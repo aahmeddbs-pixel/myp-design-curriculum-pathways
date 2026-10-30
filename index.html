@@ -144,6 +144,8 @@ textarea{min-height:110px;resize:vertical;line-height:1.5}
 .cls-row span{flex:1;min-width:160px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .seg button{border:0;background:transparent;padding:6px 10px;font-size:13px}
+.field>.seg{align-self:flex-start}
+#roleSeg button{padding:8px 20px;font-size:14px;font-weight:bold}
 .seg button[aria-pressed=true]{background:var(--navy);color:var(--paper)}
 .dots{display:flex;gap:6px}
 .dots i{width:22px;height:8px;border-radius:9px;background:var(--soft);border:1px solid var(--line)}
@@ -199,13 +201,15 @@ ol.guide li{margin-bottom:8px}
 <script>
 /*CONFIG-START*/
 const CONFIG = {
-  "adminPassword": "sisd2024",
+  "adminHash": {"salt": "fhQV7SKn85XMCxqKTa7ZRA==", "hash": "qQVNc7So7C9OLXTVGPmDqNIk5tdunYpcDcej3G4rtgE="},
   "unlocks": {
     "6": {"A": false, "B": false, "C": false, "D": false},
     "7": {"A": false, "B": false, "C": false, "D": false},
     "8": {"A": false, "B": false, "C": false, "D": false},
     "10": {"A": false, "B": false, "C": false, "D": false}
   },
+  "teachers": [],
+  "declined": [],
   "logForm": "",
   "controlForm": "",
   "controlCsv": "",
@@ -721,8 +725,10 @@ function speak(text, opts={}){
 }
 
 /* ================= STATE ================= */
-let session = { email: null, preview: false };
-let LIVE = null; // unlocks fetched from Google Sheet
+let session = { email: null, preview: false, back: null };
+let LIVE = null;      // { unlocks, teachers, declined } read from the switches sheet
+let REQUESTS = [];    // teacher sign-up requests read from the switches sheet
+const PREVIEW = "teacher.preview@sisd.ae";
 function user(){ return session.email ? DB.users[session.email] : null; }
 function gradeData(g){ return COURSE.grades[g]; }
 function scenarioFor(email, g){ const sc = gradeData(g).scenarios; return sc[hash(email.toLowerCase()+"|"+g) % sc.length]; }
@@ -733,16 +739,34 @@ function fill(str, g, sc){
   return String(str).replace(/\{client\}/g, sc.client).replace(/\{problem\}/g, sc.problem).replace(/\{user\}/g, sc.user)
     .replace(/\{product\}/g, gd.product).replace(/\{title\}/g, sc.title).replace(/\{ideaLabel\}/g, gd.ideaLabel).replace(/\{planLabel\}/g, gd.planLabel);
 }
-function unlocks(){
-  if (LIVE) return LIVE;
-  if (DB.teacherUnlocks) return DB.teacherUnlocks;
-  return CONFIG.unlocks;
+/* shared course state: live sheet → this device's admin copy → baked file */
+function courseState(){
+  const base = { unlocks: CONFIG.unlocks, teachers: CONFIG.teachers || [], declined: CONFIG.declined || [] };
+  const src = LIVE || DB.localState || {};
+  return { unlocks: src.unlocks || base.unlocks, teachers: src.teachers || base.teachers, declined: src.declined || base.declined };
 }
+function unlocks(){ return courseState().unlocks; }
+function approvedTeacher(email){ return courseState().teachers.find(t => t.email === email) || null; }
+function teacherNames(){ const n = new Set(COURSE.teachers); courseState().teachers.forEach(t => n.add(t.name)); return [...n]; }
 function isOpen(g, c){
   if (COURSE.criteria[c].comingSoon) return false;
   if (session.preview) return true;
   const u = unlocks(); return !!(u[g] && u[g][c]);
 }
+
+/* ================= PASSWORDS ================= */
+const b64e = u8 => btoa(String.fromCharCode(...u8));
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function hashPw(pw, saltB64){
+  if (!(window.crypto && crypto.subtle)) throw new Error("Open the course from its https:// link to sign in.");
+  const salt = saltB64 ? b64d(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name:"PBKDF2", salt, iterations:100000, hash:"SHA-256" }, key, 256);
+  return { salt: b64e(salt), hash: b64e(new Uint8Array(bits)) };
+}
+async function checkPw(pw, rec){ if (!rec || !rec.salt) return false; return (await hashPw(pw, rec.salt)).hash === rec.hash; }
+function pwProblem(pw){ if (pw.length < 8) return "Your password must be at least 8 characters."; if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return "Your password must include at least one letter and one number."; return ""; }
+const SCHOOL = /^[^\s@]+@sisd\.ae$/i;
 
 /* ================= GOOGLE FORM (private copy) ================= */
 function parseFormLink(link){
@@ -765,9 +789,10 @@ async function postForm(link, values){
 }
 function logEvent(crit, event, details){
   const u = user(); if (!u || session.preview) return;
-  const item = [session.email, u.name, "Grade " + u.grade, u.teacher, "Criterion " + crit, event, u.pin, details, new Date().toISOString()];
+  const item = [session.email, u.name, u.role === "teacher" ? "Staff" : "Grade " + u.grade, u.role === "teacher" ? "-" : u.teacher, crit === "-" ? "-" : "Criterion " + crit, event, u.role === "teacher" ? "Teacher" : "Student", details, new Date().toISOString()];
   DB.queue.push(item); save(); flushQueue();
 }
+
 let flushing = false;
 async function flushQueue(){
   const link = settings().logForm; if (!link || flushing || !DB.queue.length) return;
@@ -799,12 +824,20 @@ async function loadLive(){
   try {
     const r = await fetch(url + (url.includes("?") ? "&" : "?") + "cb=" + Date.now());
     if (!r.ok) return;
-    const rows = parseCSV(await r.text());
-    for (let i=rows.length-1;i>0;i--){
-      const cell = rows[i].slice(1).find(v => v && v.trim().startsWith("{"));
-      if (cell){ const d = JSON.parse(cell); if (d.unlocks){ const changed = JSON.stringify(LIVE) !== JSON.stringify(d.unlocks); LIVE = d.unlocks; if (changed) render(); } return; }
+    const rows = parseCSV(await r.text()); let state = null; const reqs = [];
+    for (let i=1;i<rows.length;i++){
+      const cell = rows[i].slice(1).find(v => v && v.trim().startsWith("{")); if (!cell) continue;
+      try { const d = JSON.parse(cell); if (d.unlocks) state = d; else if (d.request) reqs.push(d.request); } catch(e){}
     }
-  } catch(e){ /* offline: keep baked switches */ }
+    REQUESTS = reqs;
+    if (state){ const next = { unlocks: state.unlocks, teachers: state.teachers || [], declined: state.declined || [] };
+      const changed = JSON.stringify(LIVE) !== JSON.stringify(next); LIVE = next; if (changed && !$("#modalRoot .modal")) render(); }
+  } catch(e){ /* offline: keep the baked settings */ }
+}
+async function publishState(next){
+  const s = settings(); DB.localState = next; save(); if (s.controlCsv) LIVE = next;
+  if (!s.controlForm) return "local";
+  return (await postForm(s.controlForm, [JSON.stringify(Object.assign({}, next, { t:new Date().toISOString() }))])) ? "sent" : "failed";
 }
 
 /* ================= ICONS ================= */
@@ -838,13 +871,17 @@ function badgeSVG(text, sub){
 function renderMast(){
   const u = user(); const r = $("#mastRight");
   if (!u){ r.innerHTML = ""; return; }
-  const pts = Object.values(u.progress||{}).reduce((s,p)=>s+(p.ex?.points||0),0);
-  r.innerHTML = `<span class="chip pts" title="Practice points">★ ${pts} pts</span>
-    <button class="chip" id="voiceBtn" aria-pressed="${DB.voice}">${DB.voice?ICON.voiceOn:ICON.voiceOff} Voice</button>
-    <span class="chip">${esc(u.name)} · G${esc(u.grade)}</span>
-    <button class="chip" id="signOut">Sign out</button>`;
-  $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
-  $("#signOut").onclick = () => { session = { email:null, preview:false }; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} $("#previewBanner").hidden = true; render(); };
+  const signOut = `<button class="chip" id="signOut">Sign out</button>`;
+  if (u.role === "teacher" && !session.preview){
+    r.innerHTML = `<span class="chip">${esc(u.name)} · Teacher</span>${signOut}`;
+  } else {
+    const pts = Object.values(u.progress||{}).reduce((s,p)=>s+(p.ex?.points||0),0);
+    r.innerHTML = `<span class="chip pts" title="Practice points">★ ${pts} pts</span>
+      <button class="chip" id="voiceBtn" aria-pressed="${DB.voice}">${DB.voice?ICON.voiceOn:ICON.voiceOff} Voice</button>
+      <span class="chip">${esc(u.name)} · G${esc(u.grade)}</span>${session.preview?"":signOut}`;
+    $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
+  }
+  const so = $("#signOut"); if (so) so.onclick = () => { session = { email:null, preview:false, back:null }; staffIn = false; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} render(); };
 }
 
 /* ================= ROUTER ================= */
@@ -853,15 +890,16 @@ function go(v){ view = Object.assign({ name:"home", crit:null, step:0, strand:0 
 function render(){
   renderMast();
   $("#previewBanner").hidden = !session.preview;
-  const app = $("#app");
-  if (!user()) return renderLogin(app);
+  const app = $("#app"), u = user();
+  if (!u) return renderLogin(app);
+  if (u.role === "teacher" && !session.preview) return renderTeacherHome(app);
   if (view.name === "crit") return renderCrit(app);
   return renderHome(app);
 }
 
 /* ================= LOGIN ================= */
 function renderLogin(app){
-  let mode = "in";
+  let mode = "in", role = "student";
   app.innerHTML = `<div class="login">
     <section class="hero stack">
       <div class="eyebrow">IB MYP Design · Grades 6, 7, 8 &amp; 10</div>
@@ -875,44 +913,98 @@ function renderLogin(app){
     <section class="card stack" aria-label="Sign in">
       <div class="tabs" role="tablist"><button role="tab" id="tIn" aria-selected="true">Sign in</button><button role="tab" id="tUp" aria-selected="false">Sign up</button></div>
       <form id="lf" class="stack" novalidate>
-        <label class="f">School email<input type="email" id="lEmail" autocomplete="email" placeholder="firstname.lastname@sisd.ae" required></label>
+        <div id="roleRow" class="field" hidden><span class="lbl" style="font-size:13px">I am a</span><div class="seg" id="roleSeg"><button type="button" data-r="student" aria-pressed="true">Student</button><button type="button" data-r="teacher" aria-pressed="false">Teacher</button></div></div>
+        <label class="f">School email<input type="email" id="lEmail" autocomplete="username" placeholder="firstname.lastname@sisd.ae" required></label>
         <div id="upOnly" class="stack" hidden>
           <label class="f">Full name<input type="text" id="lName" autocomplete="name" placeholder="First and last name"></label>
-          <div class="grid2">
+          <div class="grid2" id="studentOnly">
             <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.grades).map(g=>`<option value="${g}">Grade ${g} (MYP ${COURSE.grades[g].myp})</option>`).join("")}</select></label>
-            <label class="f">Teacher<select id="lTeacher"><option value="">Choose…</option>${COURSE.teachers.map(t=>`<option>${esc(t)}</option>`).join("")}</select></label>
+            <label class="f">Teacher<select id="lTeacher"><option value="">Choose…</option>${teacherNames().map(t=>`<option>${esc(t)}</option>`).join("")}</select></label>
           </div>
         </div>
-        <label class="f"><span id="pinLbl">4-digit PIN</span><input type="password" id="lPin" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="current-password"></label>
+        <label class="f"><span id="pwLbl">Password</span><input type="password" id="lPw" autocomplete="current-password" placeholder="Your password"></label>
+        <label class="f" id="pw2Row" hidden>Type your password again<input type="password" id="lPw2" autocomplete="new-password"></label>
+        <p class="muted" id="pwRule" style="font-size:12px;margin:-6px 0 0" hidden>At least 8 characters, with at least one letter and one number. Don't use your school email password.</p>
         <div id="lMsg"></div>
         <button class="btn" type="submit" id="lGo">Sign in</button>
-        <p class="muted" style="font-size:12px;margin:0">Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion.</p>
+        <p class="muted" id="lFoot" style="font-size:12px;margin:0">Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion.</p>
       </form>
     </section></div>`;
-  const setMode = m => { mode = m; $("#tIn").setAttribute("aria-selected", m==="in"); $("#tUp").setAttribute("aria-selected", m==="up"); $("#upOnly").hidden = m!=="up"; $("#lGo").textContent = m==="in"?"Sign in":"Create my account"; $("#pinLbl").textContent = m==="in"?"4-digit PIN":"Choose a 4-digit PIN (remember it!)"; $("#lMsg").innerHTML=""; };
+  const setRole = r => { role = r; $("#roleSeg").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === r)); $("#studentOnly").hidden = r !== "student";
+    $("#lGo").textContent = mode === "in" ? "Sign in" : r === "teacher" ? "Request teacher access" : "Create my account";
+    $("#lFoot").textContent = r === "teacher" && mode === "up" ? "Teacher accounts are checked by the course admin. You can sign in once your request is approved." : "Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion."; };
+  const setMode = m => { mode = m; $("#tIn").setAttribute("aria-selected", m==="in"); $("#tUp").setAttribute("aria-selected", m==="up");
+    $("#upOnly").hidden = $("#roleRow").hidden = $("#pw2Row").hidden = $("#pwRule").hidden = m !== "up";
+    $("#pwLbl").textContent = m === "in" ? "Password" : "Create a password"; $("#lPw").autocomplete = m === "in" ? "current-password" : "new-password"; $("#lMsg").innerHTML = ""; setRole(role); };
   $("#tIn").onclick = () => setMode("in"); $("#tUp").onclick = () => setMode("up");
-  $("#lf").onsubmit = e => {
+  $("#roleSeg").querySelectorAll("button").forEach(b => b.onclick = () => setRole(b.dataset.r));
+  const msg = (t, kind="bad") => $("#lMsg").innerHTML = `<div class="notice ${kind}">${t}</div>`;
+  $("#lf").onsubmit = async e => {
     e.preventDefault();
-    const email = $("#lEmail").value.trim().toLowerCase(), pin = $("#lPin").value.trim();
-    const msg = t => $("#lMsg").innerHTML = `<div class="notice bad">${t}</div>`;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg("Enter your full school email address.");
-    if (!/^\d{4}$/.test(pin)) return msg("Your PIN must be exactly 4 numbers.");
-    if (mode === "in"){
-      const u = DB.users[email];
-      if (!u) return msg("No account on this device for that email. Choose <b>Sign up</b> if this is your first time here.");
-      if (u.pin !== pin) return msg("That PIN does not match. Ask your teacher if you have forgotten it.");
-    } else {
-      const name = $("#lName").value.trim(), grade = $("#lGrade").value, teacher = $("#lTeacher").value;
-      if (DB.users[email]) return msg("This email already has an account on this device. Choose <b>Sign in</b>.");
+    const email = $("#lEmail").value.trim().toLowerCase(), pw = $("#lPw").value;
+    if (!SCHOOL.test(email)) return msg("Use your full SISD school email address, ending in @sisd.ae.");
+    $("#lGo").disabled = true;
+    try {
+      if (mode === "in"){
+        if (!pw) return msg("Enter your password.");
+        let u = DB.users[email];
+        if (!u){
+          const t = approvedTeacher(email);
+          if (t && await checkPw(pw, t)){ DB.users[email] = { role:"teacher", name:t.name, salt:t.salt, hash:t.hash, created:new Date().toISOString() }; u = DB.users[email]; }
+          else if ((DB.pending||[]).some(p => p.email === email)) return msg("Your teacher account is waiting for admin approval.", "warn");
+          else return msg("No account on this device for that email. Choose <b>Sign up</b> if this is your first time here.");
+        } else {
+          if (!(await checkPw(pw, u))) return msg("That password is not right. If you have forgotten it, ask your teacher to reset it on this device.");
+          if (u.role === "teacher"){
+            const t = approvedTeacher(email);
+            if (!t){ if (courseState().declined.includes(email)) return msg("Your teacher access request was not approved. Contact the course admin."); return msg("Your teacher account is waiting for admin approval. Try again once you have been approved.", "warn"); }
+          }
+        }
+        session.email = email; DB.session = email; save(); flushQueue();
+        if (u.role !== "teacher") speak(`Welcome back, ${u.name.split(" ")[0]}. Let's design something great.`);
+        return go({ name:"home" });
+      }
+      const name = $("#lName").value.trim();
+      if (DB.users[email] || approvedTeacher(email)) return msg("This email already has an account. Choose <b>Sign in</b>.");
       if (name.split(/\s+/).length < 2) return msg("Enter your first and last name.");
+      const prob = pwProblem(pw); if (prob) return msg(prob);
+      if (pw !== $("#lPw2").value) return msg("The two passwords do not match.");
+      const rec = await hashPw(pw);
+      if (role === "teacher"){
+        const req = { email, name, salt:rec.salt, hash:rec.hash, t:new Date().toISOString() };
+        DB.users[email] = { role:"teacher", name, salt:rec.salt, hash:rec.hash, created:req.t };
+        DB.pending = (DB.pending||[]).filter(p => p.email !== email).concat([req]); save();
+        const s = settings(); if (s.controlForm) postForm(s.controlForm, [JSON.stringify({ request:req })]);
+        DB.queue.push([email, name, "Staff", "-", "-", "Teacher access requested", "Teacher", "Waiting for admin approval", req.t]); save(); flushQueue();
+        setMode("in"); $("#lEmail").value = email;
+        return msg("Request sent. The course admin will approve your teacher account. You can sign in once it is approved.", "ok");
+      }
+      const grade = $("#lGrade").value, teacher = $("#lTeacher").value;
       if (!grade) return msg("Choose your grade."); if (!teacher) return msg("Choose your teacher.");
-      DB.users[email] = { name, grade, teacher, pin, created: new Date().toISOString(), progress:{} };
-      session.email = email; logEvent("-", "Signed up", `Scenario: ${scenarioFor(email, grade).title}`);
-    }
-    session.email = email; DB.session = email; save(); flushQueue();
-    speak(`Welcome, ${DB.users[email].name.split(" ")[0]}. Let's design something great.`);
-    go({ name:"home" });
+      DB.users[email] = { role:"student", name, grade, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
+      session.email = email; DB.session = email; save();
+      logEvent("-", "Signed up", `Design challenge: ${scenarioFor(email, grade).title}`);
+      speak(`Welcome, ${name.split(" ")[0]}. Let's design something great.`);
+      go({ name:"home" });
+    } catch(err){ msg(esc(err.message)); }
+    finally { const b = $("#lGo"); if (b) b.disabled = false; }
   };
+}
+
+/* ================= TEACHER HOME ================= */
+function renderTeacherHome(app){
+  const u = user();
+  const mine = Object.entries(DB.users).filter(([,s]) => s.role !== "teacher" && s.teacher === u.name).length;
+  app.innerHTML = `<div class="stack" style="gap:20px">
+    <div><div class="eyebrow">Teacher tools</div><h1 style="font-family:var(--f-display);font-size:clamp(24px,3.4vw,34px)">Welcome, ${esc(u.name)}</h1>
+      <p class="muted" style="margin:.4em 0 0;max-width:60ch">Preview any grade as a student, check answer keys, look up a student's design challenge, and reset a student's password on this device. Switching criteria on and off is done by the course admin.</p></div>
+    <div class="crit-grid">
+      <button class="crit open" data-go="preview"><span class="L">▶</span><h3>Preview as a student</h3><p class="muted" style="margin:0;font-size:13px">Open every criterion for any grade without sending data.</p></button>
+      <button class="crit open" data-go="answers"><span class="L">✔</span><h3>Answer key</h3><p class="muted" style="margin:0;font-size:13px">All practice questions with answers and hints.</p></button>
+      <button class="crit open" data-go="lookup"><span class="L">?</span><h3>Students</h3><p class="muted" style="margin:0;font-size:13px">Design challenges and password resets. ${mine} of your students on this device.</p></button>
+      <div class="crit locked"><span class="L">${Object.keys(COURSE.grades).filter(g=>["A","B"].some(c=>unlocks()[g]?.[c])).length}</span><h3>Grades with open criteria</h3><p class="muted" style="margin:0;font-size:13px">${Object.keys(COURSE.grades).map(g=>`G${g}: ${["A","B","C","D"].filter(c=>unlocks()[g]?.[c]).join(", ")||"none"}`).join(" · ")}</p></div>
+    </div></div>`;
+  app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => b.dataset.go === "preview" ? previewGradePicker() : staffPanel(b.dataset.go, "teacher"));
 }
 
 /* ================= HOME ================= */
@@ -1336,71 +1428,99 @@ async function saveFile(name, blob, fallback){
 /* ================= STAFF PANEL ================= */
 let staffIn = false;
 function openStaff(){
-  if (!staffIn){
-    modal(`<div class="stack"><h2>Staff sign in</h2><form id="sf" class="stack"><label class="f">Staff password<input type="password" id="sPw" autocomplete="current-password"></label><div id="sMsg2"></div><div class="row"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" data-close>Cancel</button></div></form></div>`);
-    $("#sPw").focus();
-    $("#sf").onsubmit = e => { e.preventDefault(); if ($("#sPw").value === settings().adminPassword){ staffIn = true; closeModal(); openStaff(); } else $("#sMsg2").innerHTML = `<div class="notice bad">Incorrect password.</div>`; };
-    return;
-  }
-  staffPanel("switches");
+  if (staffIn) return staffPanel("switches", "admin");
+  modal(`<div class="stack"><h2>Admin sign in</h2><p class="muted" style="margin:0;font-size:13px">Teachers: sign in on the main page with your school email instead.</p><form id="sf" class="stack"><label class="f">Admin password<input type="password" id="sPw" autocomplete="current-password"></label><div id="sMsg2"></div><div class="row"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" data-close>Cancel</button></div></form></div>`);
+  $("#sPw").focus();
+  $("#sf").onsubmit = async e => { e.preventDefault();
+    try { if (await checkPw($("#sPw").value, settings().adminHash)){ staffIn = true; closeModal(); openStaff(); } else $("#sMsg2").innerHTML = `<div class="notice bad">Incorrect password.</div>`; }
+    catch(err){ $("#sMsg2").innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; } };
 }
-function staffPanel(tab){
-  const s = settings(), U = JSON.parse(JSON.stringify(unlocks()));
-  const tabs = [["switches","Criteria switches"],["answers","Answer key"],["lookup","Student lookup"],["setup","Connect & settings"]];
+function pendingRequests(){
+  const st = courseState(), seen = new Set(), out = [];
+  [...REQUESTS, ...(DB.pending||[])].sort((a,b)=>String(b.t).localeCompare(String(a.t))).forEach(r => {
+    if (!r || !r.email || seen.has(r.email)) return; seen.add(r.email);
+    if (st.teachers.some(t => t.email === r.email) || st.declined.includes(r.email)) return; out.push(r); });
+  return out;
+}
+function staffPanel(tab, who="admin"){
+  const s = settings(), st = JSON.parse(JSON.stringify(courseState())), U = st.unlocks;
+  const pend = pendingRequests();
+  const tabs = who === "admin"
+    ? [["switches","Criteria switches"],["teachers",`Teacher approvals${pend.length?` (${pend.length})`:""}`],["answers","Answer key"],["lookup","Students"],["setup","Connect & settings"]]
+    : [["answers","Answer key"],["lookup","Students"]];
+  if (!tabs.some(t => t[0] === tab)) tab = tabs[0][0];
+  const liveNote = s.controlForm && s.controlCsv ? `<b>Live updates are connected</b> — changes reach every device within about 5 minutes.` : `<b>Live updates are not connected yet</b>, so changes apply on this device only. Connect them once in <i>Connect &amp; settings</i>.`;
   let body = "";
   if (tab === "switches"){
-    body = `<p class="muted" style="margin:0">Switch a criterion on and it appears for every student in that grade. ${s.controlForm && s.controlCsv ? `<b>Live switching is connected</b> — students see changes within about 5 minutes (Google refreshes the sheet).` : `<b>Live switching is not connected yet</b>, so changes apply on this device only. Connect it once in <i>Connect &amp; settings</i>, or download an updated course file and replace the one on your site.`}</p>
+    body = `<p class="muted" style="margin:0">Switch a criterion on and it appears for every student in that grade. ${liveNote}</p>
       <div class="scroll"><table class="tbl toggle-grid"><tr><th>Grade</th>${["A","B","C","D"].map(c=>`<th>Criterion ${c}${COURSE.criteria[c].comingSoon?"<br><span class='muted' style='font-weight:normal;text-transform:none'>coming soon</span>":""}</th>`).join("")}</tr>
       ${Object.keys(COURSE.grades).map(g=>`<tr><td><b>Grade ${g}</b><br><span class="muted">MYP ${COURSE.grades[g].myp}</span></td>${["A","B","C","D"].map(c=>`<td><button class="sw-t" role="switch" aria-checked="${!!U[g]?.[c]}" data-g="${g}" data-c="${c}" aria-label="Grade ${g} Criterion ${c}" ${COURSE.criteria[c].comingSoon?"disabled":""}></button></td>`).join("")}</tr>`).join("")}</table></div>
       <div id="swMsg"></div>
-      <div class="row"><button class="btn" id="pubSw">Apply switches</button><button class="btn sec" id="dlFile">${ICON.dl} Download course file with these switches</button><button class="btn ghost" id="previewBtn">Preview as a student</button></div>`;
+      <div class="row"><button class="btn" id="pubSw">Apply switches</button><button class="btn sec" id="dlFile">${ICON.dl} Download course file</button><button class="btn ghost" id="previewBtn">Preview as a student</button></div>`;
+  } else if (tab === "teachers"){
+    body = `<p class="muted" style="margin:0">Teachers sign up on the main page with their school email and a password. Approve them here before they can sign in. ${liveNote}</p>
+      <h3>Waiting for approval</h3>
+      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Requested</th><th></th></tr>${pend.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${r.t?esc(new Date(r.t).toLocaleString("en-GB")):"—"}</td><td><div class="row" style="gap:6px"><button class="btn sm ok" data-ap="${esc(r.email)}">Approve</button><button class="btn sm ghost" data-de="${esc(r.email)}">Decline</button></div></td></tr>`).join("") || `<tr><td colspan="4" class="muted">No requests waiting.</td></tr>`}</table></div>
+      <h3>Approved teachers</h3>
+      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th></th></tr>${st.teachers.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.email)}</td><td><button class="btn sm ghost" data-rm="${esc(t.email)}">Remove access</button></td></tr>`).join("") || `<tr><td colspan="3" class="muted">No approved teachers yet.</td></tr>`}</table></div>
+      <div id="tMsg"></div>`;
   } else if (tab === "answers"){
     body = Object.keys(COURSE.grades).map(g => { const gd = COURSE.grades[g]; return ["A","B"].map(c => { const qs = COURSE.exercises[c].filter(q=>q.y<=gd.myp).concat(COURSE.gradeExercises[g][c]);
       return `<details><summary><b>Grade ${g} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
   } else if (tab === "lookup"){
-    body = `<p class="muted" style="margin:0">Each student gets one of four design challenges, chosen from their email, so neighbours rarely have the same task. Check a student's challenge here. Student PINs appear in the "PIN" column of your Google Sheet each time they log activity.</p>
+    const studs = Object.entries(DB.users).filter(([e,u]) => u.role !== "teacher" && e !== PREVIEW);
+    body = `<p class="muted" style="margin:0">Each student gets one of four design challenges, chosen from their email, so neighbours rarely have the same task.</p>
       <div class="grid2"><label class="f">Student email<input type="email" id="luE" placeholder="name@sisd.ae"></label><label class="f">Grade<select id="luG">${Object.keys(COURSE.grades).map(g=>`<option>${g}</option>`).join("")}</select></label></div>
       <div id="luR"></div>
-      <h3 style="margin-top:8px">Accounts on this device</h3>
-      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Grade</th><th>PIN</th><th>A</th><th>B</th></tr>${Object.entries(DB.users).map(([e,u])=>`<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(u.grade)}</td><td>${esc(u.pin)}</td><td>${critProgress(u.progress?.A)}%</td><td>${critProgress(u.progress?.B)}%</td></tr>`).join("") || `<tr><td colspan="6" class="muted">No student accounts on this device.</td></tr>`}</table></div>`;
+      <h3 style="margin-top:8px">Students on this device</h3>
+      <p class="muted" style="margin:0;font-size:13px">Passwords are stored scrambled, so nobody can read them. If a student forgets theirs, reset it here and give them the temporary password.</p>
+      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Grade</th><th>A</th><th>B</th><th></th></tr>${studs.map(([e,u])=>`<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(u.grade)}</td><td>${critProgress(u.progress?.A)}%</td><td>${critProgress(u.progress?.B)}%</td><td><button class="btn sm sec" data-rs="${esc(e)}">Reset password</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">No student accounts on this device.</td></tr>`}</table></div><div id="rsMsg"></div>`;
   } else {
     body = `<ol class="guide">
-      <li><b>Student copies (one-time).</b> In Google Forms create a form called <i>Design Studio Log</i> with 8 <b>Short answer</b> questions in this order: Student email, Student name, Grade, Teacher, Criterion, Event, PIN, Details (make Details a <b>Paragraph</b>). Turn off "Collect email addresses" and sign-in. Open ⋮ → <b>Get pre-filled link</b>, type <code>x</code> in every box, click <b>Get link</b> → <b>Copy link</b>, and paste it below. In the Responses tab, click <b>Link to Sheets</b> and turn on email notifications if you want them sent to your Gmail.</li>
-      <li><b>Live criteria switches (one-time).</b> Create a second form called <i>Design Studio Switches</i> with one <b>Paragraph</b> question called Settings. Paste its pre-filled link below. Link it to a new sheet, then in that sheet choose File → Share → <b>Publish to web</b> → pick the response sheet → <b>Comma-separated values (.csv)</b> → Publish, and paste that link below. This sheet only ever holds switch settings — never student work.</li>
-      <li>Click <b>Save settings</b>, then <b>Download course file</b> and upload it to your course site (replacing the old file). After this, switching criteria on and off is live — no more uploads.</li></ol>
+      <li><b>Student copies (one-time).</b> In Google Forms create a form called <i>Design Studio Log</i> with 8 <b>Short answer</b> questions in this order: Email, Name, Grade, Teacher, Criterion, Event, Role, Details (make Details a <b>Paragraph</b>). Turn off "Collect email addresses" and sign-in. Open ⋮ → <b>Get pre-filled link</b>, type <code>x</code> in every box, click <b>Get link</b> → <b>Copy link</b>, and paste it below. In the Responses tab, click <b>Link to Sheets</b>, and turn on email notifications if you want them sent to your Gmail.</li>
+      <li><b>Live switches and teacher approvals (one-time).</b> Create a second form called <i>Design Studio Switches</i> with one <b>Paragraph</b> question called Settings. Paste its pre-filled link below. Link it to a new sheet, then in that sheet choose File → Share → <b>Publish to web</b> → pick the response sheet → <b>Comma-separated values (.csv)</b> → Publish, and paste that link below. This sheet holds only switch settings and teacher sign-up requests, never student work.</li>
+      <li>Click <b>Save settings</b>, then <b>Download course file</b>, and upload it to your GitHub repository in place of index.html. After this, switches and approvals are live, with no more uploads.</li></ol>
       <div class="stack">
         <label class="f">Student log form — pre-filled link<input type="text" id="setLog" value="${esc(s.logForm)}" placeholder="https://docs.google.com/forms/d/e/…/viewform?usp=pp_url&entry.…"></label>
         <label class="f">Switches form — pre-filled link<input type="text" id="setCtl" value="${esc(s.controlForm)}"></label>
         <label class="f">Switches sheet — published CSV link<input type="text" id="setCsv" value="${esc(s.controlCsv)}" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"></label>
-        <label class="f">Staff password<input type="text" id="setPw" value="${esc(s.adminPassword)}"></label>
+        <label class="f">New admin password (leave blank to keep the current one)<input type="password" id="setPw" autocomplete="new-password"></label>
         <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B"].map(c=>`<label class="f">Grade ${g} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
         <div id="setMsg"></div>
         <div class="row"><button class="btn" id="saveSet">Save settings</button><button class="btn sec" id="dlFile2">${ICON.dl} Download course file</button><button class="btn ghost" id="testLog">Send a test entry</button></div></div>`;
   }
-  modal(`<div class="stack"><div class="row" style="justify-content:space-between"><h2>Staff panel</h2><button class="btn ghost sm" data-close>Close</button></div>
-    <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-t="${k}" aria-selected="${k===tab}">${l}</button>`).join("")}</div>${body}</div>`);
-  document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => staffPanel(b.dataset.t));
+  modal(`<div class="stack"><div class="row" style="justify-content:space-between"><h2>${who==="admin"?"Admin panel":"Teacher tools"}</h2><button class="btn ghost sm" data-close>Close</button></div>
+    <div class="tabs" role="tablist" style="flex-wrap:wrap">${tabs.map(([k,l])=>`<button role="tab" data-t="${k}" aria-selected="${k===tab}">${l}</button>`).join("")}</div>${body}</div>`);
+  document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => staffPanel(b.dataset.t, who));
+  const result = (r, el) => $(el).innerHTML = r === "sent" ? `<div class="notice ok">Saved and sent. Every device will update within about 5 minutes.</div>` : r === "failed" ? `<div class="notice bad">Saved here, but Google Forms could not be reached. Check the internet connection and try again.</div>` : `<div class="notice warn">Saved on this device only. Connect live updates in Connect &amp; settings so other devices get the change.</div>`;
   if (tab === "switches"){
     document.querySelectorAll(".sw-t").forEach(b => b.onclick = () => { const on = b.getAttribute("aria-checked") !== "true"; b.setAttribute("aria-checked", on); U[b.dataset.g] = U[b.dataset.g] || {}; U[b.dataset.g][b.dataset.c] = on; });
-    $("#pubSw").onclick = async () => {
-      DB.teacherUnlocks = U; save(); LIVE = s.controlCsv ? U : null;
-      if (s.controlForm){ const ok = await postForm(s.controlForm, [JSON.stringify({ unlocks:U, t:new Date().toISOString() })]);
-        $("#swMsg").innerHTML = ok ? `<div class="notice ok">Switches sent. Students will see the change within about 5 minutes (they may need to refresh).</div>` : `<div class="notice bad">Could not reach Google Forms. Check the internet connection and try again.</div>`; }
-      else $("#swMsg").innerHTML = `<div class="notice warn">Applied on this device. To change what students see, connect live switching or download the updated course file and upload it to your site.</div>`;
-      render();
-    };
-    $("#dlFile").onclick = () => downloadCourse({ unlocks:U });
+    $("#pubSw").onclick = async () => { result(await publishState(st), "#swMsg"); render(); };
+    $("#dlFile").onclick = () => downloadCourse(st);
     $("#previewBtn").onclick = () => { closeModal(); previewGradePicker(); };
   }
-  if (tab === "lookup"){ const f = () => { const e = $("#luE").value.trim(); if (!e) { $("#luR").innerHTML=""; return; } const sc = scenarioFor(e, $("#luG").value); $("#luR").innerHTML = `<div class="notice ok"><b>${esc(sc.title)}</b> — ${esc(sc.brief)}</div>`; }; $("#luE").oninput = f; $("#luG").onchange = f; }
+  if (tab === "teachers"){
+    const after = async r => { const res = await publishState(st); staffPanel("teachers", who); result(res, "#tMsg"); };
+    document.querySelectorAll("[data-ap]").forEach(b => b.onclick = () => { const r = pend.find(p => p.email === b.dataset.ap); st.teachers.push({ email:r.email, name:r.name, salt:r.salt, hash:r.hash }); st.declined = st.declined.filter(e => e !== r.email); after(); });
+    document.querySelectorAll("[data-de]").forEach(b => b.onclick = () => { st.declined.push(b.dataset.de); after(); });
+    document.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { st.teachers = st.teachers.filter(t => t.email !== b.dataset.rm); st.declined.push(b.dataset.rm); after(); });
+  }
+  if (tab === "lookup"){
+    const f = () => { const e = $("#luE").value.trim(); if (!e) { $("#luR").innerHTML=""; return; } const sc = scenarioFor(e, $("#luG").value); $("#luR").innerHTML = `<div class="notice ok"><b>${esc(sc.title)}</b> — ${esc(sc.brief)}</div>`; }; $("#luE").oninput = f; $("#luG").onchange = f;
+    document.querySelectorAll("[data-rs]").forEach(b => b.onclick = async () => { const temp = "Design" + Math.floor(1000 + Math.random()*9000); const u = DB.users[b.dataset.rs]; Object.assign(u, await hashPw(temp)); save();
+      $("#rsMsg").innerHTML = `<div class="notice ok">New password for <b>${esc(u.name)}</b>: <code style="font-size:15px">${temp}</code> — give it to the student. Their work is kept.</div>`; });
+  }
   if (tab === "setup"){
-    const collect = () => { const vl = {}; document.querySelectorAll("[data-vl]").forEach(i => { if (i.value.trim()) vl[i.dataset.vl] = i.value.trim(); });
-      return { logForm: $("#setLog").value.trim(), controlForm: $("#setCtl").value.trim(), controlCsv: $("#setCsv").value.trim(), adminPassword: $("#setPw").value.trim() || "sisd2024", videoLinks: vl }; };
+    const collect = async () => { const vl = {}; document.querySelectorAll("[data-vl]").forEach(i => { if (i.value.trim()) vl[i.dataset.vl] = i.value.trim(); });
+      const v = { logForm: $("#setLog").value.trim(), controlForm: $("#setCtl").value.trim(), controlCsv: $("#setCsv").value.trim(), videoLinks: vl, adminHash: settings().adminHash };
+      const np = $("#setPw").value; if (np){ if (np.length < 8) throw new Error("The admin password must be at least 8 characters."); v.adminHash = await hashPw(np); }
+      return v; };
     const check = v => { const errs = []; if (v.logForm && !parseFormLink(v.logForm)) errs.push("The student log link is not a Google Forms pre-filled link (it should contain entry.)."); if (v.controlForm && !parseFormLink(v.controlForm)) errs.push("The switches form link is not a pre-filled link."); if (v.controlCsv && !/output=csv/.test(v.controlCsv)) errs.push("The published sheet link should end with output=csv."); if (v.logForm && parseFormLink(v.logForm)?.entries.length < 8) errs.push(`The log form has ${parseFormLink(v.logForm).entries.length} questions; 8 are expected. Extra details will be combined into the last question.`); return errs; };
-    $("#saveSet").onclick = () => { const v = collect(), errs = check(v); DB.teacherSettings = v; save(); loadLive(); flushQueue(); $("#setMsg").innerHTML = errs.length ? `<div class="notice warn">${errs.map(esc).join("<br>")}</div>` : `<div class="notice ok">Settings saved on this device. Download the course file so students get them too.</div>`; };
-    $("#dlFile2").onclick = () => { DB.teacherSettings = collect(); save(); downloadCourse({}); };
-    $("#testLog").onclick = async () => { const v = collect(); if (!v.logForm) return $("#setMsg").innerHTML = `<div class="notice bad">Paste the student log form link first.</div>`;
-      const ok = await postForm(v.logForm, ["test@sisd.ae","Test Student","Grade 8","Mr. Ahmed","Criterion A","Test entry","0000","If you can read this in your sheet, the connection works.", new Date().toISOString()]);
+    const fail = err => $("#setMsg").innerHTML = `<div class="notice bad">${esc(err.message)}</div>`;
+    $("#saveSet").onclick = async () => { try { const v = await collect(), errs = check(v); DB.teacherSettings = v; save(); $("#setPw").value = ""; loadLive(); flushQueue(); $("#setMsg").innerHTML = errs.length ? `<div class="notice warn">${errs.map(esc).join("<br>")}</div>` : `<div class="notice ok">Settings saved on this device. Download the course file and upload it to GitHub so every device gets them.</div>`; } catch(err){ fail(err); } };
+    $("#dlFile2").onclick = async () => { try { DB.teacherSettings = await collect(); save(); downloadCourse(courseState()); } catch(err){ fail(err); } };
+    $("#testLog").onclick = async () => { const link = $("#setLog").value.trim(); if (!link) return $("#setMsg").innerHTML = `<div class="notice bad">Paste the student log form link first.</div>`;
+      const ok = await postForm(link, ["test@sisd.ae","Test Student","Grade 8","Mr. Ahmed","Criterion A","Test entry","Student","If you can read this in your sheet, the connection works.", new Date().toISOString()]);
       $("#setMsg").innerHTML = ok ? `<div class="notice ok">Test sent. Check your Google Sheet for a row from "Test Student".</div>` : `<div class="notice bad">Could not reach Google Forms from here.</div>`; };
   }
 }
@@ -1408,34 +1528,37 @@ function previewGradePicker(){
   modal(`<div class="stack"><h2>Preview as a student</h2><p class="muted" style="margin:0">Choose a grade. Every criterion opens for this preview only; no data is sent.</p>
     <div class="row">${Object.keys(COURSE.grades).map(g=>`<button class="btn sec" data-pg="${g}">Grade ${g}</button>`).join("")}</div></div>`);
   document.querySelectorAll("[data-pg]").forEach(b => b.onclick = () => {
-    session.preview = true; session.email = "teacher.preview@sisd.ae";
-    const pu = DB.users[session.email] = DB.users[session.email] || { name:"Teacher Preview", teacher:"Mr. Ahmed", pin:"0000", progress:{} };
+    if (!session.preview) session.back = session.email;
+    session.preview = true; session.email = PREVIEW;
+    const pu = DB.users[PREVIEW] = DB.users[PREVIEW] || { role:"student", name:"Teacher Preview", teacher:"Mr. Ahmed", progress:{} };
     if (pu.grade !== b.dataset.pg){ pu.grade = b.dataset.pg; pu.progress = {}; }
     save(); closeModal(); go({ name:"home" });
   });
 }
-async function downloadCourse(over){
-  const cfg = Object.assign({}, CONFIG, DB.teacherSettings||{}, { unlocks: over.unlocks || unlocks() });
+async function downloadCourse(st){
+  const s = DB.teacherSettings || {};
+  const cfg = { adminHash: s.adminHash || CONFIG.adminHash, unlocks: st.unlocks, teachers: st.teachers, declined: st.declined,
+    logForm: s.logForm ?? CONFIG.logForm, controlForm: s.controlForm ?? CONFIG.controlForm, controlCsv: s.controlCsv ?? CONFIG.controlCsv, videoLinks: s.videoLinks || CONFIG.videoLinks || {} };
   try {
     const r = await fetch(location.href.split("#")[0], { cache:"no-store" }); if (!r.ok) throw 0;
     const src = await r.text();
     const a = src.indexOf("/*CONFIG-START*/"), b = src.indexOf("/*CONFIG-END*/");
     if (a < 0 || b < 0) throw 0;
     const out = src.slice(0, a) + "/*CONFIG-START*/\nconst CONFIG = " + JSON.stringify(cfg, null, 2) + ";\n" + src.slice(b);
-    const blob = new Blob([out], { type:"text/html" }); const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob); link.download = "index.html"; document.body.appendChild(link); link.click(); link.remove();
-    toast("Course file downloaded as index.html — upload it to your course site to replace the old one.", 5000);
-  } catch(e){ toast("Open the course from its website link to download the file (this preview cannot).", 5000); }
+    await saveFile("index.html", new Blob([out], { type:"text/html" }), () => { const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([out], { type:"text/html" })); link.download = "index.html"; document.body.appendChild(link); link.click(); link.remove(); });
+    toast("Course file downloaded as index.html — upload it to GitHub in place of the old one.", 5000);
+  } catch(e){ toast("Open the course from its website link to download the file.", 5000); }
 }
+
 function modal(html){ $("#modalRoot").innerHTML = `<div class="modal" role="dialog" aria-modal="true"><div class="card">${html}</div></div>`;
   $("#modalRoot .modal").addEventListener("click", e => { if (e.target.classList.contains("modal") || e.target.hasAttribute("data-close")) closeModal(); }); }
-function closeModal(){ $("#modalRoot").innerHTML = ""; }
+function closeModal(){ $("#modalRoot").innerHTML = ""; if (user()) render(); }
 
 /* ================= BOOT ================= */
 $("#staffLink").onclick = openStaff;
 document.addEventListener("keydown", e => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a"){ e.preventDefault(); openStaff(); } if (e.key === "Escape") closeModal(); });
-$("#endPreview").onclick = () => { session.preview = false; if (session.email === "teacher.preview@sisd.ae"){ session.email = null; } render(); };
-if (DB.session && DB.users[DB.session] && DB.session !== "teacher.preview@sisd.ae") session.email = DB.session;
+$("#endPreview").onclick = () => { session.preview = false; session.email = session.back || null; session.back = null; go({ name:"home" }); };
+if (DB.session && DB.users[DB.session] && DB.session !== PREVIEW && DB.users[DB.session].hash) session.email = DB.session;
 try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
 render(); loadLive(); flushQueue();
 setInterval(() => { loadLive(); flushQueue(); }, 60000);
