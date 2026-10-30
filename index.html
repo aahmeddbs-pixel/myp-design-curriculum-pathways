@@ -1,0 +1,1445 @@
+<title>SISD Design Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a design-journal workspace — navy masthead, criterion ring, strand tabs on graph paper */
+:root{
+  --navy:#1B2D4E; --red:#DC2B3E; --bg:#F3F5F9; --paper:#FFFFFF; --ink:#16223A; --muted:#5B6782;
+  --line:#D8DEEA; --grid:rgba(27,45,78,.045); --soft:#E9EDF5; --ok:#1E8A55; --okbg:#E3F4EA; --warn:#B26A00; --warnbg:#FFF2DC; --bad:#C0283A; --badbg:#FBE5E8;
+  --accent:#DC2B3E; --mast:#1B2D4E; --mastfg:#FFFFFF;
+  --f-body: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --f-display: "Arial Black", Arial, "Helvetica Neue", sans-serif;
+  --f-mono: "SFMono-Regular", Menlo, Consolas, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1626; --paper:#16213A; --ink:#E7ECF6; --muted:#9AA7C2; --line:#2A3858; --grid:rgba(255,255,255,.035); --soft:#1D2A47;
+  --ok:#47C487; --okbg:#143326; --warn:#F0B44C; --warnbg:#3A2C10; --bad:#FF6B7C; --badbg:#3E1820; --accent:#FF5468; --mast:#0A1220; --mastfg:#FFFFFF; --navy:#8FB0E8; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1626; --paper:#16213A; --ink:#E7ECF6; --muted:#9AA7C2; --line:#2A3858; --grid:rgba(255,255,255,.035); --soft:#1D2A47;
+  --ok:#47C487; --okbg:#143326; --warn:#F0B44C; --warnbg:#3A2C10; --bad:#FF6B7C; --badbg:#3E1820; --accent:#FF5468; --mast:#0A1220; --mastfg:#FFFFFF; --navy:#8FB0E8; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--mast)}
+h1,h2,h3{text-wrap:balance;line-height:1.2;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+/* masthead */
+.mast{background:var(--mast);color:var(--mastfg);position:sticky;top:env(safe-area-inset-top,0px);z-index:9;border-bottom:4px solid var(--red)}
+.mast .wrap{display:flex;align-items:center;gap:14px;padding-block:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);letter-spacing:.02em;font-size:17px}
+.brand .mk{width:34px;height:34px;border-radius:7px;background:var(--red);display:grid;place-items:center;font-size:13px}
+.brand small{display:block;font-family:var(--f-body);font-weight:normal;font-size:11px;opacity:.75;letter-spacing:.08em;text-transform:uppercase}
+.mast .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;font-size:12px;background:rgba(255,255,255,.12);color:var(--mastfg);border:0}
+.chip.pts{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+main{padding-block:22px 60px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:bold}
+.btn{border:0;border-radius:8px;padding:10px 16px;background:var(--red);color:#fff;font-weight:bold;display:inline-flex;align-items:center;gap:8px}
+.btn.sec{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.ok{background:var(--ok)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:6px 11px;font-size:13px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:bold}
+input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 12px;width:100%;font-weight:normal}
+textarea{min-height:110px;resize:vertical;line-height:1.5}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+.notice{border-radius:8px;padding:10px 14px;font-size:14px}
+.notice.ok{background:var(--okbg);color:var(--ok)}
+.notice.warn{background:var(--warnbg);color:var(--warn)}
+.notice.bad{background:var(--badbg);color:var(--bad)}
+/* login */
+.login{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:start}
+@media (max-width:820px){.login{grid-template-columns:1fr}}
+.hero h1{font-family:var(--f-display);font-size:clamp(28px,4.6vw,44px);color:var(--ink)}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.cycle-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+.cycle-legend div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
+.cycle-legend b{font-family:var(--f-display);color:var(--accent);margin-right:6px}
+.tabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:9px}
+.tabs button{flex:1;border:0;background:transparent;padding:8px;border-radius:7px;font-weight:bold;color:var(--muted)}
+.tabs button[aria-selected=true]{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* dashboard */
+.unitbar{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.unitbar>div{min-width:0;flex:1}
+.unitbar h1{font-family:var(--f-display);font-size:clamp(22px,3.4vw,32px)}
+.brief{border-left:4px solid var(--accent);background:var(--paper);padding:14px 16px;border-radius:0 8px 8px 0;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.crit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.crit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.crit-grid{grid-template-columns:1fr}}
+.crit{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;text-align:left;min-height:190px}
+.crit .L{font-family:var(--f-display);font-size:40px;line-height:1;color:var(--accent)}
+.crit.locked .L{color:var(--muted)}
+.crit h3{font-size:16px}
+.crit .state{margin-top:auto;font-size:12px;font-weight:bold;display:flex;align-items:center;gap:6px}
+.crit.open{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.crit.open:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(27,45,78,.12)}
+.bar{height:6px;background:var(--soft);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);width:0}
+/* criterion stepper */
+.steps{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.step{flex:1 0 auto;min-width:118px;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:8px 10px;text-align:left;font-size:12px;display:flex;flex-direction:column;gap:2px}
+.step b{font-size:13px}
+.step .n{font-family:var(--f-mono);color:var(--muted);font-size:11px}
+.step[aria-current=true]{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+.step.done .n::after{content:" ✓";color:var(--ok);font-weight:bold}
+.step:disabled{opacity:.45;cursor:not-allowed}
+.pane{margin-top:16px}
+/* video */
+.player{background:var(--mast);color:#fff;border-radius:var(--r);overflow:hidden;position:relative}
+.stage{aspect-ratio:16/9;max-width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:20px;align-items:center;padding:clamp(16px,4vw,40px);position:relative}
+@media (max-width:600px){.stage{grid-template-columns:1fr;aspect-ratio:auto;min-height:360px}.stage svg{max-height:120px}}
+.stage svg{width:100%;height:auto;max-height:260px}
+.stage .txt{min-width:0}
+.stage .kick{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#FF8C99;font-weight:bold}
+.stage h2{font-family:var(--f-display);font-size:clamp(18px,2.8vw,30px);margin:6px 0 10px;color:#fff}
+.stage p{margin:0;font-size:clamp(13px,1.6vw,16px);color:#D9E2F2}
+.scene-in{animation:sceneIn .6s ease both}
+@keyframes sceneIn{from{opacity:.2;transform:translateY(10px)}to{opacity:1;transform:none}}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(0,0,0,.25);flex-wrap:wrap}
+.controls button{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:6px;padding:7px 12px;font-weight:bold}
+.controls .prog{flex:1;min-width:120px;height:6px;background:rgba(255,255,255,.18);border-radius:9px;overflow:hidden}
+.controls .prog i{display:block;height:100%;background:var(--red);width:0;transition:width .4s}
+.controls .tc{font-family:var(--f-mono);font-size:12px;color:#C9D3E6}
+.ring-arc{stroke-dasharray:300;stroke-dashoffset:300;animation:draw 1.6s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.pulse{animation:pulse 1.8s ease-in-out infinite;transform-origin:center;transform-box:fill-box}
+@keyframes pulse{50%{transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.scene-in,.ring-arc,.pulse{animation:none!important;stroke-dashoffset:0!important}}
+/* content tables */
+.model table,.tbl{border-collapse:collapse;width:100%;font-size:14px}
+.model th,.model td,.tbl th,.tbl td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+.model th,.tbl th{background:var(--soft);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.scroll{overflow-x:auto;max-width:100%}
+.model p{margin:.3em 0 .6em}
+.model .note{font-size:13px;color:var(--muted);font-style:italic}
+.strand-h{display:flex;gap:12px;align-items:baseline}
+.roman{font-family:var(--f-display);color:var(--accent);font-size:20px;min-width:34px}
+.why{background:var(--okbg);color:var(--ok);font-size:13px;padding:8px 12px;border-radius:7px}
+.rub th:first-child,.rub td:first-child{width:70px;text-align:center;font-family:var(--f-mono)}
+.rub tr.top td{background:var(--okbg)}
+.starters{display:flex;flex-wrap:wrap;gap:6px}
+.starters span{background:var(--soft);border:1px dashed var(--line);border-radius:6px;padding:4px 9px;font-size:13px}
+/* exercise */
+.q{font-size:18px;font-weight:bold}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--paper);border-radius:9px;padding:11px 14px}
+.opt:hover{border-color:var(--navy)}
+.opt.sel{border-color:var(--navy);background:var(--soft)}
+.opt.right{border-color:var(--ok);background:var(--okbg)}
+.opt.wrong{border-color:var(--bad);background:var(--badbg)}
+.ord li{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--paper);margin-bottom:6px}
+.ord li span{flex:1;min-width:0}
+.ord ol{padding:0;margin:0;list-style:none}
+.cls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--paper)}
+.cls-row span{flex:1;min-width:160px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 10px;font-size:13px}
+.seg button[aria-pressed=true]{background:var(--navy);color:var(--paper)}
+.dots{display:flex;gap:6px}
+.dots i{width:22px;height:8px;border-radius:9px;background:var(--soft);border:1px solid var(--line)}
+.dots i.on{background:var(--ok);border-color:var(--ok)}
+/* main task */
+.strand-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.strand-tabs button{border:1px solid var(--line);background:var(--paper);border-radius:8px 8px 0 0;padding:8px 14px;font-weight:bold;border-bottom:3px solid transparent}
+.strand-tabs button[aria-selected=true]{border-bottom-color:var(--accent)}
+.strand-tabs button.done::after{content:" ✓";color:var(--ok)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field .lbl{font-weight:bold}
+.counter{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.counter.ok{color:var(--ok)}
+.tin input{border:0;width:100%;padding:6px 4px;background:transparent;min-width:110px}
+.tin td{padding:0 4px}
+.sk{border:1px solid var(--line);border-radius:9px;background:var(--paper);padding:10px;display:flex;flex-direction:column;gap:8px}
+.sk canvas{width:100%;max-width:100%;aspect-ratio:4/3;background:#fff;border-radius:6px;border:1px solid var(--line);touch-action:none}
+.sk img{border-radius:6px;border:1px solid var(--line);max-height:420px;object-fit:contain;background:#fff}
+.tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sw{width:24px;height:24px;border-radius:50%;border:2px solid var(--line)}
+.sw[aria-pressed=true]{outline:3px solid var(--accent);outline-offset:1px}
+.bands{display:flex;gap:6px;flex-wrap:wrap}
+.bands button{border:1px solid var(--line);background:var(--paper);border-radius:7px;padding:6px 12px;font-family:var(--f-mono)}
+.bands button[aria-pressed=true]{background:var(--navy);color:var(--paper);border-color:var(--navy)}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(10,18,32,.55);display:grid;place-items:center;z-index:50;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal .card{width:min(980px,100%);max-height:88vh;overflow:auto}
+.toggle-grid td,.toggle-grid th{text-align:center}
+.sw-t{position:relative;width:46px;height:26px;border-radius:99px;border:0;background:var(--line)}
+.sw-t::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.sw-t[aria-checked=true]{background:var(--ok)}
+.sw-t[aria-checked=true]::after{left:23px}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--mast);color:#fff;padding:10px 16px;border-radius:8px;z-index:60;font-size:14px;max-width:calc(100% - 32px)}
+.preview-banner{background:var(--warnbg);color:var(--warn);font-size:13px;text-align:center;padding:6px}
+footer{font-size:12px;color:var(--muted);text-align:center;padding-block:20px}
+footer button{background:none;border:0;color:var(--muted);text-decoration:underline}
+code{font-family:var(--f-mono);font-size:12.5px;background:var(--soft);padding:1px 5px;border-radius:4px;word-break:break-all}
+ol.guide li{margin-bottom:8px}
+</style>
+
+<div id="previewBanner" class="preview-banner" hidden>Teacher preview — all criteria are open on this device only. <button class="btn sm sec" id="endPreview">End preview</button></div>
+<header class="mast"><div class="wrap">
+  <div class="brand"><div class="mk">SISD</div><div>Design Studio<small>IB MYP Design · Digital Design &amp; IT</small></div></div>
+  <div class="sp"></div>
+  <div id="mastRight" class="row"></div>
+</div></header>
+<main class="wrap" id="app"></main>
+<footer class="wrap">Swiss International Scientific School Dubai · MYP Design · <button id="staffLink">Staff</button></footer>
+<div id="modalRoot"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+/*CONFIG-START*/
+const CONFIG = {
+  "adminPassword": "sisd2024",
+  "unlocks": {
+    "6": {"A": false, "B": false, "C": false, "D": false},
+    "7": {"A": false, "B": false, "C": false, "D": false},
+    "8": {"A": false, "B": false, "C": false, "D": false},
+    "10": {"A": false, "B": false, "C": false, "D": false}
+  },
+  "logForm": "",
+  "controlForm": "",
+  "controlCsv": "",
+  "videoLinks": {}
+};
+/*CONFIG-END*/
+</script>
+<script>
+/* ==========================================================
+   SISD MYP DESIGN STUDIO — COURSE CONTENT (Criteria A & B)
+   Tokens used in text: {client} {problem} {user} {product} {title}
+   ========================================================== */
+const COURSE = {
+  teachers: ["Mr. Ahmed", "Miss Abdelaziz", "Mr. French"],
+
+  /* ---------------- GRADES / UNITS ---------------- */
+  grades: {
+    "6": {
+      myp: 1,
+      unit: "City 2050: Smart Neighbourhoods",
+      sdg: "SDG 11 Sustainable Cities · SDG 9 Innovation",
+      product: "a smart-city information screen or app home screen",
+      ideaLabel: "screen or poster layout",
+      planLabel: "labelled layout drawing of your screen",
+      scenarios: [
+        { id: "park", title: "Cool Park", client: "the Al Barsha Residents' Committee", user: "families who use the neighbourhood park",
+          problem: "families avoid the local park in summer because it is too hot, there is not enough shade information and litter is left behind",
+          brief: "Design a smart information screen for the park entrance (or an app home screen) that shows shaded areas, water stations and recycling points, and encourages people to keep the park clean." },
+        { id: "water", title: "Water Wise Homes", client: "Dubai 2050 Sustainability Club", user: "families living in apartments",
+          problem: "families waste water at home without noticing — long showers, running taps and over-watering plants",
+          brief: "Design a smart home screen (or app home screen) that shows a family how much water they use each day and gives simple tips to save water." },
+        { id: "routes", title: "Safe Routes to School", client: "the school's Student Council", user: "students who walk or cycle to school",
+          problem: "students who walk or cycle to school feel unsafe at busy crossings and do not know the safest route",
+          brief: "Design a smart route screen (or app home screen) that shows safe walking and cycling routes, crossing points and live warnings." },
+        { id: "power", title: "Power Down School", client: "the school's Eco Committee", user: "students and teachers in classrooms",
+          problem: "classrooms waste electricity because lights, projectors and air-conditioning are left on in empty rooms",
+          brief: "Design a smart classroom screen (or app home screen) that shows how much energy each room uses and reminds people to switch off." }
+      ],
+      example: { title: "The Smart Bus Stop", client: "Seaview Town Council", user: "bus passengers, especially older people and young children",
+        problem: "passengers wait in strong sun for up to 20 minutes and do not know when the next bus will arrive" }
+    },
+    "7": {
+      myp: 2,
+      unit: "Hardware Helpers: Choosing the Right Computer",
+      sdg: "SDG 4 Quality Education · SDG 12 Responsible Consumption",
+      product: "an interactive digital buyer's guide",
+      ideaLabel: "guide layout (screen or page)",
+      planLabel: "storyboard of every screen in your guide",
+      scenarios: [
+        { id: "grandparent", title: "Video Calls for Grandad", client: "Mr. Faisal, a grandparent", user: "grandparents buying their first laptop",
+          problem: "grandparents want a laptop for video calls with family but do not understand terms like RAM, GB, GHz or webcam resolution",
+          brief: "Design an interactive buyer's guide that helps a grandparent choose a laptop for video calls, explaining each component in plain words." },
+        { id: "student", title: "Ready for Grade 6", client: "the Grade 5 parents' group", user: "students moving up to Grade 6 and their parents",
+          problem: "families buy devices for school that are too slow, too heavy or have batteries that do not last the school day",
+          brief: "Design an interactive buyer's guide that helps a family choose the right school laptop or tablet for MYP projects." },
+        { id: "gamer", title: "Budget Gamer", client: "Omar, a Grade 8 gamer", user: "teenage gamers with a limited budget",
+          problem: "young gamers waste money on computers with the wrong graphics card, too little RAM or poor cooling",
+          brief: "Design an interactive buyer's guide that helps a teenager choose computer parts for gaming on a budget." },
+        { id: "artist", title: "Digital Art Studio", client: "Ms. Lina, a digital art teacher", user: "art students who draw digitally",
+          problem: "art students choose devices with poor screens, slow processors or no stylus support, so drawing apps lag",
+          brief: "Design an interactive buyer's guide that helps art students choose a device for digital drawing and painting." }
+      ],
+      example: { title: "The Coach's Tablet", client: "Coach Sara, an under-12 football coach", user: "sports coaches with little technical knowledge",
+        problem: "coaches want a tablet to record and review training videos but shop websites use confusing terms like GB, GHz and mAh" }
+    },
+    "8": {
+      myp: 3,
+      unit: "Open for Business: Website Design",
+      sdg: "SDG 8 Decent Work & Economic Growth · SDG 9 Innovation",
+      product: "a multi-page website for a local business",
+      ideaLabel: "homepage layout",
+      planLabel: "site map and wireframe",
+      scenarios: [
+        { id: "bakery", title: "Crumbs & Co. Bakery", client: "Mrs. Hana, owner of Crumbs & Co. Bakery", user: "local families and office workers",
+          problem: "customers cannot see the daily menu or order cakes in advance, so the bakery loses custom orders to competitors",
+          brief: "Design a website for Crumbs & Co. that shows the daily menu and lets customers request celebration cakes." },
+        { id: "bikes", title: "Spoke Street Bike Repair", client: "Mr. Karim, owner of Spoke Street Bike Repair", user: "cyclists and parents of young riders",
+          problem: "customers cannot book repairs or check prices, so the shop is crowded at weekends and quiet during the week",
+          brief: "Design a website for Spoke Street that shows repair prices and lets customers book a time slot." },
+        { id: "plants", title: "Green Corner Nursery", client: "Ms. Aisha, owner of Green Corner Plant Nursery", user: "apartment owners who are new to plants",
+          problem: "customers buy plants but they die quickly because there is no care information for desert-climate homes",
+          brief: "Design a website for Green Corner that sells plants and gives care guides for hot, indoor environments." },
+        { id: "tutor", title: "Bright Minds Tutoring", client: "Mr. Rahul, director of Bright Minds Tutoring", user: "parents of students aged 10–16",
+          problem: "parents cannot see timetables, tutor profiles or fees, so they phone the centre repeatedly and some give up",
+          brief: "Design a website for Bright Minds that shows timetables, tutor profiles and fees, with an enquiry form." }
+      ],
+      example: { title: "Paws & Bubbles", client: "Layla, owner of Paws & Bubbles pet-grooming salon", user: "pet owners aged 25–50 who mostly use phones",
+        problem: "all bookings are taken by phone and the owner misses about 15 calls a week while she is grooming" }
+    },
+    "10": {
+      myp: 5,
+      unit: "Harvest Hub: Data Systems for Food Security",
+      sdg: "SDG 2 Zero Hunger · SDG 12 Responsible Consumption",
+      product: "a digital data system (data entry form, data structure and dashboard)",
+      ideaLabel: "system concept (form + data structure + dashboard)",
+      planLabel: "data structure, data flow diagram and dashboard layout",
+      scenarios: [
+        { id: "canteen", title: "Canteen Waste Tracker", client: "the school catering manager", user: "kitchen staff and the Eco Committee",
+          problem: "the canteen throws away large amounts of cooked food each day but nobody records what is wasted or why",
+          brief: "Design a data system that records daily food waste by dish, quantity and reason, and shows trends on a dashboard so menus can be adjusted." },
+        { id: "fridge", title: "Community Fridge Network", client: "a neighbourhood community-fridge volunteer group", user: "volunteers and donors",
+          problem: "donated food goes out of date in community fridges because nobody knows what is stored where or when it expires",
+          brief: "Design a data system that logs donations, expiry dates and fridge locations, and alerts volunteers before food expires." },
+        { id: "rooftop", title: "Rooftop Farm Harvests", client: "the manager of a rooftop urban farm", user: "farm staff and buyers",
+          problem: "the farm cannot predict harvests or match produce to orders, so some crops are wasted and some orders are short",
+          brief: "Design a data system that records planting, harvest weights and orders, and shows a dashboard comparing supply with demand." },
+        { id: "foodbank", title: "Food Bank Distribution", client: "the coordinator of a charity food bank", user: "volunteers and families who receive parcels",
+          problem: "the food bank uses paper lists, so some families receive two parcels while others are missed, and stock runs out without warning",
+          brief: "Design a data system that tracks registered families, parcel collections and stock levels, with a dashboard for the coordinator." }
+      ],
+      example: { title: "Library Equipment Loans", client: "Mrs. Khan, the school librarian", user: "students, teachers and the IT technician",
+        problem: "40 laptops, cameras and calculators are lent out using a paper sheet, and 6 items went missing last term" }
+    }
+  },
+
+  /* ---------------- CRITERIA ---------------- */
+  criteria: {
+    A: { name: "Inquiring and analysing", icon: "search",
+      intro: "In Criterion A you become a design detective. You find out what the problem really is, who has it, what research you need, and what already exists — before you design anything.",
+      strands: {
+        1: ["Explain and justify the need for a solution to a problem", "State and prioritise the main points of research needed", "Describe a range of existing products that inspire a solution", "Present the main findings of relevant research"],
+        2: ["Explain and justify the need for a solution to a problem for a target audience", "State and prioritise the primary and secondary research needed", "Describe and begin to analyse a range of existing products", "Present the main findings of research in a simple design brief"],
+        3: ["Explain and justify the need for a solution to a problem for a specified client or target audience", "Identify and prioritise the primary and secondary research needed", "Analyse a range of existing products that inspire a solution", "Develop a design brief which presents the analysis of relevant research"],
+        5: ["Explain and justify the need for a solution to a problem for a specified client or target audience", "Identify and prioritise the primary and secondary research needed to develop a solution", "Analyse a range of existing products that inspire a solution", "Develop a detailed design brief which summarises the analysis of relevant research"]
+      },
+      strandTips: [
+        "Say what the problem is, who has it and why it matters. Use evidence — a number, a quote or an observation.",
+        "List the questions you need to answer before designing, and put the most important first. Say why.",
+        "Look at products that already exist. Say what works, what does not, and what you will borrow.",
+        "Pull everything together: what did you find out, and what does it mean for your design?"
+      ]
+    },
+    B: { name: "Developing ideas", icon: "bulb",
+      intro: "In Criterion B you turn your research into ideas. You decide how you will judge success, sketch several different ideas, choose the best one and plan it in enough detail for someone else to make it.",
+      strands: {
+        1: ["Develop a list of success criteria for the solution", "Present feasible design ideas which can be correctly interpreted by others", "Present the chosen design", "Create a planning drawing or diagram which outlines the main details for making the chosen solution"],
+        2: ["Develop a list of success criteria (a simple design specification)", "Present a range of feasible design ideas which can be correctly interpreted by others", "Present the chosen design and outline the reasons for its selection", "Create planning drawings or diagrams and list the requirements for making the solution"],
+        3: ["Develop a design specification which outlines the success criteria for the design of a solution based on the data collected", "Present a range of feasible design ideas which can be correctly interpreted by others", "Present the chosen design and outline the reasons for its selection", "Develop accurate planning drawings or diagrams and outline requirements for the creation of the chosen solution"],
+        5: ["Develop a design specification which clearly states the success criteria for the design of a solution", "Develop a range of feasible design ideas which can be correctly interpreted by others", "Present the final chosen design and justify its selection", "Develop accurate and detailed planning drawings or diagrams and outline requirements for the creation of the chosen solution"]
+      },
+      strandTips: [
+        "Write success criteria you can test. 'Looks nice' cannot be tested; 'uses 3 colours or fewer' can.",
+        "Sketch ideas that are genuinely different, and label them so anyone could understand them.",
+        "Compare your ideas with your success criteria and pick the one that meets the most. Explain why.",
+        "Draw your chosen design in detail with labels, sizes and colours, and list everything needed to make it."
+      ]
+    },
+    C: { name: "Creating the solution", icon: "tools", comingSoon: true },
+    D: { name: "Evaluating", icon: "check", comingSoon: true }
+  },
+
+  /* ---------------- RUBRICS (student-friendly, by MYP year) ---------------- */
+  rubrics: {
+    A: {
+      1: [
+        ["1–2", "You <b>state</b> the need for a solution. You state one or two research points. You state one existing product. You state some research findings, with little detail."],
+        ["3–4", "You <b>outline</b> the need for a solution. You state some research points and begin to put them in order. You outline one or two existing products. You outline some main findings."],
+        ["5–6", "You <b>explain</b> the need for a solution. You state and prioritise the main research points. You describe a range of existing products that inspire you. You describe the main findings of your research."],
+        ["7–8", "You <b>explain and justify</b> the need for a solution, with evidence. You state and prioritise the main points of research and give reasons for the order. You describe a range of existing products in detail and say how each inspires you. You present the main findings of relevant research clearly."]
+      ],
+      2: [
+        ["1–2", "You <b>state</b> the need for a solution. You state a research point. You state an existing product. You state a research finding."],
+        ["3–4", "You <b>outline</b> the need for a solution for your target audience. You state some primary or secondary research points. You outline existing products. You outline some findings."],
+        ["5–6", "You <b>explain</b> the need for a solution for your target audience. You state and prioritise primary and secondary research. You describe existing products and begin to say why they succeed or fail. You present the main findings in a simple design brief."],
+        ["7–8", "You <b>explain and justify</b> the need for a solution for your target audience, with evidence. You state and prioritise primary and secondary research with reasons. You describe and begin to analyse a range of existing products, linking each to your design. You present the main findings of relevant research in a clear design brief."]
+      ],
+      3: [
+        ["1–2", "You <b>state</b> the need for a solution for a client. You state a research point. You list an existing product. You state some findings."],
+        ["3–4", "You <b>outline</b> the need for a solution for the client or target audience. You state some primary and secondary research needed. You outline a range of existing products. You outline a design brief."],
+        ["5–6", "You <b>explain</b> the need for a solution for the client or target audience. You identify and prioritise primary and secondary research. You describe and partly analyse a range of existing products. You develop a design brief that presents some analysis of research."],
+        ["7–8", "You <b>explain and justify</b> the need for a solution for a specified client or target audience. You identify and prioritise the primary and secondary research needed, with reasons. You analyse a range of existing products that inspire a solution. You develop a design brief which presents the analysis of relevant research."]
+      ],
+      5: [
+        ["1–2", "You <b>state</b> the need for a solution for a client. You state some research. You list an existing product. You state a basic design brief."],
+        ["3–4", "You <b>outline</b> the need for a solution for a specified client or target audience. You outline some primary and secondary research. You outline a range of existing products. You outline a basic design brief."],
+        ["5–6", "You <b>explain</b> the need for a solution for a specified client or target audience. You identify and prioritise the primary and secondary research needed. You describe and analyse a range of existing products. You develop a design brief which summarises the research."],
+        ["7–8", "You <b>explain and justify</b> the need for a solution for a specified client or target audience, using evidence. You identify and prioritise the primary and secondary research needed to develop a solution, justifying the order. You analyse a range of existing products in depth and draw clear implications for your design. You develop a detailed design brief which summarises the analysis of relevant research."]
+      ]
+    },
+    B: {
+      1: [
+        ["1–2", "You state one or two <b>success criteria</b>. You present one design idea that others may not fully understand. You present a chosen design. You create a basic planning drawing with few details."],
+        ["3–4", "You develop a few success criteria. You present one or two feasible ideas that others can understand. You present the chosen design. You create a planning drawing that shows some main details."],
+        ["5–6", "You develop a list of success criteria. You present feasible design ideas which others can correctly understand. You present the chosen design clearly. You create a planning drawing or diagram that shows the main details."],
+        ["7–8", "You develop a clear, testable list of success criteria. You present feasible design ideas with labels so others interpret them correctly. You present the chosen design and link it to your criteria. You create a planning drawing or diagram which outlines all the main details for making the solution."]
+      ],
+      2: [
+        ["1–2", "You state some success criteria. You present one idea. You present a chosen design. You create a basic planning drawing."],
+        ["3–4", "You develop some success criteria. You present a few ideas that others can mostly understand. You present the chosen design with a reason. You create a planning drawing and list some requirements."],
+        ["5–6", "You develop a simple design specification. You present a range of feasible ideas others can understand. You present the chosen design and outline reasons for choosing it. You create planning drawings and list the main requirements."],
+        ["7–8", "You develop a clear, testable design specification linked to your research. You present a range of genuinely different, feasible, well-labelled ideas. You present the chosen design and outline reasons using your specification. You create accurate planning drawings and list all requirements for making the solution."]
+      ],
+      3: [
+        ["1–2", "You list some basic success criteria. You present one design idea. You present the chosen design. You create a planning drawing or list some requirements."],
+        ["3–4", "You develop a few success criteria for a design specification. You present more than one feasible idea. You present the chosen design and outline a reason. You create planning drawings and outline some requirements."],
+        ["5–6", "You develop a design specification which outlines the success criteria. You present a range of feasible ideas which others can interpret. You present the chosen design and outline reasons for selecting it. You develop planning drawings and outline the requirements."],
+        ["7–8", "You develop a design specification which outlines the success criteria based on the data collected. You present a range of feasible design ideas which can be correctly interpreted by others. You present the chosen design and outline the reasons for its selection. You develop accurate planning drawings or diagrams and outline requirements for the creation of the chosen solution."]
+      ],
+      5: [
+        ["1–2", "You state basic success criteria. You present one design idea. You present a chosen design. You create incomplete planning drawings."],
+        ["3–4", "You outline a few success criteria. You present a few feasible ideas. You present the chosen design and outline reasons. You create planning drawings and outline some requirements."],
+        ["5–6", "You develop a design specification which states the success criteria. You develop a range of feasible ideas others can interpret. You present the chosen design and explain why it was selected. You develop accurate planning drawings and outline requirements."],
+        ["7–8", "You develop a design specification which clearly states measurable success criteria justified by research. You develop a range of feasible design ideas which can be correctly interpreted by others. You present the final chosen design and justify its selection fully against the specification. You develop accurate and detailed planning drawings or diagrams and outline all requirements for the creation of the chosen solution."]
+      ]
+    }
+  },
+
+  /* ---------------- METHOD (how to solve each strand) ---------------- */
+  method: {
+    A: [
+      { steps: ["Write one sentence that names the problem and who has it.", "Add evidence: a number, an observation or something a user told you.", "Explain the consequence: what happens if nobody solves it?", "Finish with why a designed solution is the right answer."],
+        starters: ["The problem is that…", "This affects… because…", "I know this because…", "If this is not solved…", "A solution is needed so that…"], senior: "MYP 3+: name a specific client and describe them. MYP 5: include more than one stakeholder and use quantitative evidence." },
+      { steps: ["Brainstorm every question you need answered before you can design.", "Remove questions that do not affect the design (for example your favourite colour).", "Label each question: primary (you collect it) or secondary (someone else published it).", "Number them in order of importance and give a reason for the top ones."],
+        starters: ["I need to find out…", "This matters because…", "I will find this out by…", "This is my top priority because…"], senior: "MYP 3+: choose a method and a named source for each question. MYP 5: justify the priority order in terms of risk to the design." },
+      { steps: ["Choose at least three existing products that solve a similar problem.", "For each, note who it is for and its key features.", "Analyse: why does each feature work or fail for its user?", "Write what you will borrow, improve or avoid in your own design."],
+        starters: ["This product is designed for…", "It works well because…", "A weakness is… which means…", "In my design I will…"], senior: "MYP 3+: compare products against each other, not just one by one. MYP 5: draw implications — each analysis should end with a design decision." },
+      { steps: ["Re-read all your research and highlight the three to five most important findings.", "Write each finding as a clear statement with evidence.", "Explain what each finding means for your design.", "Summarise everything in a design brief: problem, user, findings, goal."],
+        starters: ["My research shows that…", "This means my design must…", "Design brief: I am going to design… for… because…"], senior: "MYP 3+: include constraints (time, tools, budget). MYP 5: add ethical, privacy, accessibility and sustainability considerations." }
+    ],
+    B: [
+      { steps: ["Go back to your Criterion A findings.", "Turn each finding into a requirement your design must meet.", "Make every criterion testable — add a number, a check or a test.", "Group them under headings such as Function, Aesthetics, User, Accessibility."],
+        starters: ["My design will be successful if…", "I will test this by…", "This links to my research finding that…"], senior: "MYP 3+: link every specification point to research data. MYP 5: make every point measurable and justified." },
+      { steps: ["Sketch several ideas quickly before choosing any.", "Make each idea genuinely different — not the same layout in a new colour.", "Check each idea is feasible with your time, skills and tools.", "Annotate: label features, colours, sizes and how it works."],
+        starters: ["Idea 1 uses…", "This feature helps the user to…", "This label shows…"], senior: "MYP 3+: present at least three distinct ideas. MYP 5: show a wide range, including one that takes a risk." },
+      { steps: ["Compare each idea with your success criteria or specification.", "Count or score how well each idea meets them.", "Choose the strongest idea, or combine the best parts.", "Explain the reasons, using your criteria as evidence."],
+        starters: ["I chose idea… because…", "It meets… of my… criteria.", "Idea… was not chosen because…"], senior: "MYP 3+: use a comparison table. MYP 5: use a weighted decision matrix and justify the weights." },
+      { steps: ["Redraw the chosen idea neatly and in detail.", "Add labels, sizes or measurements, colours, fonts and materials.", "List everything needed to make it: software, tools, assets, time.", "Check: could another student build it from your plan alone?"],
+        starters: ["This section will be…", "Size / dimensions:", "I will need… to make…", "Step 1…"], senior: "MYP 3+: include accurate drawings such as wireframes or site maps. MYP 5: include detailed technical diagrams such as data structures and data flow." }
+    ]
+  },
+
+  /* ---------------- WORKED EXAMPLES (different scenario per grade) ---------------- */
+  examples: {
+    "6": {
+      A: [
+        `<p><b>The problem:</b> at the Seaview bus stop, passengers wait in strong sun for up to 20 minutes and do not know when the next bus will arrive. Older people and young children are affected most.</p><p><b>Why it needs solving:</b> standing in the heat can make people feel unwell, and when waiting is uncomfortable people choose cars instead of buses, which adds traffic and pollution to the city.</p>`,
+        `<table><tr><th>Research question</th><th>Why it matters</th><th>Priority</th></tr><tr><td>How hot does the stop get at midday?</td><td>Shows how serious the problem is</td><td>1</td></tr><tr><td>What do passengers want to know while waiting?</td><td>Tells me what information to show</td><td>2</td></tr><tr><td>How do other cities show bus times?</td><td>Gives me ideas</td><td>3</td></tr><tr><td>Which colours are easy to read in bright sun?</td><td>Helps people read the screen</td><td>4</td></tr></table><p class="note">Heat is first because it affects people's health.</p>`,
+        `<table><tr><th>Product</th><th>What it does</th><th>What I like</th><th>What I would change</th></tr><tr><td>Air-conditioned bus shelters in Dubai</td><td>Gives passengers a cool place to wait</td><td>Protects people from heat</td><td>Use solar power to save energy</td></tr><tr><td>Countdown signs at bus stops</td><td>Shows minutes until the next bus</td><td>Simple and quick to read</td><td>Brighter screen for strong sunlight</td></tr><tr><td>A bus-tracking app</td><td>Shows buses moving on a map</td><td>Always in your pocket</td><td>Not everyone has a phone</td></tr></table>`,
+        `<p><b>Main findings:</b> (1) shade and cool air matter most to passengers; (2) people want to know exactly when the bus will come; (3) screens need high contrast to be read in sunlight.</p><p><b>What this means:</b> my smart bus-stop screen should show live arrival times in large, high-contrast numbers and point people to the shaded seats.</p>`
+      ],
+      B: [
+        `<table><tr><th>My design is successful if…</th><th>How I will test it</th></tr><tr><td>The arrival time can be read from 2 metres away</td><td>Three classmates read it from 2 m</td></tr><tr><td>It uses no more than 3 colours</td><td>I count the colours</td></tr><tr><td>It shows where the shade is</td><td>A tester finds the shade in 5 seconds</td></tr><tr><td>Every piece of information has an icon</td><td>I check each section</td></tr><tr><td>Older people can read the text</td><td>I ask an adult to read it</td></tr></table>`,
+        `<p><b>Idea 1 (sketch):</b> a big screen with a huge countdown number in the centre and a small shade map underneath. Labels: "big number = minutes until bus", "green = shaded seat".</p><p><b>Idea 2 (sketch):</b> a phone-app home screen with a bus icon moving along a route line and a "Find a cool spot" button.</p>`,
+        `<p>I chose <b>Idea 1</b> because it meets all 5 of my success criteria. It works for passengers without phones, and the large number can be read from 2 metres. Idea 2 only helps people who have the app.</p>`,
+        `<p><b>Planning drawing (labelled):</b> title bar at the top in navy with "Seaview Stop"; countdown box in the centre with white numbers; shade map bottom-left; next three buses bottom-right.</p><p><b>What I need:</b> Canva for the layout, free icons, screen size 1920 × 1080 pixels, two lessons.</p>`
+      ]
+    },
+    "7": {
+      A: [
+        `<p><b>The problem:</b> Coach Sara runs an under-12 football club. She wants to record training and show players their mistakes, but shop websites use confusing terms such as GB, GHz and mAh, so she does not know which tablet to buy.</p><p><b>Target audience:</b> sports coaches with little technical knowledge.</p><p><b>Why it matters:</b> a wrong choice wastes money — with too little storage, videos cannot be saved. A clear guide would let coaches decide in minutes.</p>`,
+        `<table><tr><th>Research question</th><th>Primary / secondary</th><th>How</th><th>Priority</th></tr><tr><td>How long does the coach record each session?</td><td>Primary</td><td>Interview</td><td>1</td></tr><tr><td>How much storage does 1 hour of HD video need?</td><td>Secondary</td><td>Manufacturer websites</td><td>2</td></tr><tr><td>Which battery lasts a 2-hour session?</td><td>Secondary</td><td>Product reviews</td><td>3</td></tr><tr><td>Which words confuse coaches?</td><td>Primary</td><td>Survey of 5 coaches</td><td>4</td></tr></table><p class="note">Recording time is first because it decides the storage and battery she needs.</p>`,
+        `<table><tr><th>Existing guide</th><th>Strengths</th><th>Weaknesses</th><th>Idea I can use</th></tr><tr><td>An electronics shop's comparison page</td><td>Filters by price</td><td>Full of technical terms</td><td>Use filters, but explain every term</td></tr><tr><td>A "which tablet?" video review</td><td>Shows real use</td><td>15 minutes long</td><td>Keep my guide short</td></tr><tr><td>A manufacturer's comparison chart</td><td>Side-by-side specs</td><td>Only one brand</td><td>Compare several brands</td></tr></table>`,
+        `<p><b>Findings:</b> the coach records about 2 hours per session; 1 hour of HD video uses roughly 8 GB; she needs a battery that lasts more than 3 hours; coaches did not understand "GHz" or "mAh".</p><p><b>Design brief:</b> I am going to design an interactive buyer's guide for sports coaches because they need to choose a tablet quickly without technical knowledge. It will explain storage, battery, screen and processor in plain words.</p>`
+      ],
+      B: [
+        `<table><tr><th>Area</th><th>Success criterion</th><th>Test</th></tr><tr><td>Look</td><td>An icon beside every hardware term</td><td>Check each term</td></tr><tr><td>Function</td><td>The user answers 3 questions and gets a recommendation</td><td>A tester finishes in under 2 minutes</td></tr><tr><td>User</td><td>Every confusing word from my survey is explained</td><td>The coach reads it and confirms</td></tr><tr><td>Content</td><td>Covers storage, battery, screen and processor</td><td>Checklist</td></tr><tr><td>Accessibility</td><td>Body text at least 18 pt</td><td>Measure the text</td></tr></table>`,
+        `<p><b>Idea 1:</b> a quiz-style guide — three questions, then a result screen. <b>Idea 2:</b> a one-page infographic comparing three tablets. <b>Idea 3:</b> a slide-by-slide tour of each component. Each sketch is labelled with buttons, icons and colours.</p>`,
+        `<p>I chose <b>Idea 1</b> because it meets all 5 criteria: it gives a personal recommendation and takes under 2 minutes. Idea 2 was too crowded to read on a tablet, and Idea 3 was too long for a busy coach.</p>`,
+        `<p><b>Storyboard:</b> Screen 1 welcome → Screen 2 "How long do you record?" (3 buttons) → Screen 3 "What is your budget?" → Screen 4 result card explaining storage and battery → Screen 5 glossary of terms.</p><p><b>Requirements:</b> Google Slides with hyperlinked buttons, an icon set, three lessons. Step 1: build all screens; Step 2: add links; Step 3: test with a classmate.</p>`
+      ]
+    },
+    "8": {
+      A: [
+        `<p><b>The problem:</b> Paws & Bubbles takes every booking by phone. Layla, the owner, misses about 15 calls a week while she is grooming, and customers cannot see prices before they call.</p><p><b>Client and audience:</b> Layla (owner); pet owners aged 25–50 in the neighbourhood, most of whom browse on phones.</p><p><b>Justification:</b> each missed call is a lost booking. In my survey, 7 out of 10 pet owners said they would rather book online, and two nearby competitors already have booking websites.</p>`,
+        `<table><tr><th>Research question</th><th>Type</th><th>Method / source</th><th>Priority and reason</th></tr><tr><td>Which services and prices should the site show?</td><td>Primary</td><td>Interview with Layla</td><td>1 — the site cannot exist without this content</td></tr><tr><td>How do customers prefer to book?</td><td>Primary</td><td>Survey of 10 pet owners</td><td>2 — decides the booking feature</td></tr><tr><td>What do competitor sites offer?</td><td>Secondary</td><td>Two local groomer websites</td><td>3 — shows the minimum standard</td></tr><tr><td>What makes a site easy to use on a phone?</td><td>Secondary</td><td>Web design guidance articles</td><td>4 — most users are on phones</td></tr></table>`,
+        `<table><tr><th>Website</th><th>Audience</th><th>Strengths</th><th>Weaknesses</th><th>Inspiration</th></tr><tr><td>A national pet-store chain's grooming page</td><td>Busy pet owners</td><td>Online booking, clear price list</td><td>Cluttered with product adverts</td><td>A clear price table and a booking button</td></tr><tr><td>An independent groomer's site</td><td>Local customers</td><td>Friendly photos of real pets</td><td>No prices; breaks on phones</td><td>Real photos; must be responsive</td></tr><tr><td>A hair-salon booking site</td><td>Salon customers</td><td>Calendar booking and reminders</td><td>Not designed for pets</td><td>A simple time-slot calendar</td></tr></table><p class="note">Comparison: the chain is easiest to book but impersonal; the independent site feels friendly but is hard to use. My design should combine both.</p>`,
+        `<p><b>Design brief.</b> Client: Layla, Paws & Bubbles. Problem: missed bookings and hidden prices. Key findings: 7/10 owners prefer online booking; most use phones; competitors show prices and booking. Constraints: four lessons, a free website builder, Layla's own photos. Goal: a responsive four-page website with a clear price list and a booking request form.</p>`
+      ],
+      B: [
+        `<table><tr><th>Area</th><th>Specification point</th><th>Linked to research</th><th>Test</th></tr><tr><td>Function</td><td>A "Book now" button on every page</td><td>7/10 prefer online booking</td><td>Check each page</td></tr><tr><td>Function</td><td>The booking form sends to Layla's email</td><td>Interview</td><td>Submit a test booking</td></tr><tr><td>Content</td><td>Full price list on the Services page</td><td>Competitor analysis</td><td>Compare with Layla's list</td></tr><tr><td>User</td><td>Works on a 375-pixel-wide phone screen</td><td>Most users are on phones</td><td>Test on a phone</td></tr><tr><td>Aesthetics</td><td>Uses the salon's teal and white colours</td><td>Interview</td><td>Colour check</td></tr><tr><td>Accessibility</td><td>Every image has alt text</td><td>Web guidance</td><td>Inspect each image</td></tr></table>`,
+        `<p><b>Idea 1:</b> a full-width photo hero with a "Book now" button. <b>Idea 2:</b> a split homepage — price list on the left, booking calendar on the right. <b>Idea 3:</b> a card grid of services, each with its own booking button. Each wireframe is annotated with sizes, colours and fonts.</p>`,
+        `<table><tr><th>Idea</th><th>Meets spec?</th><th>Strength</th><th>Weakness</th></tr><tr><td>1</td><td>5/6</td><td>Friendly and simple</td><td>Prices are one click away</td></tr><tr><td>2</td><td>4/6</td><td>Everything on one screen</td><td>Too cramped on phones</td></tr><tr><td>3</td><td>6/6</td><td>Prices and booking together</td><td>More pages to build</td></tr></table><p>I chose <b>Idea 3</b> because it meets all six specification points and works well on phones.</p>`,
+        `<p><b>Site map:</b> Home → Services and prices → Book → About us → Contact.</p><p><b>Wireframe:</b> navigation bar (logo left, menu right, 80 px high); service cards in 3 columns on a laptop and 1 column on a phone; footer with opening hours.</p><p><b>Requirements:</b> Google Sites, the Poppins font, teal #1A9E9A, 8 photos from Layla, 4 lessons.</p>`
+      ]
+    },
+    "10": {
+      A: [
+        `<p><b>The problem:</b> the library lends about 40 laptops, cameras and graphing calculators using a paper sign-out sheet. Last term 6 items went missing (worth about AED 9,000), and Mrs. Khan spends around 30 minutes a day chasing late returns.</p><p><b>Client and stakeholders:</b> Mrs. Khan (librarian); students and teachers who borrow; the IT technician who maintains devices; the finance office that replaces losses.</p><p><b>Justification:</b> losses cost money, chasing wastes staff time, and students cannot see whether equipment is available. Paper records cannot show patterns such as which items are most often late, so a digital system with accurate, secure data is needed.</p>`,
+        `<table><tr><th>Research question</th><th>Type</th><th>Method &amp; source</th><th>Priority</th><th>Justification</th></tr><tr><td>What data must be recorded for each loan?</td><td>Primary</td><td>Interview with Mrs. Khan</td><td>1</td><td>Defines the whole data structure</td></tr><tr><td>Who needs to see which data?</td><td>Primary</td><td>Interviews with stakeholders</td><td>2</td><td>Decides privacy and access</td></tr><tr><td>What loan rules apply?</td><td>Primary</td><td>Library policy document</td><td>3</td><td>Validation rules</td></tr><tr><td>How do existing loan systems work?</td><td>Secondary</td><td>Product websites, demos</td><td>4</td><td>Avoid reinventing features</td></tr><tr><td>What does data-protection law require for student data?</td><td>Secondary</td><td>UAE data-protection guidance</td><td>5</td><td>Legal constraint</td></tr></table><p class="note">Reflection: question 1 comes first because every later decision depends on the fields being right.</p>`,
+        `<table><tr><th>System</th><th>Who uses it</th><th>Key features</th><th>Strengths</th><th>Limitations</th><th>Implication</th></tr><tr><td>A commercial library management system</td><td>Large libraries</td><td>Barcode scanning, overdue emails</td><td>Automated and reliable</td><td>Expensive; built for books</td><td>Include automatic overdue alerts</td></tr><tr><td>A spreadsheet loan template</td><td>Small teams</td><td>Simple table and filters</td><td>Free and easy to edit</td><td>No validation; easy to overwrite</td><td>Add an input form with validation</td></tr><tr><td>Self-checkout in a supermarket</td><td>Shoppers</td><td>Scan, confirm, receipt</td><td>Very fast</td><td>Needs dedicated hardware</td><td>Use QR codes scanned by phone</td></tr></table><p>Analysis: the strongest systems separate data entry from data storage and use automation for reminders. Free tools lack validation, which causes the errors seen on the paper sheet.</p>`,
+        `<p><b>Detailed design brief.</b> Context: a secondary-school library lending 40 high-value items. Analysis: losses come from missing return dates and unreadable handwriting; stakeholders need different views; automated reminders reduce chasing. Constraints: free school software only, built in 5 lessons, student data visible only to library staff. Goal: a data system with a validated loan form, linked Items/Borrowers/Loans tables and a dashboard of current and overdue loans.</p>`
+      ],
+      B: [
+        `<table><tr><th>Area</th><th>Specification point</th><th>Justification</th><th>Measurable test</th></tr><tr><td>Data</td><td>Each loan stores item ID, borrower ID, loan date and due date</td><td>Interview</td><td>Inspect the Loans table</td></tr><tr><td>Validation</td><td>Item ID must exist in the Items table</td><td>Paper-sheet errors</td><td>Enter a false ID — it is rejected</td></tr><tr><td>Automation</td><td>Due date = loan date + 7 days</td><td>Library policy</td><td>Check 5 records</td></tr><tr><td>Output</td><td>Dashboard shows overdue items in red</td><td>Reduce chasing time</td><td>Overdue test record shows in red</td></tr><tr><td>Privacy</td><td>Only staff accounts can view borrower details</td><td>Data-protection law</td><td>Log in as a student — no access</td></tr><tr><td>Usability</td><td>A loan is recorded in under 30 seconds</td><td>Librarian workload</td><td>Time three loans</td></tr></table>`,
+        `<p><b>Idea 1:</b> an online form feeding a spreadsheet, with a chart dashboard. <b>Idea 2:</b> a relational database with separate forms and a report view. <b>Idea 3:</b> QR stickers on every item; scanning opens a pre-filled form linked to a dashboard. Each concept is annotated with data flow, users and tools.</p>`,
+        `<table><tr><th>Criterion</th><th>Weight</th><th>Idea 1</th><th>Idea 2</th><th>Idea 3</th></tr><tr><td>Validation</td><td>3</td><td>2</td><td>5</td><td>4</td></tr><tr><td>Speed of loan</td><td>3</td><td>3</td><td>3</td><td>5</td></tr><tr><td>Privacy</td><td>2</td><td>3</td><td>5</td><td>4</td></tr><tr><td>Feasibility</td><td>2</td><td>5</td><td>3</td><td>4</td></tr><tr><td><b>Total</b></td><td></td><td>31</td><td>40</td><td><b>45</b></td></tr></table><p>I chose <b>Idea 3</b>. It scores highest on the weighted matrix, mainly because QR scanning meets the 30-second target and removes typing errors. I will add Idea 2's linked-table structure to improve validation.</p>`,
+        `<p><b>Data structure:</b> Items(ItemID PK, Type, Serial, Status) · Borrowers(BorrowerID PK, Name, Role, Email) · Loans(LoanID PK, ItemID FK, BorrowerID FK, LoanDate, DueDate, Returned Y/N).</p><p><b>Data flow:</b> scan QR → pre-filled form → Loans table → dashboard and overdue email.</p><p><b>Requirements:</b> school Google/Microsoft account, a QR generator, printed labels, 5 lessons; a test plan of 10 records.</p>`
+      ]
+    }
+  },
+
+  /* ---------------- EXERCISE QUESTION BANKS ---------------- */
+  exercises: {
+    A: [
+      { y: 1, type: "mcq", q: "Which is the best problem statement?", o: ["I want to make an app.", "Grade 6 students forget homework because they have no simple way to check tasks at home.", "Apps are cool.", "Phones are useful for everything."], a: 1, h: "A good problem statement says WHO has the problem and WHAT the problem is.", w: "It names the people affected and the exact problem." },
+      { y: 1, type: "mcq", q: "What does 'justify the need' mean?", o: ["Draw the product", "Give reasons and evidence for why the problem matters", "List the materials", "Choose a colour scheme"], a: 1, h: "Justify = give reasons, ideally with evidence.", w: "Justifying means proving the problem is worth solving." },
+      { y: 1, type: "mcq", q: "A target audience is…", o: ["everyone in the world", "the specific group of people your solution is designed for", "your teacher", "the people who make the product"], a: 1, h: "Think: who will actually USE your design?", w: "Designers design for a specific group." },
+      { y: 1, type: "order", q: "Put the MYP design cycle in order.", items: ["Inquiring and analysing", "Developing ideas", "Creating the solution", "Evaluating"], h: "You research before you design, and test at the end.", w: "A → B → C → D." },
+      { y: 1, type: "classify", q: "Sort these research questions into Strong or Weak.", cats: ["Strong", "Weak"], items: [["What features do our users use most?", 0], ["Is design fun?", 1], ["What budget does the client have?", 0], ["What is my favourite colour?", 1], ["What do similar products do badly?", 0]], h: "A strong question changes what you design.", w: "Strong questions affect design decisions." },
+      { y: 1, type: "mcq", q: "Which is the most useful description of an existing product?", o: ["It's good.", "It's blue and nice.", "Its large buttons make it easy for older users, but it does not work offline, so my design should work without Wi-Fi.", "I don't like it."], a: 2, h: "Look for a strength, a weakness AND what it means for YOUR design.", w: "It links the product to a design decision." },
+      { y: 2, type: "classify", q: "Sort these into Primary or Secondary research.", cats: ["Primary", "Secondary"], items: [["Interviewing your client", 0], ["Reading a government report", 1], ["Surveying 10 users", 0], ["Watching a product review video", 1], ["Testing an existing product yourself", 0], ["Reading statistics on a website", 1]], h: "Primary = YOU collect it first-hand. Secondary = someone else already published it.", w: "Primary is first-hand; secondary is already published." },
+      { y: 2, type: "mcq", q: "Which is a secondary research method?", o: ["Interviewing a user", "Running a survey", "Observing people using a product", "Reading an online review article"], a: 3, h: "Which one did someone else already write?", w: "Reading published material is secondary research." },
+      { y: 3, type: "mcq", q: "Why do designers prioritise their research?", o: ["To make the list look longer", "To spend time first on the questions that most affect the design", "Because the teacher says so", "To avoid doing primary research"], a: 1, h: "Time is limited — what should come first?", w: "Priorities focus effort where it matters most." },
+      { y: 3, type: "mcq", q: "What belongs in a design brief?", o: ["Only a sketch", "A summary of the problem, the client or audience and the key research findings", "The final product photo", "A list of your favourite websites"], a: 1, h: "A brief summarises everything Criterion A found out.", w: "The brief bridges research and design." },
+      { y: 3, type: "mcq", q: "'Analyse' an existing product means…", o: ["describe its colour", "break it down to explain why its features work or fail for its users", "copy it", "say whether you like it"], a: 1, h: "Analysis explains WHY, not just WHAT.", w: "Analysis looks at reasons and effects." },
+      { y: 5, type: "mcq", q: "Which secondary source is most reliable for statistics?", o: ["An anonymous blog", "A recent report from a government or UN agency", "A social media comment", "An advertisement"], a: 1, h: "Who has the authority and the data?", w: "Official recent reports are the most reliable." },
+      { y: 5, type: "mcq", q: "Which statement is an ethical consideration for a design brief?", o: ["The dashboard will be blue", "Users' personal data will be stored securely and seen only by staff who need it", "The system will have 5 tables", "It will be finished in 5 lessons"], a: 1, h: "Ethics is about doing right by the people affected.", w: "Data privacy is an ethical consideration." },
+      { y: 5, type: "mcq", q: "Which is QUANTITATIVE evidence of a need?", o: ["Staff said it is annoying", "6 items were lost last term, costing AED 9,000", "It seems like a problem", "Everyone knows it's bad"], a: 1, h: "Quantitative = numbers.", w: "Numbers make a stronger justification." }
+    ],
+    B: [
+      { y: 1, type: "mcq", q: "A good success criterion is…", o: ["It looks nice", "Something you can check or test, such as 'text can be read from 2 metres'", "It is the best", "Everyone will love it"], a: 1, h: "Could you prove it with a test?", w: "Success criteria must be testable." },
+      { y: 1, type: "classify", q: "Sort these into Testable or Not testable.", cats: ["Testable", "Not testable"], items: [["Looks nice", 1], ["Loads in under 3 seconds", 0], ["Uses 3 colours or fewer", 0], ["Is amazing", 1], ["Fits a phone screen 375 px wide", 0]], h: "Testable criteria have a number or a clear check.", w: "Numbers and checks make criteria testable." },
+      { y: 1, type: "mcq", q: "What makes a design idea 'feasible'?", o: ["It is the most expensive", "It can actually be made with the time, skills, tools and budget available", "It is very original", "It has the most colours"], a: 1, h: "Feasible = possible to make.", w: "Feasibility means it can really be built." },
+      { y: 1, type: "mcq", q: "Why do we annotate design sketches?", o: ["To fill space", "So others can correctly understand features, sizes, colours and how it works", "To make them colourful", "Because sketches are hard to see"], a: 1, h: "Ideas must be 'correctly interpreted by others'.", w: "Annotations explain the idea to others." },
+      { y: 1, type: "mcq", q: "A planning drawing should include…", o: ["only a title", "labels, sizes, colours or materials and the main details", "a photo of the finished product", "your name only"], a: 1, h: "Could someone else make it from your drawing?", w: "Planning drawings carry the details for making." },
+      { y: 2, type: "mcq", q: "What is the best way to choose your final design?", o: ["Pick your favourite", "Compare each idea against your success criteria", "Pick the first one you drew", "Ask a friend to choose"], a: 1, h: "Use the criteria you already wrote.", w: "Criteria make the choice objective." },
+      { y: 2, type: "mcq", q: "A 'range' of design ideas means…", o: ["the same idea in three colours", "several ideas that are genuinely different from each other", "one very detailed idea", "ideas copied from the internet"], a: 1, h: "Different layouts, approaches or features.", w: "A range shows genuinely different thinking." },
+      { y: 3, type: "order", q: "Put the steps of Criterion B in order.", items: ["Write the design specification", "Sketch a range of ideas", "Compare ideas against the specification", "Choose and justify the final design", "Create detailed planning drawings"], h: "You need criteria before you can judge ideas.", w: "Specification → ideas → compare → choose → plan." },
+      { y: 3, type: "mcq", q: "A design specification should be linked to…", o: ["your favourite products", "your research findings from Criterion A", "what is easiest", "the last project you did"], a: 1, h: "The specification is 'based on the data collected'.", w: "Research data drives the specification." },
+      { y: 3, type: "classify", q: "Sort these specification points into Aesthetics or Function.", cats: ["Aesthetics", "Function"], items: [["Uses brand colours navy and gold", 0], ["A booking button on every page", 1], ["Rounded, friendly font", 0], ["Contact form sends to the owner's email", 1], ["Photos of real customers on the homepage", 0], ["Loads correctly on mobile", 1]], h: "Aesthetics = how it looks. Function = what it does.", w: "Look vs work." },
+      { y: 5, type: "mcq", q: "In a weighted decision matrix, the weight shows…", o: ["how heavy the product is", "how important each criterion is compared with the others", "the number of ideas", "the final score"], a: 1, h: "Not all criteria matter equally.", w: "Weights reflect importance." },
+      { y: 5, type: "mcq", q: "Which requirement is detailed enough for someone else to build from?", o: ["Make a table for loans", "Loans table: LoanID (auto number), ItemID (text, must exist in Items), DueDate (date = loan date + 7)", "Store the data somewhere", "Use a database"], a: 1, h: "Look for names, data types and rules.", w: "Detail = names, types and validation." }
+    ]
+  },
+  gradeExercises: {
+    "6": {
+      A: [
+        { type: "mcq", q: "Which is a smart-city problem worth designing for?", o: ["Buildings are tall", "People waste water at home because they cannot see how much they use", "The sky is blue", "Cars have four wheels"], a: 1, h: "A problem affects people and can be improved by design.", w: "It is a real problem with a clear user." },
+        { type: "mcq", q: "Which research question is MOST important for a park-shade screen?", o: ["What colour are the benches?", "Where are the shaded areas and when are they in shade?", "How old is the park?", "Who designed the park?"], a: 1, h: "Which answer changes what your screen shows?", w: "Shade information is the core of the design." },
+        { type: "mcq", q: "Which SDG is about sustainable cities and communities?", o: ["SDG 2", "SDG 4", "SDG 11", "SDG 14"], a: 2, h: "It is the number of your unit's main SDG.", w: "SDG 11 = Sustainable Cities and Communities." }
+      ],
+      B: [
+        { type: "mcq", q: "Which success criterion is testable for a smart screen?", o: ["It is cool", "The main message can be read in 5 seconds", "People like it", "It is modern"], a: 1, h: "Look for a number.", w: "5 seconds can be timed." },
+        { type: "mcq", q: "Icons on a smart-city screen help because…", o: ["they look decorative", "people can understand information quickly, even if they don't read the language", "they make the screen slower", "they replace all text"], a: 1, h: "Think about people in a busy city.", w: "Icons are fast and universal." },
+        { type: "mcq", q: "Which tool could you use to create your screen layout?", o: ["A calculator", "Canva or Google Slides", "A microwave", "A spreadsheet of numbers only"], a: 1, h: "You need a layout tool.", w: "Canva/Slides are layout tools." }
+      ]
+    },
+    "7": {
+      A: [
+        { type: "mcq", q: "Storage space on a device is measured in…", o: ["GHz", "GB or TB", "mAh", "Pixels"], a: 1, h: "Gigabytes…", w: "GB/TB measure storage." },
+        { type: "mcq", q: "What does RAM do?", o: ["Stores files permanently", "Holds the data and programs the computer is using right now", "Charges the battery", "Displays the picture"], a: 1, h: "Short-term working memory.", w: "RAM is working memory." },
+        { type: "mcq", q: "Battery capacity is measured in…", o: ["mAh or Wh", "GB", "GHz", "dpi"], a: 0, h: "milliamp-hours…", w: "mAh/Wh measure battery capacity." }
+      ],
+      B: [
+        { type: "mcq", q: "Which success criterion suits a buyer's guide?", o: ["It is fun", "A user gets a recommendation in under 2 minutes", "It has pictures", "It is the best guide"], a: 1, h: "Can you time it?", w: "Timed tasks are testable." },
+        { type: "mcq", q: "A storyboard shows…", o: ["the price of the product", "each screen of your guide in order and how they link", "only the final screen", "the hardware inside a computer"], a: 1, h: "Like a comic strip of your guide.", w: "Storyboards show sequence and links." },
+        { type: "mcq", q: "How can you make Google Slides interactive?", o: ["Add hyperlinks from buttons to other slides", "Use bigger fonts", "Add more slides", "Print it"], a: 0, h: "Click a button, jump to a slide.", w: "Hyperlinks create navigation." }
+      ]
+    },
+    "8": {
+      A: [
+        { type: "mcq", q: "Which is PRIMARY research for a client website?", o: ["Reading a web-design blog", "Interviewing the business owner", "Watching a YouTube tutorial", "Reading a competitor's website"], a: 1, h: "First-hand from the source.", w: "Interviewing the client is primary." },
+        { type: "mcq", q: "A 'responsive' website…", o: ["replies to emails", "adjusts its layout to fit phones, tablets and laptops", "loads slowly", "only works on laptops"], a: 1, h: "Think about screen sizes.", w: "Responsive = adapts to screen size." },
+        { type: "mcq", q: "Which is the best analysis of a competitor's website?", o: ["It's nice.", "It has clear prices, but the booking button is hidden on phones, so mine will keep it visible.", "It's red.", "I would not visit it."], a: 1, h: "Strength + weakness + implication.", w: "It ends with a design decision." }
+      ],
+      B: [
+        { type: "mcq", q: "A site map shows…", o: ["where the business is located", "all the pages of a website and how they link", "the colours of the site", "the website's code"], a: 1, h: "A map of PAGES.", w: "Site maps show structure." },
+        { type: "mcq", q: "A wireframe is…", o: ["a finished, coloured web page", "a simple layout plan showing where content goes on a page", "the site's server", "a type of font"], a: 1, h: "The skeleton of a page.", w: "Wireframes plan layout." },
+        { type: "mcq", q: "Which website specification point is measurable?", o: ["The site feels modern", "Every page loads in under 3 seconds on a phone", "The client likes it", "It is user-friendly"], a: 1, h: "Look for a number.", w: "3 seconds can be measured." }
+      ]
+    },
+    "10": {
+      A: [
+        { type: "mcq", q: "A stakeholder is…", o: ["only the person who pays", "anyone affected by or involved in the system", "the programmer only", "a type of database"], a: 1, h: "Think wider than the client.", w: "Stakeholders include everyone affected." },
+        { type: "mcq", q: "Which is the most important privacy consideration for a food-bank system?", o: ["The dashboard colours", "Family names and addresses must be visible only to authorised staff", "The number of tables", "The font size"], a: 1, h: "Whose data is sensitive?", w: "Personal data must be protected." },
+        { type: "mcq", q: "Which research would best show how much food the canteen wastes?", o: ["Asking a friend", "Weighing and recording waste each day for two weeks", "Guessing", "Reading a recipe book"], a: 1, h: "Primary, quantitative, over time.", w: "Measured data over time is strongest." }
+      ],
+      B: [
+        { type: "mcq", q: "A primary key is…", o: ["the password to the database", "a field that uniquely identifies each record", "the first column, always named 'Key'", "a type of chart"], a: 1, h: "No two records share it.", w: "Primary keys are unique identifiers." },
+        { type: "mcq", q: "Which is a validation rule?", o: ["Make the header bold", "Quantity must be a whole number between 1 and 500", "Use a pie chart", "Save the file"], a: 1, h: "A rule that stops bad data getting in.", w: "Validation checks input." },
+        { type: "mcq", q: "The best data type for 'Expiry date' is…", o: ["Text", "Date", "Boolean (Yes/No)", "Currency"], a: 1, h: "So you can calculate and sort by it.", w: "Date type allows date calculations." }
+      ]
+    }
+  }
+};
+
+/* ---------------- MAIN TASK FIELDS BY MYP YEAR ----------------
+   type: text {min words} | table {cols, rows} | sketch
+-------------------------------------------------------------- */
+const TASK_FIELDS = {
+  A: {
+    1: [
+      [ { t: "text", id: "a1p", label: "Describe the problem: {problem}. Who has this problem?", min: 40 },
+        { t: "text", id: "a1j", label: "Why does this problem need solving? Give at least two reasons with evidence.", min: 40 } ],
+      [ { t: "table", id: "a2t", label: "Your research questions, in order of priority (1 = most important)", cols: ["Research question", "Why it matters", "Priority"], rows: 4 },
+        { t: "text", id: "a2r", label: "Why did you choose your number 1 priority?", min: 20 } ],
+      [ { t: "table", id: "a3t", label: "Describe at least three existing products that inspire you", cols: ["Product", "What it does", "What I like", "What I would change"], rows: 3 } ],
+      [ { t: "text", id: "a4f", label: "Main findings: what did your research tell you? List at least three findings.", min: 50 },
+        { t: "text", id: "a4m", label: "What do these findings mean for your design?", min: 30 } ]
+    ],
+    2: [
+      [ { t: "text", id: "a1p", label: "Describe the problem: {problem}.", min: 40 },
+        { t: "text", id: "a1u", label: "Describe your target audience ({user}). What do they need?", min: 30 },
+        { t: "text", id: "a1j", label: "Justify the need: why must this be solved? Use evidence.", min: 40 } ],
+      [ { t: "table", id: "a2t", label: "Research plan", cols: ["Research question", "Primary or secondary", "How I will find out", "Priority"], rows: 5 },
+        { t: "text", id: "a2r", label: "Explain the order of your top two priorities.", min: 30 } ],
+      [ { t: "table", id: "a3t", label: "Existing products", cols: ["Product", "Strengths", "Weaknesses", "Idea I can use"], rows: 3 },
+        { t: "text", id: "a3a", label: "Which product is most successful for its users, and why?", min: 40 } ],
+      [ { t: "text", id: "a4f", label: "Main research findings (at least four)", min: 60 },
+        { t: "text", id: "a4b", label: "Design brief: I am going to design… for… because… It will…", min: 40 } ]
+    ],
+    3: [
+      [ { t: "text", id: "a1p", label: "Problem statement: {problem}. Explain the problem in detail.", min: 60 },
+        { t: "text", id: "a1u", label: "Client and target audience: describe {client} and {user}.", min: 50 },
+        { t: "text", id: "a1j", label: "Justify the need using evidence (survey results, observations, numbers).", min: 60 } ],
+      [ { t: "table", id: "a2t", label: "Research plan", cols: ["Research question", "Primary / secondary", "Method and source", "Priority and reason"], rows: 6 } ],
+      [ { t: "table", id: "a3t", label: "Analysis of existing products", cols: ["Product", "Target audience", "Strengths", "Weaknesses", "Inspiration for my design"], rows: 3 },
+        { t: "text", id: "a3c", label: "Comparison: how do the products compare, and what will your design combine or improve?", min: 70 } ],
+      [ { t: "text", id: "a4s", label: "Design brief — summary of client, problem and context", min: 50 },
+        { t: "text", id: "a4f", label: "Design brief — analysis of key research findings", min: 80 },
+        { t: "text", id: "a4c", label: "Design brief — constraints (time, tools, budget, skills) and design goal", min: 40 } ]
+    ],
+    5: [
+      [ { t: "text", id: "a1p", label: "Problem statement with evidence: {problem}.", min: 80 },
+        { t: "text", id: "a1u", label: "Client profile and stakeholders ({client}; {user}). Who is affected and how?", min: 60 },
+        { t: "text", id: "a1j", label: "Justify the need: impact, scale, and the consequence if it is not solved.", min: 80 } ],
+      [ { t: "table", id: "a2t", label: "Research plan", cols: ["Research question", "Primary / secondary", "Method and source", "Priority", "Justification"], rows: 6 },
+        { t: "text", id: "a2r", label: "Reflection: justify your priority order in terms of risk to the design.", min: 50 } ],
+      [ { t: "table", id: "a3t", label: "Analysis of existing products or systems", cols: ["Product / system", "Users", "Key features", "Strengths", "Limitations", "Implication for my design"], rows: 3 },
+        { t: "text", id: "a3c", label: "Analytical summary: patterns across products and the design implications", min: 100 } ],
+      [ { t: "text", id: "a4s", label: "Detailed design brief — context and client", min: 60 },
+        { t: "text", id: "a4f", label: "Detailed design brief — analysis of relevant research", min: 120 },
+        { t: "text", id: "a4c", label: "Detailed design brief — constraints and considerations (ethical, data privacy, cost, accessibility, sustainability)", min: 60 },
+        { t: "text", id: "a4g", label: "Design goal statement", min: 30 } ]
+    ]
+  },
+  B: {
+    1: [
+      [ { t: "table", id: "b1t", label: "Success criteria for {product}", cols: ["My design is successful if…", "How I will test it"], rows: 5 } ],
+      [ { t: "sketch", id: "b2s1", label: "Design idea 1 — {ideaLabel}" },
+        { t: "text", id: "b2n1", label: "Explain idea 1 (labels: what each part does)", min: 20 },
+        { t: "sketch", id: "b2s2", label: "Design idea 2 — {ideaLabel}" },
+        { t: "text", id: "b2n2", label: "Explain idea 2", min: 20 } ],
+      [ { t: "text", id: "b3c", label: "My chosen design is idea… because… (use your success criteria)", min: 40 } ],
+      [ { t: "sketch", id: "b4s", label: "Planning drawing — {planLabel}" },
+        { t: "table", id: "b4t", label: "What I need to make it", cols: ["Software / tool / material", "What I will use it for"], rows: 4 } ]
+    ],
+    2: [
+      [ { t: "table", id: "b1t", label: "Design specification for {product}", cols: ["Area (look, function, user, content)", "Success criterion", "How I will test it"], rows: 6 } ],
+      [ { t: "sketch", id: "b2s1", label: "Design idea 1 — {ideaLabel}" }, { t: "text", id: "b2n1", label: "Annotations for idea 1", min: 25 },
+        { t: "sketch", id: "b2s2", label: "Design idea 2 — {ideaLabel}" }, { t: "text", id: "b2n2", label: "Annotations for idea 2", min: 25 },
+        { t: "sketch", id: "b2s3", label: "Design idea 3 — {ideaLabel}" }, { t: "text", id: "b2n3", label: "Annotations for idea 3", min: 25 } ],
+      [ { t: "table", id: "b3t", label: "Compare your ideas", cols: ["Idea", "Criteria met (out of 6)", "Main strength", "Main weakness"], rows: 3 },
+        { t: "text", id: "b3c", label: "Present your chosen design and outline the reasons for choosing it", min: 50 } ],
+      [ { t: "sketch", id: "b4s", label: "Planning drawing — {planLabel}" },
+        { t: "table", id: "b4t", label: "Requirements", cols: ["Requirement (software, assets, tools)", "Details"], rows: 5 },
+        { t: "text", id: "b4p", label: "Steps to make your solution", min: 40 } ]
+    ],
+    3: [
+      [ { t: "table", id: "b1t", label: "Design specification for {product}", cols: ["Area", "Specification point", "Linked to research finding", "Test"], rows: 8 } ],
+      [ { t: "sketch", id: "b2s1", label: "Design idea 1 — {ideaLabel}" }, { t: "text", id: "b2n1", label: "Annotations for idea 1", min: 30 },
+        { t: "sketch", id: "b2s2", label: "Design idea 2 — {ideaLabel}" }, { t: "text", id: "b2n2", label: "Annotations for idea 2", min: 30 },
+        { t: "sketch", id: "b2s3", label: "Design idea 3 — {ideaLabel}" }, { t: "text", id: "b2n3", label: "Annotations for idea 3", min: 30 } ],
+      [ { t: "table", id: "b3t", label: "Evaluate each idea against the specification", cols: ["Idea", "Specification points met", "Strength", "Weakness"], rows: 3 },
+        { t: "text", id: "b3c", label: "Present your chosen design and outline the reasons for its selection", min: 70 } ],
+      [ { t: "sketch", id: "b4s", label: "Accurate planning drawing — {planLabel}" },
+        { t: "table", id: "b4t", label: "Requirements for creating the solution", cols: ["Requirement", "Details (sizes, colours, fonts, software, assets, time)"], rows: 6 } ]
+    ],
+    5: [
+      [ { t: "table", id: "b1t", label: "Design specification for {product}", cols: ["Area", "Specification point", "Justification from research", "Measurable test"], rows: 10 } ],
+      [ { t: "sketch", id: "b2s1", label: "Design idea 1 — {ideaLabel}" }, { t: "text", id: "b2n1", label: "Annotations for idea 1", min: 40 },
+        { t: "sketch", id: "b2s2", label: "Design idea 2 — {ideaLabel}" }, { t: "text", id: "b2n2", label: "Annotations for idea 2", min: 40 },
+        { t: "sketch", id: "b2s3", label: "Design idea 3 — {ideaLabel}" }, { t: "text", id: "b2n3", label: "Annotations for idea 3", min: 40 } ],
+      [ { t: "table", id: "b3t", label: "Weighted decision matrix (score each idea 1–5)", cols: ["Criterion", "Weight (1–3)", "Idea 1", "Idea 2", "Idea 3"], rows: 6 },
+        { t: "text", id: "b3c", label: "Present the final chosen design and justify its selection against the specification", min: 120 } ],
+      [ { t: "sketch", id: "b4s1", label: "Detailed planning diagram 1 — data structure (tables, fields, data types, keys)" },
+        { t: "sketch", id: "b4s2", label: "Detailed planning diagram 2 — data flow, input form and dashboard layout" },
+        { t: "table", id: "b4t", label: "Requirements for creating the solution", cols: ["Requirement", "Specification / details"], rows: 8 },
+        { t: "text", id: "b4h", label: "How could another designer build your system from these plans?", min: 60 } ]
+    ]
+  }
+};
+
+</script>
+<script>
+(function(){
+"use strict";
+/* ================= UTILITIES ================= */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ROMAN = ["i","ii","iii","iv"];
+const LS_KEY = "sisdDesignStudio.v1";
+const words = s => (String(s||"").trim().match(/\S+/g) || []).length;
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const stripTags = s => String(s).replace(/<[^>]+>/g, "");
+
+function load(){ try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch(e){ return {}; } }
+let DB = load();
+DB.users = DB.users || {}; DB.queue = DB.queue || []; if (DB.voice === undefined) DB.voice = true;
+function save(){ try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch(e){ toast("Storage is full or blocked on this device — download your PDF to keep a copy."); } }
+
+function toast(msg, ms=3200){ const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(()=>t.remove(), ms); }
+
+/* settings: baked CONFIG, overridden on the teacher's own device */
+function settings(){ return Object.assign({}, CONFIG, DB.teacherSettings || {}); }
+
+/* ================= SPEECH ================= */
+const CHEERS_RIGHT = ["Brilliant, well done!", "Yes! You've got it.", "Great thinking, keep going!", "That's exactly right!", "Superb — you're on a roll!", "I knew you could do it!"];
+const CHEERS_WRONG = ["So close! Read the explanation and try the next one.", "Not quite — you can do it!", "Good try. I believe in you!", "Keep going, you're learning!"];
+function speak(text, opts={}){
+  if (!DB.voice && !opts.force) return null;
+  try {
+    if (!("speechSynthesis" in window)) return null;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = opts.rate || 1; u.pitch = 1; u.lang = "en-GB";
+    const v = speechSynthesis.getVoices().find(v => /en-GB/i.test(v.lang)) || speechSynthesis.getVoices().find(v=>/^en/i.test(v.lang));
+    if (v) u.voice = v;
+    if (!opts.queue) speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+    return u;
+  } catch(e){ return null; }
+}
+
+/* ================= STATE ================= */
+let session = { email: null, preview: false };
+let LIVE = null; // unlocks fetched from Google Sheet
+function user(){ return session.email ? DB.users[session.email] : null; }
+function gradeData(g){ return COURSE.grades[g]; }
+function scenarioFor(email, g){ const sc = gradeData(g).scenarios; return sc[hash(email.toLowerCase()+"|"+g) % sc.length]; }
+function yearKey(myp){ return myp >= 5 ? 5 : myp; }
+function prog(u, c){ u.progress = u.progress || {}; u.progress[c] = u.progress[c] || { watched:false, seen:{}, ex:{correct:0, points:0, done:false, hints:0, attempts:0}, fields:{}, bands:{}, done:[false,false,false,false], finished:false }; return u.progress[c]; }
+function fill(str, g, sc){
+  const gd = gradeData(g);
+  return String(str).replace(/\{client\}/g, sc.client).replace(/\{problem\}/g, sc.problem).replace(/\{user\}/g, sc.user)
+    .replace(/\{product\}/g, gd.product).replace(/\{title\}/g, sc.title).replace(/\{ideaLabel\}/g, gd.ideaLabel).replace(/\{planLabel\}/g, gd.planLabel);
+}
+function unlocks(){
+  if (LIVE) return LIVE;
+  if (DB.teacherUnlocks) return DB.teacherUnlocks;
+  return CONFIG.unlocks;
+}
+function isOpen(g, c){
+  if (COURSE.criteria[c].comingSoon) return false;
+  if (session.preview) return true;
+  const u = unlocks(); return !!(u[g] && u[g][c]);
+}
+
+/* ================= GOOGLE FORM (private copy) ================= */
+function parseFormLink(link){
+  if (!link) return null;
+  const m = link.match(/docs\.google\.com\/forms\/(?:u\/\d+\/)?d\/(e\/)?([^/]+)\//);
+  if (!m) return null;
+  const action = `https://docs.google.com/forms/d/${m[1]||""}${m[2]}/formResponse`;
+  const entries = []; const re = /entry\.(\d+)=/g; let x; while ((x = re.exec(link))) entries.push("entry."+x[1]);
+  return entries.length ? { action, entries } : null;
+}
+async function postForm(link, values){
+  const f = parseFormLink(link); if (!f) return false;
+  const p = new URLSearchParams();
+  f.entries.forEach((e,i) => {
+    let v = values[i] ?? "";
+    if (i === f.entries.length-1 && values.length > f.entries.length) v = values.slice(i).join(" | ");
+    p.append(e, v);
+  });
+  try { await fetch(f.action, { method:"POST", mode:"no-cors", body:p }); return true; } catch(e){ return false; }
+}
+function logEvent(crit, event, details){
+  const u = user(); if (!u || session.preview) return;
+  const item = [session.email, u.name, "Grade " + u.grade, u.teacher, "Criterion " + crit, event, u.pin, details, new Date().toISOString()];
+  DB.queue.push(item); save(); flushQueue();
+}
+let flushing = false;
+async function flushQueue(){
+  const link = settings().logForm; if (!link || flushing || !DB.queue.length) return;
+  flushing = true;
+  while (DB.queue.length){
+    const ok = await postForm(link, DB.queue[0]);
+    if (!ok) break;
+    DB.queue.shift(); save();
+  }
+  flushing = false;
+}
+
+/* ================= LIVE TEACHER SWITCHES ================= */
+function parseCSV(text){
+  const rows = []; let row = [], cur = "", q = false;
+  for (let i=0;i<text.length;i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i+1] === '"'){ cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ","){ row.push(cur); cur = ""; }
+    else if (c === "\n"){ row.push(cur); rows.push(row); row = []; cur = ""; }
+    else if (c !== "\r") cur += c;
+  }
+  if (cur || row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+async function loadLive(){
+  const url = settings().controlCsv; if (!url) return;
+  try {
+    const r = await fetch(url + (url.includes("?") ? "&" : "?") + "cb=" + Date.now());
+    if (!r.ok) return;
+    const rows = parseCSV(await r.text());
+    for (let i=rows.length-1;i>0;i--){
+      const cell = rows[i].slice(1).find(v => v && v.trim().startsWith("{"));
+      if (cell){ const d = JSON.parse(cell); if (d.unlocks){ const changed = JSON.stringify(LIVE) !== JSON.stringify(d.unlocks); LIVE = d.unlocks; if (changed) render(); } return; }
+    }
+  } catch(e){ /* offline: keep baked switches */ }
+}
+
+/* ================= ICONS ================= */
+const ICON = {
+  search:`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`,
+  bulb:`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>`,
+  tools:`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>`,
+  lock:`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+  open:`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>`,
+  dl:`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16"/></svg>`,
+  voiceOn:`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>`,
+  voiceOff:`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4zM23 9l-6 6M17 9l6 6"/></svg>`
+};
+function cycleSVG(active, label){
+  const L = ["A","B","C","D"], pos = [[100,28],[172,100],[100,172],[28,100]];
+  return `<svg viewBox="0 0 200 200" aria-hidden="true">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="10"/>
+    <circle class="ring-arc" cx="100" cy="100" r="72" fill="none" stroke="#DC2B3E" stroke-width="10" stroke-linecap="round" transform="rotate(-90 100 100)" style="stroke-dasharray:${2*Math.PI*72};stroke-dashoffset:${2*Math.PI*72};--len:${2*Math.PI*72}"/>
+    ${L.map((l,i)=>`<g ${l===active?'class="pulse"':''}><circle cx="${pos[i][0]}" cy="${pos[i][1]}" r="22" fill="${l===active?'#DC2B3E':'#22375E'}" stroke="#fff" stroke-width="2"/><text x="${pos[i][0]}" y="${pos[i][1]+7}" text-anchor="middle" font-family="Arial Black,Arial" font-size="20" fill="#fff">${l}</text></g>`).join("")}
+    <text x="100" y="106" text-anchor="middle" font-family="Arial" font-size="13" fill="#D9E2F2">${esc(label||"")}</text></svg>`;
+}
+function badgeSVG(text, sub){
+  return `<svg viewBox="0 0 200 200" aria-hidden="true"><rect x="30" y="30" width="140" height="140" rx="22" fill="#22375E" stroke="rgba(255,255,255,.3)" stroke-width="2"/>
+    <rect class="pulse" x="48" y="48" width="104" height="104" rx="16" fill="#DC2B3E"/>
+    <text x="100" y="${sub?112:118}" text-anchor="middle" font-family="Arial Black,Arial" font-size="${text.length>3?28:46}" fill="#fff">${esc(text)}</text>
+    ${sub?`<text x="100" y="138" text-anchor="middle" font-family="Arial" font-size="12" fill="#FFE3E6">${esc(sub)}</text>`:""}</svg>`;
+}
+
+/* ================= MASTHEAD ================= */
+function renderMast(){
+  const u = user(); const r = $("#mastRight");
+  if (!u){ r.innerHTML = ""; return; }
+  const pts = Object.values(u.progress||{}).reduce((s,p)=>s+(p.ex?.points||0),0);
+  r.innerHTML = `<span class="chip pts" title="Practice points">★ ${pts} pts</span>
+    <button class="chip" id="voiceBtn" aria-pressed="${DB.voice}">${DB.voice?ICON.voiceOn:ICON.voiceOff} Voice</button>
+    <span class="chip">${esc(u.name)} · G${esc(u.grade)}</span>
+    <button class="chip" id="signOut">Sign out</button>`;
+  $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
+  $("#signOut").onclick = () => { session = { email:null, preview:false }; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} $("#previewBanner").hidden = true; render(); };
+}
+
+/* ================= ROUTER ================= */
+let view = { name:"home", crit:null, step:0, strand:0 };
+function go(v){ view = Object.assign({ name:"home", crit:null, step:0, strand:0 }, v); try{speechSynthesis.cancel()}catch(e){} stopVideo(); render(); window.scrollTo({top:0}); }
+function render(){
+  renderMast();
+  $("#previewBanner").hidden = !session.preview;
+  const app = $("#app");
+  if (!user()) return renderLogin(app);
+  if (view.name === "crit") return renderCrit(app);
+  return renderHome(app);
+}
+
+/* ================= LOGIN ================= */
+function renderLogin(app){
+  let mode = "in";
+  app.innerHTML = `<div class="login">
+    <section class="hero stack">
+      <div class="eyebrow">IB MYP Design · Grades 6, 7, 8 &amp; 10</div>
+      <h1>Think like a <em>designer.</em><br>Work like one too.</h1>
+      <p class="muted" style="max-width:52ch">Each criterion opens when your teacher switches it on. Watch the introduction, study a worked example, learn the method, check the rubric, pass the practice — then complete your own design task strand by strand and download it to hand in.</p>
+      <div class="cycle-legend">
+        <div><b>A</b>Inquiring &amp; analysing</div><div><b>B</b>Developing ideas</div>
+        <div><b>C</b>Creating the solution</div><div><b>D</b>Evaluating</div>
+      </div>
+    </section>
+    <section class="card stack" aria-label="Sign in">
+      <div class="tabs" role="tablist"><button role="tab" id="tIn" aria-selected="true">Sign in</button><button role="tab" id="tUp" aria-selected="false">Sign up</button></div>
+      <form id="lf" class="stack" novalidate>
+        <label class="f">School email<input type="email" id="lEmail" autocomplete="email" placeholder="firstname.lastname@sisd.ae" required></label>
+        <div id="upOnly" class="stack" hidden>
+          <label class="f">Full name<input type="text" id="lName" autocomplete="name" placeholder="First and last name"></label>
+          <div class="grid2">
+            <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.grades).map(g=>`<option value="${g}">Grade ${g} (MYP ${COURSE.grades[g].myp})</option>`).join("")}</select></label>
+            <label class="f">Teacher<select id="lTeacher"><option value="">Choose…</option>${COURSE.teachers.map(t=>`<option>${esc(t)}</option>`).join("")}</select></label>
+          </div>
+        </div>
+        <label class="f"><span id="pinLbl">4-digit PIN</span><input type="password" id="lPin" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="current-password"></label>
+        <div id="lMsg"></div>
+        <button class="btn" type="submit" id="lGo">Sign in</button>
+        <p class="muted" style="font-size:12px;margin:0">Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion.</p>
+      </form>
+    </section></div>`;
+  const setMode = m => { mode = m; $("#tIn").setAttribute("aria-selected", m==="in"); $("#tUp").setAttribute("aria-selected", m==="up"); $("#upOnly").hidden = m!=="up"; $("#lGo").textContent = m==="in"?"Sign in":"Create my account"; $("#pinLbl").textContent = m==="in"?"4-digit PIN":"Choose a 4-digit PIN (remember it!)"; $("#lMsg").innerHTML=""; };
+  $("#tIn").onclick = () => setMode("in"); $("#tUp").onclick = () => setMode("up");
+  $("#lf").onsubmit = e => {
+    e.preventDefault();
+    const email = $("#lEmail").value.trim().toLowerCase(), pin = $("#lPin").value.trim();
+    const msg = t => $("#lMsg").innerHTML = `<div class="notice bad">${t}</div>`;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg("Enter your full school email address.");
+    if (!/^\d{4}$/.test(pin)) return msg("Your PIN must be exactly 4 numbers.");
+    if (mode === "in"){
+      const u = DB.users[email];
+      if (!u) return msg("No account on this device for that email. Choose <b>Sign up</b> if this is your first time here.");
+      if (u.pin !== pin) return msg("That PIN does not match. Ask your teacher if you have forgotten it.");
+    } else {
+      const name = $("#lName").value.trim(), grade = $("#lGrade").value, teacher = $("#lTeacher").value;
+      if (DB.users[email]) return msg("This email already has an account on this device. Choose <b>Sign in</b>.");
+      if (name.split(/\s+/).length < 2) return msg("Enter your first and last name.");
+      if (!grade) return msg("Choose your grade."); if (!teacher) return msg("Choose your teacher.");
+      DB.users[email] = { name, grade, teacher, pin, created: new Date().toISOString(), progress:{} };
+      session.email = email; logEvent("-", "Signed up", `Scenario: ${scenarioFor(email, grade).title}`);
+    }
+    session.email = email; DB.session = email; save(); flushQueue();
+    speak(`Welcome, ${DB.users[email].name.split(" ")[0]}. Let's design something great.`);
+    go({ name:"home" });
+  };
+}
+
+/* ================= HOME ================= */
+function critProgress(p){ if (!p) return 0; let s = 0; if (p.watched) s++; ["ex","me","ru"].forEach(k=>{ if (p.seen?.[k]) s++; }); if (p.ex?.done) s++; s += p.done.filter(Boolean).length; return Math.round(s/9*100); }
+function renderHome(app){
+  const u = user(), g = u.grade, gd = gradeData(g), sc = scenarioFor(session.email, g);
+  app.innerHTML = `<div class="stack" style="gap:22px">
+    <div class="unitbar">
+      <div class="stack" style="gap:6px">
+        <div class="eyebrow">Grade ${g} · MYP Design Year ${gd.myp} · ${esc(gd.sdg)}</div>
+        <h1>${esc(gd.unit)}</h1>
+        <div class="brief"><div class="eyebrow" style="color:var(--muted)">Your design challenge</div>
+          <h3 style="margin:4px 0">${esc(sc.title)}</h3>
+          <p style="margin:0">${esc(sc.client)} needs your help: ${esc(sc.problem)}.</p>
+          <p style="margin:.5em 0 0" class="muted">${esc(sc.brief)}</p></div>
+        <p class="muted" style="font-size:12.5px;margin:4px 0 0">Students in your class have different challenges, so your work will be your own.</p>
+      </div>
+    </div>
+    <div class="crit-grid">${["A","B","C","D"].map(c => {
+      const cd = COURSE.criteria[c], open = isOpen(g,c), p = u.progress?.[c], pc = critProgress(p);
+      const state = cd.comingSoon ? `${ICON.lock} Coming soon` : open ? (p?.finished ? `${ICON.check} Finished — download any time` : `${ICON.open} Open · ${pc}% done`) : `${ICON.lock} Waiting for your teacher to switch this on`;
+      return `<${open?"button":"div"} class="crit ${open?"open":"locked"}" data-c="${c}" ${open?`aria-label="Open Criterion ${c}"`:""}>
+        <div class="row" style="justify-content:space-between"><span class="L">${c}</span><span class="muted">${ICON[cd.icon]}</span></div>
+        <h3>${esc(cd.name)}</h3>
+        ${open?`<div class="bar"><i style="width:${pc}%"></i></div>`:""}
+        <div class="state" style="color:${open?"var(--ok)":"var(--muted)"}">${state}</div>
+      </${open?"button":"div"}>`; }).join("")}</div>
+  </div>`;
+  app.querySelectorAll(".crit.open").forEach(b => b.onclick = () => go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }));
+}
+
+/* ================= CRITERION FLOW ================= */
+const STEPS = [
+  { k:"video", t:"Introduction", s:"Watch the video" },
+  { k:"ex",    t:"Worked example", s:"A different problem" },
+  { k:"me",    t:"How to solve it", s:"Method & starters" },
+  { k:"ru",    t:"Rubric", s:"How you're marked" },
+  { k:"prac",  t:"Practice", s:"Pass before the task" },
+  { k:"task",  t:"Your task", s:"Strands i–iv" },
+  { k:"sub",   t:"Download & hand in", s:"PDF + teacher copy" }
+];
+function stepDone(p, i){
+  switch(STEPS[i].k){ case "video": return p.watched; case "ex": return !!p.seen.ex; case "me": return !!p.seen.me; case "ru": return !!p.seen.ru;
+    case "prac": return p.ex.done; case "task": return p.done.every(Boolean); case "sub": return p.finished; }
+}
+function stepUnlocked(p, i){ for (let j=0;j<i;j++) if (!stepDone(p,j)) return false; return true; }
+function firstStep(c){ const p = prog(user(), c); for (let i=0;i<STEPS.length;i++) if (!stepDone(p,i)) return i; return STEPS.length-1; }
+
+function renderCrit(app){
+  const u = user(), c = view.crit, g = u.grade, gd = gradeData(g), cd = COURSE.criteria[c], p = prog(u,c), sc = scenarioFor(session.email, g);
+  if (!isOpen(g,c)) return go({ name:"home" });
+  if (!stepUnlocked(p, view.step)) view.step = firstStep(c);
+  app.innerHTML = `<div class="stack">
+    <div class="row" style="justify-content:space-between">
+      <button class="btn ghost sm" id="back">← All criteria</button>
+      <div class="muted" style="font-size:13px">Grade ${g} · MYP ${gd.myp} · ${esc(sc.title)}</div>
+    </div>
+    <div><div class="eyebrow">Criterion ${c}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.2vw,30px)">${esc(cd.name)}</h1></div>
+    <nav class="steps" aria-label="Steps">${STEPS.map((s,i)=>`<button class="step ${stepDone(p,i)?"done":""}" data-i="${i}" ${stepUnlocked(p,i)?"":"disabled"} aria-current="${view.step===i}"><span class="n">${i+1} / ${STEPS.length}</span><b>${s.t}</b><span class="muted">${s.s}</span></button>`).join("")}</nav>
+    <section class="pane" id="pane"></section></div>`;
+  $("#back").onclick = () => go({ name:"home" });
+  app.querySelectorAll(".step").forEach(b => b.onclick = () => { if (!b.disabled){ view.step = +b.dataset.i; stopVideo(); try{speechSynthesis.cancel()}catch(e){} render(); } });
+  const pane = $("#pane");
+  ({ video:paneVideo, ex:paneExample, me:paneMethod, ru:paneRubric, prac:panePractice, task:paneTask, sub:paneSubmit })[STEPS[view.step].k](pane, { u, c, g, gd, cd, p, sc });
+}
+function nextBtn(label, onClick){ return `<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="nextStep">${label} →</button></div>`; }
+function advance(ctx, key){ if (key) ctx.p.seen[key] = true; save(); view.step = Math.min(view.step+1, STEPS.length-1); render(); window.scrollTo({top:0, behavior:"smooth"}); }
+
+/* ---------- 1. VIDEO ---------- */
+let vid = null;
+function stopVideo(){ if (vid){ clearTimeout(vid.timer); vid.playing = false; vid = null; } }
+function buildScenes(ctx){
+  const { c, g, gd, cd, sc } = ctx, Y = yearKey(gd.myp), strands = cd.strands[Y], top = stripTags(COURSE.rubrics[c][Y][3][1]);
+  const sc_ = [
+    { k:"Criterion " + c, h: cd.name, p:`MYP Design Year ${gd.myp} · ${gd.unit}`, say:`Welcome to MYP Design, year ${gd.myp}. This is Criterion ${c}: ${cd.name}. Our unit is ${gd.unit}.`, art: cycleSVG(c, cd.name.split(" ")[0]) },
+    { k:"What this criterion is about", h: c==="A" ? "Find out before you design" : "Turn research into ideas", p: cd.intro, say: cd.intro, art: badgeSVG(c, cd.name.split(" ")[0]) },
+    { k:"Your design challenge", h: sc.title, p:`${sc.client} needs help: ${sc.problem}. ${sc.brief}`, say:`Your design challenge is called ${sc.title}. ${sc.client} needs help, because ${sc.problem}. ${sc.brief}`, art: badgeSVG("!", "your challenge") }
+  ];
+  strands.forEach((s,i) => sc_.push({ k:`Strand ${ROMAN[i]}`, h: s, p: cd.strandTips[i], say:`Strand ${ROMAN[i]}. ${s}. ${cd.strandTips[i]}`, art: badgeSVG(ROMAN[i], "strand") }));
+  sc_.push({ k:"How you're assessed", h:"Aim for 7–8", p: top, say:`You will be marked out of 8. To reach the top band, 7 to 8: ${top}`, art: badgeSVG("7–8", "top band") });
+  sc_.push({ k:"Your route", h:"What happens next", p:"Study the worked example — it uses a different problem, so you learn the method without copying. Read the method and the rubric, pass the practice, then complete your own task strand by strand and download it to hand in.", say:"Next, study the worked example. It uses a different problem, so you learn the method without copying. Then read the method and the rubric, pass the practice, and complete your own task, strand by strand. Good luck, designer!", art: cycleSVG(c, "Let's go") });
+  return sc_;
+}
+function paneVideo(pane, ctx){
+  const scenes = buildScenes(ctx), link = settings().videoLinks?.[ctx.g + ctx.c];
+  pane.innerHTML = `<div class="stack">
+    <div class="player" id="player"><div class="stage" id="stage"></div>
+      <div class="controls"><button id="vPrev" aria-label="Previous scene">◀</button><button id="vPlay">▶ Play</button><button id="vNext" aria-label="Next scene">▶▶</button>
+        <div class="prog"><i id="vBar"></i></div><span class="tc" id="vTc"></span></div></div>
+    <div class="row" style="justify-content:space-between">
+      <p class="muted" style="margin:0;font-size:13px">The narrator reads each scene aloud. Turn your sound on, or read the captions.${link?` Your teacher also recorded a video: <a href="${esc(link)}" target="_blank" rel="noopener">open the teacher video</a>.`:""}</p>
+      <button class="btn" id="nextStep" ${ctx.p.watched?"":"disabled"}>Continue to the worked example →</button>
+    </div></div>`;
+  vid = { i:0, playing:false, timer:null, scenes };
+  const show = () => {
+    const s = scenes[vid.i];
+    $("#stage").innerHTML = `<div class="scene-in">${s.art}</div><div class="txt scene-in"><div class="kick">${esc(s.k)}</div><h2>${esc(s.h)}</h2><p>${esc(s.p)}</p></div>`;
+    $("#vBar").style.width = ((vid.i+1)/scenes.length*100) + "%";
+    $("#vTc").textContent = `Scene ${vid.i+1} of ${scenes.length}`;
+    if (vid.i === scenes.length-1){ ctx.p.watched = true; save(); const n = $("#nextStep"); if (n) n.disabled = false; }
+  };
+  const playScene = () => {
+    if (!vid || !vid.playing) return;
+    show();
+    const s = scenes[vid.i], done = () => { if (!vid || !vid.playing) return; if (vid.i < scenes.length-1){ vid.i++; playScene(); } else { vid.playing = false; $("#vPlay").textContent = "↺ Replay"; } };
+    const ms = Math.max(4000, words(s.say) / 2.6 * 1000);
+    const u = speak(s.say, { force:true, rate:.98 });
+    if (u){ let fired = false; u.onend = () => { if (!fired){ fired = true; clearTimeout(vid?.timer); vid && (vid.timer = setTimeout(done, 700)); } }; vid.timer = setTimeout(()=>{ if(!fired){ fired = true; done(); } }, ms + 6000); }
+    else vid.timer = setTimeout(done, ms);
+  };
+  $("#vPlay").onclick = () => {
+    if (vid.playing){ vid.playing = false; clearTimeout(vid.timer); try{speechSynthesis.cancel()}catch(e){} $("#vPlay").textContent = "▶ Play"; return; }
+    if (vid.i === scenes.length-1 && $("#vPlay").textContent.includes("Replay")) vid.i = 0;
+    vid.playing = true; $("#vPlay").textContent = "❚❚ Pause"; playScene();
+  };
+  $("#vPrev").onclick = () => { clearTimeout(vid.timer); try{speechSynthesis.cancel()}catch(e){} vid.i = Math.max(0, vid.i-1); vid.playing ? playScene() : show(); };
+  $("#vNext").onclick = () => { clearTimeout(vid.timer); try{speechSynthesis.cancel()}catch(e){} vid.i = Math.min(scenes.length-1, vid.i+1); vid.playing ? playScene() : show(); };
+  $("#nextStep").onclick = () => { stopVideo(); try{speechSynthesis.cancel()}catch(e){} logEvent(ctx.c, "Watched introduction", ""); advance(ctx); };
+  show();
+}
+
+/* ---------- 2. WORKED EXAMPLE ---------- */
+function paneExample(pane, ctx){
+  const { c, g, gd, cd } = ctx, ex = gd.example, Y = yearKey(gd.myp), model = COURSE.examples[g][c];
+  pane.innerHTML = `<div class="stack">
+    <div class="card stack" style="gap:8px"><div class="eyebrow">Worked example — not your challenge</div>
+      <h2>${esc(ex.title)}</h2><p style="margin:0"><b>Client:</b> ${esc(ex.client)} · <b>Users:</b> ${esc(ex.user)}</p><p style="margin:0"><b>Problem:</b> ${esc(ex.problem)}.</p>
+      <p class="muted" style="margin:0;font-size:13px">This example solves a <b>different</b> problem from yours. Study how each strand is answered, then apply the same thinking to your own challenge.</p></div>
+    ${cd.strands[Y].map((s,i)=>`<article class="card stack" style="gap:10px">
+      <div class="strand-h"><span class="roman">${ROMAN[i]}</span><h3>${esc(s)}</h3></div>
+      <div class="model scroll">${model[i]}</div>
+      <div class="why"><b>Why this works:</b> ${esc(cd.strandTips[i])}</div></article>`).join("")}
+    ${nextBtn("I've studied the example")}</div>`;
+  $("#nextStep").onclick = () => advance(ctx, "ex");
+}
+
+/* ---------- 3. METHOD ---------- */
+function paneMethod(pane, ctx){
+  const { c, gd, cd } = ctx, Y = yearKey(gd.myp);
+  pane.innerHTML = `<div class="stack">
+    <p class="muted" style="margin:0">Use these steps for every strand. They work for any design problem — including yours.</p>
+    ${COURSE.method[c].map((m,i)=>`<article class="card stack" style="gap:10px">
+      <div class="strand-h"><span class="roman">${ROMAN[i]}</span><h3>${esc(cd.strands[Y][i])}</h3></div>
+      <ol style="margin:0;padding-left:20px">${m.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
+      <div><div class="eyebrow" style="color:var(--muted);margin-bottom:6px">Sentence starters</div><div class="starters">${m.starters.map(s=>`<span>${esc(s)}</span>`).join("")}</div></div>
+      ${gd.myp>=3?`<div class="notice warn" style="font-size:13px">${esc(m.senior)}</div>`:""}</article>`).join("")}
+    ${nextBtn("Show me the rubric")}</div>`;
+  $("#nextStep").onclick = () => advance(ctx, "me");
+}
+
+/* ---------- 4. RUBRIC ---------- */
+function rubricTable(c, myp){
+  const Y = yearKey(myp), R = COURSE.rubrics[c][Y];
+  return `<div class="scroll"><table class="tbl rub"><tr><th>Band</th><th>What you need to do (MYP Year ${myp})</th></tr>
+    <tr><td>0</td><td>You have not reached any of the descriptors below.</td></tr>
+    ${R.map((r,i)=>`<tr class="${i===3?"top":""}"><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table></div>`;
+}
+function paneRubric(pane, ctx){
+  const { c, gd, cd } = ctx, Y = yearKey(gd.myp);
+  pane.innerHTML = `<div class="stack">
+    <div class="card stack"><div class="eyebrow">Criterion ${c}: ${esc(cd.name)} — maximum 8</div>
+      <ol style="margin:0;padding-left:20px">${cd.strands[Y].map((s,i)=>`<li value="${i+1}"><b>Strand ${ROMAN[i]}:</b> ${esc(s)}</li>`).join("")}</ol>
+      ${rubricTable(c, gd.myp)}
+      <p class="muted" style="margin:0;font-size:13px">The command word in each band (<b>state → outline → explain → justify</b>) tells you how deep your answer must go. You will rate yourself against this rubric after each strand.</p></div>
+    ${nextBtn("Start the practice")}</div>`;
+  $("#nextStep").onclick = () => advance(ctx, "ru");
+}
+
+/* ---------- 5. PRACTICE ---------- */
+const NEED = 6;
+function panePractice(pane, ctx){
+  const { c, g, gd, p } = ctx;
+  const pool = COURSE.exercises[c].filter(q => q.y <= gd.myp).concat(COURSE.gradeExercises[g][c]);
+  if (!p.ex.queue || p.ex.queue.length === 0) p.ex.queue = shuffle(pool.map((_,i)=>i));
+  const render_ = () => {
+    if (p.ex.done && !p.ex.extra){
+      pane.innerHTML = `<div class="card stack"><div class="notice ok">Practice passed — ${p.ex.correct} correct, ${p.ex.points} points. Your task is now open.</div>
+        <p class="muted" style="margin:0">You can keep practising for more points, or move on.</p>
+        <div class="row"><button class="btn sec" id="more">Keep practising</button><button class="btn" id="nextStep">Go to my task →</button></div></div>`;
+      $("#more").onclick = () => { p.ex.extra = true; save(); ask(); };
+      $("#nextStep").onclick = () => { p.ex.extra = false; save(); advance(ctx); };
+      return;
+    }
+    ask();
+  };
+  const ask = () => {
+    if (!p.ex.queue.length) p.ex.queue = shuffle(pool.map((_,i)=>i));
+    const q = pool[p.ex.queue[0]]; let hinted = false, answered = false;
+    const dots = Array.from({length:NEED},(_,i)=>`<i class="${i<Math.min(p.ex.correct,NEED)?"on":""}"></i>`).join("");
+    pane.innerHTML = `<div class="card stack">
+      <div class="row" style="justify-content:space-between"><div class="dots" aria-label="${p.ex.correct} of ${NEED} correct">${dots}</div><span class="counter">${p.ex.correct} / ${NEED} correct · ${p.ex.points} pts</span></div>
+      <div class="eyebrow">${q.type==="mcq"?"Choose one":q.type==="order"?"Put in order":"Sort each item"}</div>
+      <div class="q">${esc(q.q)}</div><div id="qBody"></div>
+      <div id="qFb"></div>
+      <div class="row"><button class="btn sec" id="hint">Hint (−5 pts)</button>${p.ex.done?`<button class="btn ghost" id="toTask">Go to my task →</button>`:""}<span class="sp" style="flex:1"></span><button class="btn" id="check">Check answer</button></div>
+      <p class="muted" style="margin:0;font-size:12.5px">+10 points for each correct answer. Get ${NEED} right to unlock your task. Wrong answers come back later in a different order.</p></div>`;
+    const body = $("#qBody"); let pick = null, order = null, cls = {};
+    if (q.type === "mcq"){
+      const idx = shuffle(q.o.map((_,i)=>i));
+      body.innerHTML = `<div class="opts">${idx.map(i=>`<button class="opt" data-i="${i}">${esc(q.o[i])}</button>`).join("")}</div>`;
+      body.querySelectorAll(".opt").forEach(b => b.onclick = () => { if (answered) return; pick = +b.dataset.i; body.querySelectorAll(".opt").forEach(o=>o.classList.toggle("sel", o===b)); });
+    } else if (q.type === "order"){
+      order = shuffle(q.items); if (order.join() === q.items.join()) order.reverse();
+      const draw = () => { body.innerHTML = `<div class="ord"><ol>${order.map((t,i)=>`<li><span class="counter">${i+1}</span><span>${esc(t)}</span><button class="btn sm sec" data-u="${i}" aria-label="Move up" ${i===0?"disabled":""}>↑</button><button class="btn sm sec" data-d="${i}" aria-label="Move down" ${i===order.length-1?"disabled":""}>↓</button></li>`).join("")}</ol></div>`;
+        body.querySelectorAll("[data-u]").forEach(b=>b.onclick=()=>{ if(answered)return; const i=+b.dataset.u; [order[i-1],order[i]]=[order[i],order[i-1]]; draw(); });
+        body.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ if(answered)return; const i=+b.dataset.d; [order[i+1],order[i]]=[order[i],order[i+1]]; draw(); }); };
+      draw();
+    } else {
+      const items = shuffle(q.items.map((it,i)=>i));
+      body.innerHTML = `<div class="stack" style="gap:8px">${items.map(i=>`<div class="cls-row"><span>${esc(q.items[i][0])}</span><div class="seg" data-i="${i}">${q.cats.map((ct,k)=>`<button data-k="${k}" aria-pressed="false">${esc(ct)}</button>`).join("")}</div></div>`).join("")}</div>`;
+      body.querySelectorAll(".seg").forEach(sg => sg.querySelectorAll("button").forEach(b => b.onclick = () => { if (answered) return; cls[sg.dataset.i] = +b.dataset.k; sg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b)); }));
+    }
+    if ($("#toTask")) $("#toTask").onclick = () => { p.ex.extra = false; save(); advance(ctx); };
+    $("#hint").onclick = () => { if (hinted) return; hinted = true; p.ex.points = Math.max(0, p.ex.points-5); p.ex.hints++; save(); renderMast(); $("#qFb").innerHTML = `<div class="notice warn"><b>Hint:</b> ${esc(q.h)}</div>`; $("#hint").disabled = true; };
+    $("#check").onclick = () => {
+      if (answered){ render_(); return; }
+      let right;
+      if (q.type === "mcq"){ if (pick === null) return toast("Choose an answer first."); right = pick === q.a;
+        body.querySelectorAll(".opt").forEach(o => { const i=+o.dataset.i; if (i===q.a) o.classList.add("right"); else if (i===pick) o.classList.add("wrong"); }); }
+      else if (q.type === "order"){ right = order.join("|") === q.items.join("|"); }
+      else { if (Object.keys(cls).length < q.items.length) return toast("Sort every item first."); right = q.items.every((it,i)=>cls[i]===it[1]);
+        body.querySelectorAll(".seg").forEach(sg => { const ok = cls[sg.dataset.i] === q.items[sg.dataset.i][1]; sg.style.outline = `2px solid ${ok?"var(--ok)":"var(--bad)"}`; }); }
+      answered = true; p.ex.attempts++;
+      const qi = p.ex.queue.shift();
+      if (right){ p.ex.correct++; p.ex.points += 10; speak(CHEERS_RIGHT[Math.floor(Math.random()*CHEERS_RIGHT.length)]); }
+      else { p.ex.queue.push(qi); speak(CHEERS_WRONG[Math.floor(Math.random()*CHEERS_WRONG.length)]); }
+      if (!p.ex.done && p.ex.correct >= NEED){ p.ex.done = true; logEvent(ctx.c, "Practice passed", `Correct: ${p.ex.correct}; Points: ${p.ex.points}; Attempts: ${p.ex.attempts}; Hints: ${p.ex.hints}`); setTimeout(()=>speak("Fantastic! You've unlocked your main task."), 1400); }
+      save(); renderMast();
+      const ans = q.type==="order" ? q.items.map((t,i)=>`${i+1}. ${esc(t)}`).join("<br>") : q.type==="classify" ? q.items.map(it=>`${esc(it[0])} → <b>${esc(q.cats[it[1]])}</b>`).join("<br>") : "";
+      $("#qFb").innerHTML = `<div class="notice ${right?"ok":"bad"}"><b>${right?"Correct! +10":"Not this time."}</b> ${esc(q.w)}${!right&&ans?`<div style="margin-top:6px">${ans}</div>`:""}</div>`;
+      $("#check").textContent = p.ex.done && !p.ex.extra ? "See result →" : "Next question →"; $("#hint").disabled = true;
+    };
+  };
+  render_();
+}
+
+/* ---------- 6. MAIN TASK ---------- */
+function tableRowsNeeded(rows){ return Math.max(2, Math.ceil(rows * 2/3)); }
+function fieldValid(f, val){
+  if (f.t === "text") return words(val) >= f.min;
+  if (f.t === "table"){ const rows = (val||[]).filter(r => r && f.cols.every((_,k)=>String(r[k]||"").trim())); return rows.length >= tableRowsNeeded(f.rows); }
+  if (f.t === "sketch") return !!val;
+}
+function strandValid(ctx, i){ const fs = TASK_FIELDS[ctx.c][yearKey(ctx.gd.myp)][i]; return fs.every(f => fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
+function paneTask(pane, ctx){
+  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = TASK_FIELDS[c][Y], si = view.strand;
+  pane.innerHTML = `<div class="stack">
+    <div class="brief"><b>${esc(sc.title)}</b> — ${esc(sc.client)}: ${esc(sc.problem)}. <span class="muted">${esc(sc.brief)}</span></div>
+    <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}">Strand ${r}</button>`).join("")}</div>
+    <div class="card stack" id="strandCard">
+      <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3></div>
+      <p class="muted" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
+      <div class="stack" id="fields"></div>
+      <div class="field"><span class="lbl">Rate yourself against the rubric for this strand</span>
+        <div class="bands">${["1–2","3–4","5–6","7–8"].map(b=>`<button data-b="${b}" aria-pressed="${p.bands[si]===b}">${b}</button>`).join("")}</div></div>
+      <div id="sMsg"></div>
+      <div class="row" style="justify-content:space-between">
+        <button class="btn ghost" id="prevS" ${si===0?"disabled":""}>← Strand ${ROMAN[Math.max(0,si-1)]}</button>
+        <button class="btn ok" id="doneS">${p.done[si]?"Update strand "+ROMAN[si]:"Mark strand "+ROMAN[si]+" complete"}</button>
+      </div></div></div>`;
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { view.strand = +b.dataset.i; render(); });
+  const box = $("#fields");
+  F[si].forEach(f => box.appendChild(buildField(f, ctx)));
+  pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+  $("#prevS").onclick = () => { view.strand = si-1; render(); };
+  $("#doneS").onclick = () => {
+    const missing = F[si].filter(f => !fieldValid(f, p.fields[f.id])).map(f => fill(f.label, g, sc));
+    if (!p.bands[si]) missing.push("Your self-rating for this strand");
+    if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak("Nearly there. Finish the highlighted parts."); return; }
+    const was = p.done[si]; p.done[si] = true; save();
+    if (!was) logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`);
+    if (p.done.every(Boolean)){ speak("Amazing work! All four strands are complete. Download your work and hand it in."); view.step = 6; render(); return; }
+    speak(CHEERS_RIGHT[Math.floor(Math.random()*CHEERS_RIGHT.length)]);
+    const next = p.done.findIndex(d=>!d); view.strand = next; render(); window.scrollTo({top:0, behavior:"smooth"});
+  };
+}
+function buildField(f, ctx){
+  const { p, g, sc } = ctx, el = document.createElement("div"); el.className = "field";
+  const label = fill(f.label, g, sc);
+  if (f.t === "text"){
+    const v = p.fields[f.id] || "";
+    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><textarea id="f_${f.id}" spellcheck="true">${esc(v)}</textarea><span class="counter" id="c_${f.id}"></span>`;
+    const ta = el.querySelector("textarea"), cn = el.querySelector(".counter");
+    const upd = () => { const w = words(ta.value); cn.textContent = `${w} / ${f.min} words minimum`; cn.classList.toggle("ok", w >= f.min); };
+    ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(save, 400); };
+    upd();
+  } else if (f.t === "table"){
+    const v = p.fields[f.id] || Array.from({length:f.rows},()=>f.cols.map(()=>""));
+    p.fields[f.id] = v;
+    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=>`<td><input type="text" id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" value="${esc(r[ci]||"")}" aria-label="${esc(f.cols[ci])} row ${ri+1}"></td>`).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
+    const cn = el.querySelector(".counter");
+    const upd = () => { const done = v.filter(r => f.cols.every((_,k)=>String(r[k]||"").trim())).length, need = tableRowsNeeded(f.rows); cn.textContent = `${done} of ${f.rows} rows complete (at least ${need} needed)`; cn.classList.toggle("ok", done >= need); };
+    el.querySelectorAll("input").forEach(inp => inp.oninput = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(save, 400); });
+    upd();
+  } else if (f.t === "sketch"){
+    el.appendChild(sketchBox(f, label, p));
+  }
+  return el;
+}
+function sketchBox(f, label, p){
+  const wrap = document.createElement("div"); wrap.className = "sk";
+  const drawUI = () => {
+    const has = p.fields[f.id];
+    wrap.innerHTML = `<span class="lbl" style="font-weight:bold">${esc(label)}</span>
+      ${has ? `<img src="${has}" alt="${esc(label)}"><div class="tools"><button class="btn sm sec" data-a="redo">Draw again</button><span class="counter ok">Sketch saved ✓</span></div>`
+      : `<div class="tools" role="toolbar" aria-label="Drawing tools">
+          ${["#16223A","#DC2B3E","#1B6FD1","#1E8A55","#E39B00"].map((c,i)=>`<button class="sw" data-col="${c}" style="background:${c}" aria-label="Colour ${i+1}" aria-pressed="${i===0}"></button>`).join("")}
+          <button class="btn sm sec" data-a="thin">Thin</button><button class="btn sm sec" data-a="thick">Thick</button><button class="btn sm sec" data-a="erase">Eraser</button><button class="btn sm sec" data-a="text">Add label</button><button class="btn sm ghost" data-a="clear">Clear</button></div>
+        <canvas width="1200" height="900" aria-label="Sketch area"></canvas>
+        <div class="tools"><button class="btn sm ok" data-a="save">Save sketch</button><label class="btn sm sec" style="cursor:pointer">Upload a photo instead<input type="file" accept="image/*" hidden></label><span class="muted" style="font-size:12px">Draw on paper? Take a photo and upload it.</span></div>
+        <div class="tools" data-labelbox hidden><input type="text" placeholder="Type a label, then tap the sketch to place it" style="flex:1;min-width:180px"></div>`}`;
+    if (has){ wrap.querySelector('[data-a="redo"]').onclick = () => { p.fields[f.id] = null; save(); drawUI(); }; return; }
+    const cv = wrap.querySelector("canvas"), cx = cv.getContext("2d");
+    cx.fillStyle = "#fff"; cx.fillRect(0,0,cv.width,cv.height);
+    cx.strokeStyle = "#E4E8F0"; cx.lineWidth = 1; for (let x=0;x<cv.width;x+=40){ cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x,cv.height); cx.stroke(); } for (let y=0;y<cv.height;y+=40){ cx.beginPath(); cx.moveTo(0,y); cx.lineTo(cv.width,y); cx.stroke(); }
+    let col = "#16223A", w = 4, erase = false, drawing = false, textMode = false, dirty = false;
+    const pos = e => { const r = cv.getBoundingClientRect(); return [ (e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height ]; };
+    cv.onpointerdown = e => {
+      const [x,y] = pos(e);
+      if (textMode){ const t = wrap.querySelector("[data-labelbox] input").value.trim(); if (t){ cx.fillStyle = col; cx.font = "bold 30px Arial"; cx.fillText(t, x, y); dirty = true; } textMode = false; wrap.querySelector("[data-labelbox]").hidden = true; return; }
+      drawing = true; cv.setPointerCapture(e.pointerId); cx.beginPath(); cx.moveTo(x,y);
+    };
+    cv.onpointermove = e => { if (!drawing) return; const [x,y] = pos(e); cx.lineCap = "round"; cx.lineJoin = "round"; cx.strokeStyle = erase ? "#fff" : col; cx.lineWidth = erase ? 28 : w; cx.lineTo(x,y); cx.stroke(); dirty = true; };
+    cv.onpointerup = cv.onpointercancel = () => { drawing = false; };
+    wrap.querySelectorAll(".sw").forEach(b => b.onclick = () => { col = b.dataset.col; erase = false; wrap.querySelectorAll(".sw").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+    const act = a => ({ thin:()=>{w=4;erase=false}, thick:()=>{w=10;erase=false}, erase:()=>{erase=true}, clear:()=>{ drawUI(); }, text:()=>{ textMode = true; const lb = wrap.querySelector("[data-labelbox]"); lb.hidden = false; lb.querySelector("input").focus(); },
+      save:()=>{ if (!dirty) return toast("Draw your idea first, or upload a photo."); p.fields[f.id] = shrink(cv); save(); speak("Sketch saved. Nice work."); drawUI(); } })[a]?.();
+    wrap.querySelectorAll("[data-a]").forEach(b => b.onclick = () => act(b.dataset.a));
+    wrap.querySelector('input[type=file]').onchange = ev => {
+      const file = ev.target.files[0]; if (!file) return;
+      const rd = new FileReader(); rd.onload = () => { const im = new Image(); im.onload = () => { const c2 = document.createElement("canvas"); const sc = Math.min(1, 1100/Math.max(im.width, im.height)); c2.width = im.width*sc; c2.height = im.height*sc; const x2 = c2.getContext("2d"); x2.fillStyle="#fff"; x2.fillRect(0,0,c2.width,c2.height); x2.drawImage(im,0,0,c2.width,c2.height); p.fields[f.id] = c2.toDataURL("image/jpeg", .72); save(); drawUI(); }; im.src = rd.result; }; rd.readAsDataURL(file);
+    };
+  };
+  drawUI(); return wrap;
+}
+function shrink(cv){ const c2 = document.createElement("canvas"); c2.width = 900; c2.height = 675; c2.getContext("2d").drawImage(cv,0,0,900,675); return c2.toDataURL("image/jpeg", .72); }
+
+/* ---------- 7. SUBMIT ---------- */
+function answersText(ctx){
+  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = TASK_FIELDS[c][Y];
+  let out = `Scenario: ${sc.title} | Practice: ${p.ex.correct} correct, ${p.ex.points} pts, ${p.ex.hints} hints\n`;
+  F.forEach((fs,i) => { out += `\n== Strand ${ROMAN[i]} (self-rating ${p.bands[i]||"-"}) ==\n`;
+    fs.forEach(f => { const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
+      if (f.t==="text") out += (v||"") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>r.some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
+  return out;
+}
+function paneSubmit(pane, ctx){
+  const { c, p } = ctx, s = settings();
+  pane.innerHTML = `<div class="card stack">
+    <div class="eyebrow">All four strands complete</div><h2>Download and hand in Criterion ${c}</h2>
+    <div class="scroll"><table class="tbl"><tr><th>Strand</th><th>Status</th><th>Your self-rating</th></tr>${ROMAN.map((r,i)=>`<tr><td>${r}</td><td>${p.done[i]?"Complete ✓":"Not complete"}</td><td>${p.bands[i]||"—"}</td></tr>`).join("")}</table></div>
+    <p style="margin:0">Your PDF includes all your answers, tables and sketches. Upload it wherever your teacher asks (for example ManageBac or Teams). A copy is also saved for your teacher automatically.</p>
+    <div class="row"><button class="btn" id="dlPdf">${ICON.dl} Download my work (PDF)</button><button class="btn sec" id="saveCopy">Save a copy for my teacher</button><button class="btn ghost" id="edit">Edit my answers</button></div>
+    <div id="subMsg">${p.finished?`<div class="notice ok">Copy saved for your teacher on ${new Date(p.savedAt).toLocaleString()}.</div>`:""}</div>
+    ${!s.logForm?`<p class="muted" style="font-size:12px;margin:0">Teacher copy: this course has not been connected to a teacher log yet, so the copy stays on this device.</p>`:""}</div>`;
+  const saveCopy = () => {
+    logEvent(c, "Criterion submitted", answersText(ctx));
+    p.finished = true; p.savedAt = new Date().toISOString(); save();
+    $("#subMsg").innerHTML = `<div class="notice ok">Copy saved for your teacher. Well done!</div>`;
+  };
+  $("#saveCopy").onclick = () => { saveCopy(); speak("Your copy has been saved for your teacher. Brilliant work."); };
+  $("#dlPdf").onclick = async () => { try { await buildPDF(ctx); if (!p.finished) saveCopy(); speak("Your PDF is downloading. Hand it in where your teacher asks."); } catch(e){ $("#subMsg").innerHTML = `<div class="notice bad">The PDF could not be created on this device (${esc(e.message)}). Open the course in Chrome or Edge and try again.</div>`; } };
+  $("#edit").onclick = () => { view.step = 5; view.strand = 0; render(); };
+}
+
+/* ================= PDF ================= */
+function buildPDF(ctx){
+  const { c, g, gd, cd, p, sc } = ctx, u = user(), Y = yearKey(gd.myp), F = TASK_FIELDS[c][Y];
+  if (!window.jspdf) throw new Error("PDF tool not loaded — check the internet connection");
+  const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit:"mm", format:"a4" });
+  const W = 210, M = 16, NAVY = [27,45,78], RED = [220,43,62];
+  let y = 0;
+  const bar = () => { doc.setFillColor(...NAVY); doc.rect(0,0,W,22,"F"); doc.setFillColor(...RED); doc.rect(0,22,W,1.6,"F");
+    doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text("SISD Design Studio · MYP Design Year " + gd.myp, M, 10);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.text(`Criterion ${c}: ${cd.name}  ·  ${u.name}  ·  Grade ${g}  ·  ${u.teacher}`, M, 16.5); doc.setTextColor(20); };
+  const header = () => { bar(); y = 32; };
+  const need = h => { if (y + h > 282){ doc.addPage(); header(); } };
+  const clean = t => String(t||"").replace(/[–—]/g,"-").replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,"...").replace(/·/g,"-").replace(/[^\x00-\xFF]/g,"");
+  const para = (t, size=10.5, style="normal", color=[22,34,58]) => { doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color);
+    doc.splitTextToSize(clean(t), W-2*M).forEach(line => { need(5.4); doc.text(line, M, y); y += size*0.47; }); y += 1.5; };
+  header();
+  para(gd.unit, 16, "bold"); para(`Design challenge: ${sc.title} — ${sc.client}: ${sc.problem}.`, 10.5); para(sc.brief, 10, "italic", [91,103,130]);
+  para(`Email: ${session.email}   ·   Date: ${new Date().toLocaleDateString("en-GB")}   ·   Practice: ${p.ex.correct} correct, ${p.ex.points} points`, 9, "normal", [91,103,130]);
+  y += 2;
+  F.forEach((fs,i) => {
+    need(20); doc.setFillColor(233,237,245); doc.rect(M, y-5, W-2*M, 10.5, "F"); doc.setTextColor(...RED); doc.setFont("helvetica","bold"); doc.setFontSize(11.5);
+    doc.text(`Strand ${ROMAN[i]}`, M+2, y+1.5); doc.setTextColor(...NAVY); doc.setFontSize(9.5);
+    doc.text(`Self-rating: ${p.bands[i]||"-"}`, W-M-2, y+1.5, { align:"right" }); y += 10;
+    para(cd.strands[Y][i], 9.5, "italic", [91,103,130]);
+    fs.forEach(f => {
+      const v = p.fields[f.id];
+      if (f.t === "sketch" && v){ const pr = doc.getImageProperties(v); need(Math.min(120, (W-2*M) * pr.height / pr.width) + 12); }
+      else if (f.t === "table") need(24); else need(12);
+      para(fill(f.label, g, sc), 10, "bold", NAVY);
+      if (f.t === "text") para(v || "(not answered)", 10.5);
+      else if (f.t === "table"){
+        const body = (v||[]).filter(r=>r.some(x=>String(x).trim()));
+        doc.autoTable({ startY: y, head:[f.cols.map(clean)], body: body.length?body.map(r=>r.map(clean)):[f.cols.map(()=>"")], margin:{left:M,right:M, top:30}, styles:{ fontSize:9, cellPadding:2, lineColor:[216,222,234], lineWidth:.2 }, headStyles:{ fillColor:NAVY, textColor:255 }, theme:"grid", didDrawPage: bar });
+        y = doc.lastAutoTable.finalY + 5;
+      } else if (f.t === "sketch"){
+        if (v){ const props = doc.getImageProperties(v); const w = W-2*M, h = Math.min(120, w * props.height / props.width), ww = h * props.width / props.height; need(h+4); doc.addImage(v, "JPEG", M, y, ww, h); y += h + 5; }
+        else para("(no sketch)", 10, "italic");
+      }
+    });
+    y += 3;
+  });
+  need(70); para("Assessment rubric", 12, "bold", NAVY);
+  doc.autoTable({ startY:y, head:[["Band","Descriptor"]], body: COURSE.rubrics[c][Y].map(r=>[clean(r[0]), clean(stripTags(r[1]))]), margin:{left:M,right:M,top:30}, styles:{fontSize:8.5,cellPadding:2}, headStyles:{fillColor:NAVY}, columnStyles:{0:{cellWidth:16}}, theme:"grid", didDrawPage: bar });
+  y = doc.lastAutoTable.finalY + 8;
+  need(26); para("Teacher mark: ______ / 8        Comment:", 10.5, "bold"); doc.setDrawColor(200); for (let k=0;k<3;k++){ need(8); doc.line(M, y+2, W-M, y+2); y += 8; }
+  const n = doc.getNumberOfPages(); for (let i=1;i<=n;i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(120); doc.text(`Page ${i} of ${n}`, W-M, 292, { align:"right" }); doc.text("Swiss International Scientific School Dubai", M, 292); }
+  const nm = u.name.replace(/[^a-z0-9]+/gi,"_");
+  return saveFile(`G${g}_Criterion${c}_${nm}.pdf`, doc.output("blob"), () => doc.save(`G${g}_Criterion${c}_${nm}.pdf`));
+}
+async function saveFile(name, blob, fallback){
+  try { const dl = window.claude && window.claude.use ? await Promise.race([window.claude.use("downloads"), new Promise(r=>setTimeout(()=>r(null),1500))]) : null;
+    if (dl){ await dl.save({ filename:name, data:blob }); return; } } catch(e){}
+  fallback();
+}
+
+/* ================= STAFF PANEL ================= */
+let staffIn = false;
+function openStaff(){
+  if (!staffIn){
+    modal(`<div class="stack"><h2>Staff sign in</h2><form id="sf" class="stack"><label class="f">Staff password<input type="password" id="sPw" autocomplete="current-password"></label><div id="sMsg2"></div><div class="row"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" data-close>Cancel</button></div></form></div>`);
+    $("#sPw").focus();
+    $("#sf").onsubmit = e => { e.preventDefault(); if ($("#sPw").value === settings().adminPassword){ staffIn = true; closeModal(); openStaff(); } else $("#sMsg2").innerHTML = `<div class="notice bad">Incorrect password.</div>`; };
+    return;
+  }
+  staffPanel("switches");
+}
+function staffPanel(tab){
+  const s = settings(), U = JSON.parse(JSON.stringify(unlocks()));
+  const tabs = [["switches","Criteria switches"],["answers","Answer key"],["lookup","Student lookup"],["setup","Connect & settings"]];
+  let body = "";
+  if (tab === "switches"){
+    body = `<p class="muted" style="margin:0">Switch a criterion on and it appears for every student in that grade. ${s.controlForm && s.controlCsv ? `<b>Live switching is connected</b> — students see changes within about 5 minutes (Google refreshes the sheet).` : `<b>Live switching is not connected yet</b>, so changes apply on this device only. Connect it once in <i>Connect &amp; settings</i>, or download an updated course file and replace the one on your site.`}</p>
+      <div class="scroll"><table class="tbl toggle-grid"><tr><th>Grade</th>${["A","B","C","D"].map(c=>`<th>Criterion ${c}${COURSE.criteria[c].comingSoon?"<br><span class='muted' style='font-weight:normal;text-transform:none'>coming soon</span>":""}</th>`).join("")}</tr>
+      ${Object.keys(COURSE.grades).map(g=>`<tr><td><b>Grade ${g}</b><br><span class="muted">MYP ${COURSE.grades[g].myp}</span></td>${["A","B","C","D"].map(c=>`<td><button class="sw-t" role="switch" aria-checked="${!!U[g]?.[c]}" data-g="${g}" data-c="${c}" aria-label="Grade ${g} Criterion ${c}" ${COURSE.criteria[c].comingSoon?"disabled":""}></button></td>`).join("")}</tr>`).join("")}</table></div>
+      <div id="swMsg"></div>
+      <div class="row"><button class="btn" id="pubSw">Apply switches</button><button class="btn sec" id="dlFile">${ICON.dl} Download course file with these switches</button><button class="btn ghost" id="previewBtn">Preview as a student</button></div>`;
+  } else if (tab === "answers"){
+    body = Object.keys(COURSE.grades).map(g => { const gd = COURSE.grades[g]; return ["A","B"].map(c => { const qs = COURSE.exercises[c].filter(q=>q.y<=gd.myp).concat(COURSE.gradeExercises[g][c]);
+      return `<details><summary><b>Grade ${g} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
+  } else if (tab === "lookup"){
+    body = `<p class="muted" style="margin:0">Each student gets one of four design challenges, chosen from their email, so neighbours rarely have the same task. Check a student's challenge here. Student PINs appear in the "PIN" column of your Google Sheet each time they log activity.</p>
+      <div class="grid2"><label class="f">Student email<input type="email" id="luE" placeholder="name@sisd.ae"></label><label class="f">Grade<select id="luG">${Object.keys(COURSE.grades).map(g=>`<option>${g}</option>`).join("")}</select></label></div>
+      <div id="luR"></div>
+      <h3 style="margin-top:8px">Accounts on this device</h3>
+      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Grade</th><th>PIN</th><th>A</th><th>B</th></tr>${Object.entries(DB.users).map(([e,u])=>`<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(u.grade)}</td><td>${esc(u.pin)}</td><td>${critProgress(u.progress?.A)}%</td><td>${critProgress(u.progress?.B)}%</td></tr>`).join("") || `<tr><td colspan="6" class="muted">No student accounts on this device.</td></tr>`}</table></div>`;
+  } else {
+    body = `<ol class="guide">
+      <li><b>Student copies (one-time).</b> In Google Forms create a form called <i>Design Studio Log</i> with 8 <b>Short answer</b> questions in this order: Student email, Student name, Grade, Teacher, Criterion, Event, PIN, Details (make Details a <b>Paragraph</b>). Turn off "Collect email addresses" and sign-in. Open ⋮ → <b>Get pre-filled link</b>, type <code>x</code> in every box, click <b>Get link</b> → <b>Copy link</b>, and paste it below. In the Responses tab, click <b>Link to Sheets</b> and turn on email notifications if you want them sent to your Gmail.</li>
+      <li><b>Live criteria switches (one-time).</b> Create a second form called <i>Design Studio Switches</i> with one <b>Paragraph</b> question called Settings. Paste its pre-filled link below. Link it to a new sheet, then in that sheet choose File → Share → <b>Publish to web</b> → pick the response sheet → <b>Comma-separated values (.csv)</b> → Publish, and paste that link below. This sheet only ever holds switch settings — never student work.</li>
+      <li>Click <b>Save settings</b>, then <b>Download course file</b> and upload it to your course site (replacing the old file). After this, switching criteria on and off is live — no more uploads.</li></ol>
+      <div class="stack">
+        <label class="f">Student log form — pre-filled link<input type="text" id="setLog" value="${esc(s.logForm)}" placeholder="https://docs.google.com/forms/d/e/…/viewform?usp=pp_url&entry.…"></label>
+        <label class="f">Switches form — pre-filled link<input type="text" id="setCtl" value="${esc(s.controlForm)}"></label>
+        <label class="f">Switches sheet — published CSV link<input type="text" id="setCsv" value="${esc(s.controlCsv)}" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"></label>
+        <label class="f">Staff password<input type="text" id="setPw" value="${esc(s.adminPassword)}"></label>
+        <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B"].map(c=>`<label class="f">Grade ${g} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
+        <div id="setMsg"></div>
+        <div class="row"><button class="btn" id="saveSet">Save settings</button><button class="btn sec" id="dlFile2">${ICON.dl} Download course file</button><button class="btn ghost" id="testLog">Send a test entry</button></div></div>`;
+  }
+  modal(`<div class="stack"><div class="row" style="justify-content:space-between"><h2>Staff panel</h2><button class="btn ghost sm" data-close>Close</button></div>
+    <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-t="${k}" aria-selected="${k===tab}">${l}</button>`).join("")}</div>${body}</div>`);
+  document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => staffPanel(b.dataset.t));
+  if (tab === "switches"){
+    document.querySelectorAll(".sw-t").forEach(b => b.onclick = () => { const on = b.getAttribute("aria-checked") !== "true"; b.setAttribute("aria-checked", on); U[b.dataset.g] = U[b.dataset.g] || {}; U[b.dataset.g][b.dataset.c] = on; });
+    $("#pubSw").onclick = async () => {
+      DB.teacherUnlocks = U; save(); LIVE = s.controlCsv ? U : null;
+      if (s.controlForm){ const ok = await postForm(s.controlForm, [JSON.stringify({ unlocks:U, t:new Date().toISOString() })]);
+        $("#swMsg").innerHTML = ok ? `<div class="notice ok">Switches sent. Students will see the change within about 5 minutes (they may need to refresh).</div>` : `<div class="notice bad">Could not reach Google Forms. Check the internet connection and try again.</div>`; }
+      else $("#swMsg").innerHTML = `<div class="notice warn">Applied on this device. To change what students see, connect live switching or download the updated course file and upload it to your site.</div>`;
+      render();
+    };
+    $("#dlFile").onclick = () => downloadCourse({ unlocks:U });
+    $("#previewBtn").onclick = () => { closeModal(); previewGradePicker(); };
+  }
+  if (tab === "lookup"){ const f = () => { const e = $("#luE").value.trim(); if (!e) { $("#luR").innerHTML=""; return; } const sc = scenarioFor(e, $("#luG").value); $("#luR").innerHTML = `<div class="notice ok"><b>${esc(sc.title)}</b> — ${esc(sc.brief)}</div>`; }; $("#luE").oninput = f; $("#luG").onchange = f; }
+  if (tab === "setup"){
+    const collect = () => { const vl = {}; document.querySelectorAll("[data-vl]").forEach(i => { if (i.value.trim()) vl[i.dataset.vl] = i.value.trim(); });
+      return { logForm: $("#setLog").value.trim(), controlForm: $("#setCtl").value.trim(), controlCsv: $("#setCsv").value.trim(), adminPassword: $("#setPw").value.trim() || "sisd2024", videoLinks: vl }; };
+    const check = v => { const errs = []; if (v.logForm && !parseFormLink(v.logForm)) errs.push("The student log link is not a Google Forms pre-filled link (it should contain entry.)."); if (v.controlForm && !parseFormLink(v.controlForm)) errs.push("The switches form link is not a pre-filled link."); if (v.controlCsv && !/output=csv/.test(v.controlCsv)) errs.push("The published sheet link should end with output=csv."); if (v.logForm && parseFormLink(v.logForm)?.entries.length < 8) errs.push(`The log form has ${parseFormLink(v.logForm).entries.length} questions; 8 are expected. Extra details will be combined into the last question.`); return errs; };
+    $("#saveSet").onclick = () => { const v = collect(), errs = check(v); DB.teacherSettings = v; save(); loadLive(); flushQueue(); $("#setMsg").innerHTML = errs.length ? `<div class="notice warn">${errs.map(esc).join("<br>")}</div>` : `<div class="notice ok">Settings saved on this device. Download the course file so students get them too.</div>`; };
+    $("#dlFile2").onclick = () => { DB.teacherSettings = collect(); save(); downloadCourse({}); };
+    $("#testLog").onclick = async () => { const v = collect(); if (!v.logForm) return $("#setMsg").innerHTML = `<div class="notice bad">Paste the student log form link first.</div>`;
+      const ok = await postForm(v.logForm, ["test@sisd.ae","Test Student","Grade 8","Mr. Ahmed","Criterion A","Test entry","0000","If you can read this in your sheet, the connection works.", new Date().toISOString()]);
+      $("#setMsg").innerHTML = ok ? `<div class="notice ok">Test sent. Check your Google Sheet for a row from "Test Student".</div>` : `<div class="notice bad">Could not reach Google Forms from here.</div>`; };
+  }
+}
+function previewGradePicker(){
+  modal(`<div class="stack"><h2>Preview as a student</h2><p class="muted" style="margin:0">Choose a grade. Every criterion opens for this preview only; no data is sent.</p>
+    <div class="row">${Object.keys(COURSE.grades).map(g=>`<button class="btn sec" data-pg="${g}">Grade ${g}</button>`).join("")}</div></div>`);
+  document.querySelectorAll("[data-pg]").forEach(b => b.onclick = () => {
+    session.preview = true; session.email = "teacher.preview@sisd.ae";
+    const pu = DB.users[session.email] = DB.users[session.email] || { name:"Teacher Preview", teacher:"Mr. Ahmed", pin:"0000", progress:{} };
+    if (pu.grade !== b.dataset.pg){ pu.grade = b.dataset.pg; pu.progress = {}; }
+    save(); closeModal(); go({ name:"home" });
+  });
+}
+async function downloadCourse(over){
+  const cfg = Object.assign({}, CONFIG, DB.teacherSettings||{}, { unlocks: over.unlocks || unlocks() });
+  try {
+    const r = await fetch(location.href.split("#")[0], { cache:"no-store" }); if (!r.ok) throw 0;
+    const src = await r.text();
+    const a = src.indexOf("/*CONFIG-START*/"), b = src.indexOf("/*CONFIG-END*/");
+    if (a < 0 || b < 0) throw 0;
+    const out = src.slice(0, a) + "/*CONFIG-START*/\nconst CONFIG = " + JSON.stringify(cfg, null, 2) + ";\n" + src.slice(b);
+    const blob = new Blob([out], { type:"text/html" }); const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob); link.download = "index.html"; document.body.appendChild(link); link.click(); link.remove();
+    toast("Course file downloaded as index.html — upload it to your course site to replace the old one.", 5000);
+  } catch(e){ toast("Open the course from its website link to download the file (this preview cannot).", 5000); }
+}
+function modal(html){ $("#modalRoot").innerHTML = `<div class="modal" role="dialog" aria-modal="true"><div class="card">${html}</div></div>`;
+  $("#modalRoot .modal").addEventListener("click", e => { if (e.target.classList.contains("modal") || e.target.hasAttribute("data-close")) closeModal(); }); }
+function closeModal(){ $("#modalRoot").innerHTML = ""; }
+
+/* ================= BOOT ================= */
+$("#staffLink").onclick = openStaff;
+document.addEventListener("keydown", e => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a"){ e.preventDefault(); openStaff(); } if (e.key === "Escape") closeModal(); });
+$("#endPreview").onclick = () => { session.preview = false; if (session.email === "teacher.preview@sisd.ae"){ session.email = null; } render(); };
+if (DB.session && DB.users[DB.session] && DB.session !== "teacher.preview@sisd.ae") session.email = DB.session;
+try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
+render(); loadLive(); flushQueue();
+setInterval(() => { loadLive(); flushQueue(); }, 60000);
+window.addEventListener("online", flushQueue);
+})();
+
+</script>
