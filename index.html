@@ -2182,7 +2182,7 @@ function renderLogin(app){
         <div id="upOnly" class="stack" hidden>
           <label class="f">Full name<input type="text" id="lName" autocomplete="name" placeholder="First and last name"></label>
           <div class="grid2" id="studentOnly">
-            <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.grades).map(g=>`<option value="${g}">${esc(gLabel(g))} (MYP ${COURSE.grades[g].myp})</option>`).join("")}</select></label>
+            <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.grades).map(g=>`<option value="${g}">${esc(gLabel(g))}</option>`).join("")}</select></label>
             <label class="f">Teacher<select id="lTeacher"><option value="">Choose…</option>${teacherNames().map(t=>`<option>${esc(t)}</option>`).join("")}</select></label>
           </div>
         </div>
