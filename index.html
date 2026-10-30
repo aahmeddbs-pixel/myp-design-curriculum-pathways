@@ -180,6 +180,16 @@ textarea{min-height:110px;resize:vertical;line-height:1.5}
 .sw-t[aria-checked=true]::after{left:23px}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--mast);color:#fff;padding:10px 16px;border-radius:8px;z-index:60;font-size:14px;max-width:calc(100% - 32px)}
 .preview-banner{background:var(--warnbg);color:var(--warn);font-size:13px;text-align:center;padding:6px}
+[data-read]{position:relative}
+[data-read]:not(.brief)>*:nth-child(2){padding-right:104px}
+.brief[data-read]{padding-right:112px}
+.listen{position:absolute;top:12px;right:12px;z-index:1;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:99px;padding:5px 12px;font-size:12.5px;font-weight:bold}
+.listen[aria-pressed=true]{background:var(--navy);color:var(--paper);border-color:var(--navy)}
+.chip.lang select{background:transparent;border:0;color:var(--mastfg);padding:0;width:auto;font-size:12px}
+.chip.lang select option{color:#16223A}
+#gtHost,.goog-te-banner-frame,.skiptranslate>iframe,#goog-gt-tt,.goog-te-balloon-frame,.VIpgJd-ZVi9od-ORHb-OEVmcd,.VIpgJd-ZVi9od-aZ2wEe-wOHMyf{display:none!important}
+body{top:0!important}
+.goog-text-highlight{background:none!important;box-shadow:none!important}
 footer{font-size:12px;color:var(--muted);text-align:center;padding-block:20px}
 footer button{background:none;border:0;color:var(--muted);text-decoration:underline}
 code{font-family:var(--f-mono);font-size:12.5px;background:var(--soft);padding:1px 5px;border-radius:4px;word-break:break-all}
@@ -188,13 +198,14 @@ ol.guide li{margin-bottom:8px}
 
 <div id="previewBanner" class="preview-banner" hidden>Teacher preview — all criteria are open on this device only. <button class="btn sm sec" id="endPreview">End preview</button></div>
 <header class="mast"><div class="wrap">
-  <div class="brand"><div class="mk">SISD</div><div>Design Studio<small>IB MYP Design · Digital Design &amp; IT</small></div></div>
+  <div class="brand notranslate"><div class="mk">SISD</div><div>Design Studio<small>IB MYP Design · Digital Design &amp; IT</small></div></div>
   <div class="sp"></div>
   <div id="mastRight" class="row"></div>
 </div></header>
 <main class="wrap" id="app"></main>
 <footer class="wrap">Swiss International Scientific School Dubai · MYP Design · <button id="staffLink">Staff</button></footer>
 <div id="modalRoot"></div>
+<div id="gtHost"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -708,6 +719,335 @@ const TASK_FIELDS = {
 
 </script>
 <script>
+/* ==========================================================
+   CRITERIA C & D — added to COURSE and TASK_FIELDS
+   ========================================================== */
+COURSE.criteria.C = { name: "Creating the solution", icon: "tools",
+  intro: "In Criterion C you make your design real. You plan the steps, time and resources, use your technical skills carefully, follow the plan to build a solution that works, and record every change you make along the way.",
+  strands: {
+    1: ["Outline a plan which considers the use of resources and time, sufficient for peers to be able to follow to create the solution", "Demonstrate excellent technical skills when making the solution", "Follow the plan to create the solution, which functions as intended", "List the changes made to the chosen design and plan when making the solution"],
+    2: ["Construct a plan which considers the use of resources and time, sufficient for peers to be able to follow to create the solution", "Demonstrate excellent technical skills when making the solution", "Follow the plan to create the solution, which functions as intended", "Outline the changes made to the chosen design and plan when making the solution"],
+    3: ["Construct a logical plan which outlines the efficient use of time and resources, sufficient for peers to be able to follow to create the solution", "Demonstrate excellent technical skills when making the solution", "Follow the plan to create the solution, which functions as intended", "Explain changes made to the chosen design and plan when making the solution"],
+    5: ["Construct a logical plan which describes the efficient use of time and resources, sufficient for peers to be able to follow to create the solution", "Demonstrate excellent technical skills when making the solution", "Follow the plan to create the solution, which functions as intended and is presented appropriately", "Fully justify changes made to the chosen design and plan when making the solution"]
+  },
+  strandTips: [
+    "Break the making into clear steps in order. For each step, say what you will do, what you need and how long it will take.",
+    "Show how you used your tools carefully: neat alignment, consistent fonts and colours, working links, accurate data.",
+    "Build the design you chose in Criterion B, step by step. Show the finished solution and prove it works.",
+    "Designers always change things while making. Record each change, why you made it and what effect it had."
+  ]
+};
+COURSE.criteria.D = { name: "Evaluating", icon: "check",
+  intro: "In Criterion D you find out how good your solution really is. You plan fair tests that produce data, judge the solution against your specification, suggest real improvements and explain the difference it makes to your client and users.",
+  strands: {
+    1: ["Outline simple, relevant testing methods, which generate data, to measure the success of the solution", "Outline the success of the solution against the design specification", "Outline how the solution could be improved", "Outline the impact of the solution on the client or target audience"],
+    2: ["Describe relevant testing methods, which generate data, to measure the success of the solution", "Describe the success of the solution against the design specification", "Describe how the solution could be improved", "Describe the impact of the solution on the client or target audience"],
+    3: ["Design relevant testing methods, which generate data, to measure the success of the solution", "Explain the success of the solution against the design specification", "Explain how the solution could be improved", "Explain the impact of the solution on the client or target audience"],
+    5: ["Design detailed and relevant testing methods, which generate data, to measure the success of the solution", "Critically evaluate the success of the solution against the design specification", "Explain how the solution could be improved", "Explain the impact of the solution on the client or target audience"]
+  },
+  strandTips: [
+    "Plan a test for each point in your specification. Every test must give you data — a number, a yes/no, or users' answers.",
+    "Use your test data to judge each specification point: met, partly met or not met. Then give an overall judgement.",
+    "Use the weaknesses your tests found to suggest specific improvements, and say how you would make them.",
+    "Explain how your solution changes things for your client and users. Use their feedback as evidence."
+  ]
+};
+
+COURSE.rubrics.C = {
+  1: [
+    ["1–2", "You make a basic plan that others would find hard to follow. You show limited technical skills. You create a solution that does not work as intended. You state a change, if any."],
+    ["3–4", "You <b>outline</b> a plan with some steps, time or resources. You show satisfactory technical skills. You create a solution that partly works as intended. You list some changes."],
+    ["5–6", "You <b>outline</b> a plan that considers time and resources, which a classmate could mostly follow. You show good technical skills. You follow the plan to create a solution that mostly works as intended. You list the changes you made."],
+    ["7–8", "You <b>outline</b> a plan that considers resources and time clearly enough for a classmate to follow it and make your solution. You show excellent technical skills. You follow the plan to create a solution that works as intended. You list all the changes made to your design and plan."]
+  ],
+  2: [
+    ["1–2", "You make a basic plan. You show limited technical skills. You create a solution that does not work as intended. You state a change."],
+    ["3–4", "You construct a plan with some time and resources. You show satisfactory technical skills. You create a solution that partly works. You list some changes."],
+    ["5–6", "You construct a plan that considers time and resources, which peers could mostly follow. You show good technical skills. You follow the plan to create a solution that mostly works as intended. You <b>outline</b> the changes made."],
+    ["7–8", "You construct a clear plan that considers resources and time, sufficient for peers to follow. You show excellent technical skills. You follow the plan to create a solution that works as intended. You <b>outline</b> all the changes made to your design and plan, with reasons."]
+  ],
+  3: [
+    ["1–2", "You list some steps of a plan. You show limited technical skills. You create a solution that functions poorly. You state one change."],
+    ["3–4", "You construct a plan that peers could partly follow. You show satisfactory technical skills. You create a solution that partly functions as intended. You <b>outline</b> some changes."],
+    ["5–6", "You construct a logical plan that considers time and resources, which peers could follow. You show good technical skills. You follow the plan to create a solution that functions as intended. You <b>describe</b> the changes made."],
+    ["7–8", "You construct a logical plan which outlines the <b>efficient</b> use of time and resources, sufficient for peers to follow. You demonstrate excellent technical skills. You follow the plan to create a solution which functions as intended. You <b>explain</b> the changes made to the chosen design and plan."]
+  ],
+  5: [
+    ["1–2", "You list some steps of a plan. You show limited technical skills. You create a solution that functions poorly. You state one change."],
+    ["3–4", "You construct a plan that peers could partly follow. You show satisfactory technical skills. You create a solution that partly functions as intended. You <b>outline</b> changes."],
+    ["5–6", "You construct a logical plan that outlines the efficient use of time and resources. You show good technical skills. You follow the plan to create a solution that functions as intended. You <b>explain</b> the changes made."],
+    ["7–8", "You construct a logical plan which <b>describes</b> the efficient use of time and resources, sufficient for peers to follow. You demonstrate excellent technical skills. You follow the plan to create a solution which functions as intended and is <b>presented appropriately</b>. You <b>fully justify</b> the changes made to the chosen design and plan."]
+  ]
+};
+COURSE.rubrics.D = {
+  1: [
+    ["1–2", "You <b>state</b> a testing method. You state whether the solution worked. You state an improvement. You state an impact."],
+    ["3–4", "You <b>outline</b> a testing method that gives some data. You outline some success against your criteria. You outline an improvement. You outline the impact on users."],
+    ["5–6", "You <b>outline</b> relevant testing methods that produce data. You outline the success of the solution against your success criteria. You outline how it could be improved. You outline the impact on the target audience."],
+    ["7–8", "You <b>outline</b> simple, relevant testing methods which generate data to measure success. You outline the success of the solution against the design specification, using your data. You outline clear, specific improvements. You outline the impact of the solution on the client or target audience."]
+  ],
+  2: [
+    ["1–2", "You state a testing method. You state some success. You state an improvement. You state an impact."],
+    ["3–4", "You outline testing methods that give some data. You outline success against some criteria. You outline improvements. You outline impact."],
+    ["5–6", "You <b>describe</b> relevant testing methods which generate data. You describe success against the specification. You describe improvements. You describe the impact on the target audience."],
+    ["7–8", "You <b>describe</b> relevant testing methods which generate data to measure success. You describe the success of the solution against every specification point, using data. You describe specific improvements and how to make them. You describe the impact on the client or target audience with evidence."]
+  ],
+  3: [
+    ["1–2", "You state a testing method. You state the success of the solution. You state an improvement. You state an impact."],
+    ["3–4", "You <b>outline</b> testing methods that generate some data. You outline success against the specification. You outline improvements. You outline impact."],
+    ["5–6", "You <b>describe</b> relevant testing methods which generate data. You describe the success of the solution against the specification. You describe improvements. You describe the impact on the client or audience."],
+    ["7–8", "You <b>design</b> relevant testing methods which generate data to measure success. You <b>explain</b> the success of the solution against the design specification. You explain how the solution could be improved. You explain the impact of the solution on the client or target audience."]
+  ],
+  5: [
+    ["1–2", "You state a testing method. You state the success of the solution. You state an improvement. You state an impact."],
+    ["3–4", "You <b>outline</b> relevant testing methods. You outline success against the specification. You outline improvements. You outline impact."],
+    ["5–6", "You <b>design</b> relevant testing methods which generate data. You <b>explain</b> the success against the specification. You explain improvements. You explain the impact."],
+    ["7–8", "You <b>design detailed</b> and relevant testing methods which generate data to measure success. You <b>critically evaluate</b> the success of the solution against the design specification, including the reliability of your tests. You explain how the solution could be improved. You explain the impact of the solution on the client or target audience."]
+  ]
+};
+
+COURSE.method.C = [
+  { steps: ["List every task needed to make your chosen design.", "Put the tasks in a logical order — what must happen first?", "Add the resources (software, assets, people) each task needs.", "Estimate the time for each task and check it fits the lessons you have."],
+    starters: ["Step 1: I will…", "I need… for this step", "This will take…", "This must happen before… because…"], senior: "MYP 3+: show dependencies and how you save time (for example re-using templates). MYP 5: add a contingency for steps that might go wrong." },
+  { steps: ["Choose the right tool for each job.", "Work accurately: align elements, keep fonts and colours consistent, name files clearly.", "Check details as you go (links, spelling, sizes, formulas).", "Capture screenshots or photos of your skills in action."],
+    starters: ["I used… to…", "To keep it accurate I…", "This screenshot shows…"], senior: "MYP 3+: show a range of skills, including at least one new one. MYP 5: explain why each technique was the best choice." },
+  { steps: ["Follow your plan step by step and tick off each step.", "Build the design you chose in Criterion B.", "Test it as you go: does each part do what it should?", "Capture the finished solution and share a link if it is online."],
+    starters: ["My finished solution…", "It works as intended because…", "You can see it at…"], senior: "MYP 3+: link what it does to your specification. MYP 5: explain how it is presented appropriately for the client." },
+  { steps: ["Keep a change log while you make.", "For each change, write what changed and why.", "Explain the effect of the change on the design.", "Note changes to your plan, such as extra time, too."],
+    starters: ["I changed… because…", "This improved…", "My plan changed when…"], senior: "MYP 3+: explain the reasons using evidence. MYP 5: justify each change against the specification." }
+];
+COURSE.method.D = [
+  { steps: ["List the points from your specification or success criteria.", "For each one, choose a test: a timed task, a checklist, a survey or a measurement.", "Decide who will test it and how many people.", "Say what data each test will give you."],
+    starters: ["To test… I will…", "This will give me data such as…", "I will ask… people to…"], senior: "MYP 3+: design tests that are fair and use real users. MYP 5: plan for reliability — repeat tests and avoid testing only with friends." },
+  { steps: ["Carry out your tests and record the results.", "Compare each result with its specification point.", "Decide: met, partly met or not met.", "Give an overall judgement supported by the data."],
+    starters: ["The data shows…", "This point was met because…", "Overall my solution is… because…"], senior: "MYP 3+: explain why each result happened. MYP 5: critically evaluate — weigh strengths and limitations and question how reliable your data is." },
+  { steps: ["Look at the points that were not fully met.", "Suggest a specific improvement for each one.", "Explain how you would make the improvement.", "Put the improvements in order of importance."],
+    starters: ["One weakness was…", "To improve this I would…", "This would help because…"], senior: "MYP 3+: link each improvement to test evidence. MYP 5: prioritise improvements by impact and feasibility." },
+  { steps: ["Go back to the problem from Criterion A.", "Explain how your solution changes things for the client and users.", "Use feedback or data as evidence.", "Think wider: is there an effect on the community or environment?"],
+    starters: ["My solution helps… by…", "My client said…", "In the wider community…"], senior: "MYP 3+: explain both positive and negative impacts. MYP 5: consider long-term, ethical and sustainability impacts (link to the SDGs)." }
+];
+
+COURSE.exercises.C = [
+  { y: 1, type: "mcq", q: "A good plan for making a solution includes…", o: ["only the final picture", "the steps in order, the resources needed and the time for each step", "your favourite colour", "a list of other students"], a: 1, h: "Could a classmate follow it to make your solution?", w: "Plans need steps, resources and time." },
+  { y: 1, type: "order", q: "Put these making steps in a sensible order.", items: ["Collect images and text", "Create the layout", "Add the content", "Test it with a user", "Make final fixes"], h: "You need materials before you can build.", w: "Collect → layout → content → test → fix." },
+  { y: 1, type: "mcq", q: "Your plan said 2 lessons but the task took 3. What should you do?", o: ["Pretend it took 2", "Record the change and the reason in your change log", "Delete the plan", "Stop the project"], a: 1, h: "Designers are honest about changes.", w: "Changes are recorded with reasons." },
+  { y: 1, type: "mcq", q: "Why do we record changes made while creating?", o: ["To fill space", "To show how and why the design developed", "Because the plan was wrong", "To make the project longer"], a: 1, h: "Changes are part of good design.", w: "Change logs show development." },
+  { y: 2, type: "classify", q: "Sort these plan items into Resource or Time.", cats: ["Resource", "Time"], items: [["A Canva account", 0], ["Lesson 3: build page 2", 1], ["A pack of free icons", 0], ["30 minutes for testing", 1], ["A laptop with internet", 0], ["Homework: write the text", 1]], h: "Resources are things you use; time is when or how long.", w: "Things vs. when." },
+  { y: 2, type: "mcq", q: "Which shows excellent technical skill in a digital product?", o: ["Five different fonts", "Consistent fonts, aligned elements and links that all work", "Blurry stretched images", "Text that overlaps"], a: 1, h: "Think neat, accurate and working.", w: "Accuracy and consistency show skill." },
+  { y: 3, type: "mcq", q: "A 'logical' plan means…", o: ["the steps are in an order that makes sense, with each step ready for the next", "the plan is very long", "the plan uses lots of colours", "the plan has no times"], a: 0, h: "Does each step depend on the one before?", w: "Logical = sensible order and dependencies." },
+  { y: 3, type: "mcq", q: "A Gantt chart shows…", o: ["survey results", "tasks shown against time, so you can see order and overlap", "a site map", "the cost of a product"], a: 1, h: "Bars across a timeline.", w: "Gantt charts plan tasks over time." },
+  { y: 3, type: "mcq", q: "Which is an EFFICIENT use of time?", o: ["Rebuilding every page from scratch", "Making one template and re-using it for each page", "Waiting until the last lesson", "Choosing colours for an hour"], a: 1, h: "Do the work once and re-use it.", w: "Templates save time." },
+  { y: 5, type: "mcq", q: "To fully justify a change, you should…", o: ["say you felt like it", "give the reason, the evidence for it and its effect on the specification", "only describe the new version", "hide the change"], a: 1, h: "Reason + evidence + effect.", w: "Justification needs evidence and impact." },
+  { y: 5, type: "mcq", q: "'Presented appropriately' means the solution…", o: ["has animations", "is finished and shown in a form that suits the client and its users", "is printed in colour", "is very large"], a: 1, h: "Think about the client receiving it.", w: "Presentation must suit the client." },
+  { y: 5, type: "mcq", q: "A contingency in a plan is…", o: ["a backup action if a step goes wrong", "the first step", "the budget", "the final product"], a: 0, h: "Plan B.", w: "Contingencies manage risk." }
+];
+COURSE.exercises.D = [
+  { y: 1, type: "mcq", q: "Which testing method generates DATA?", o: ["Looking at it yourself and saying it's good", "Asking 5 users to complete a task and timing them", "Asking your best friend if they like it", "Guessing"], a: 1, h: "Data is something you can record and count.", w: "Timed tasks with users give data." },
+  { y: 1, type: "classify", q: "Sort these into Quantitative (numbers) or Qualitative (opinions/descriptions).", cats: ["Quantitative", "Qualitative"], items: [["Time to complete the task: 42 seconds", 0], ["User said it was confusing", 1], ["4 out of 5 users found the button", 0], ["User suggested brighter colours", 1], ["The page loads in 1.8 seconds", 0]], h: "Quantitative = numbers.", w: "Numbers vs. words." },
+  { y: 1, type: "mcq", q: "You judge the success of your solution against…", o: ["your friend's project", "your success criteria / design specification", "the teacher's favourite design", "the internet"], a: 1, h: "You wrote these in Criterion B.", w: "Evaluate against the specification." },
+  { y: 1, type: "mcq", q: "Which is the best improvement suggestion?", o: ["Make it better", "Make the booking button larger, because 3 of 5 users missed it", "Change everything", "It is perfect"], a: 1, h: "Specific and backed by evidence.", w: "Good improvements are specific and evidence-based." },
+  { y: 2, type: "mcq", q: "The 'impact on the target audience' means…", o: ["how heavy the product is", "how the solution changes things for the people it was designed for", "how much it cost", "how long it took to make"], a: 1, h: "Go back to the problem.", w: "Impact = effect on users." },
+  { y: 3, type: "order", q: "Put the testing process in order.", items: ["Choose the specification points to test", "Design a test method for each", "Carry out the tests and record data", "Analyse the results", "Decide on improvements"], h: "Plan → test → analyse → improve.", w: "Plan, test, analyse, improve." },
+  { y: 3, type: "mcq", q: "Why should real users test your solution?", o: ["It is quicker", "You know too much about your own design, so you may miss problems", "Users always like it", "Teachers require it"], a: 1, h: "Designer bias.", w: "Real users reveal real problems." },
+  { y: 5, type: "mcq", q: "'Critically evaluate' means…", o: ["only list the strengths", "weigh strengths and limitations using evidence, including how reliable the tests were", "say whether you liked it", "copy the specification"], a: 1, h: "Both sides + evidence + reliability.", w: "Critical evaluation is balanced and evidence-based." },
+  { y: 5, type: "mcq", q: "Which is a LIMITATION of this test: 'I asked 3 friends if they liked it'?", o: ["It used too many people", "The sample is small and biased, and liking is not a measurable spec point", "It took too long", "Friends are always honest"], a: 1, h: "Who, how many, and what was measured?", w: "Small, biased samples reduce reliability." },
+  { y: 5, type: "mcq", q: "How can you make test results more reliable?", o: ["Test once with yourself", "Repeat tests with several real users and record results the same way each time", "Only test the easy parts", "Change the test each time"], a: 1, h: "Repeat + several users + consistent method.", w: "Repetition and consistency improve reliability." }
+];
+Object.assign(COURSE.gradeExercises["6"], {
+  C: [
+    { type: "mcq", q: "Which Canva tool helps you line up boxes neatly on your screen?", o: ["The rulers and guides / snap-to-grid", "The music library", "The share button", "The comments"], a: 0, h: "Lines that help you align.", w: "Guides and grids help alignment." },
+    { type: "mcq", q: "What screen size suits a large outdoor smart-city screen?", o: ["A tiny 100 × 100 pixels", "A widescreen size such as 1920 × 1080 pixels", "A4 portrait paper", "A phone notification"], a: 1, h: "Think TV-shaped.", w: "1920 × 1080 is a standard widescreen size." },
+    { type: "mcq", q: "Your water-saving screen tip text is too small to read. This is a…", o: ["change to record in your change log", "reason to start again", "secret", "test result to ignore"], a: 0, h: "Changes are normal.", w: "Record it as a change." }
+  ],
+  D: [
+    { type: "mcq", q: "Which test checks 'the main message can be read in 5 seconds'?", o: ["Ask 3 people to read it and time them", "Look at it yourself", "Count the colours", "Ask if they like it"], a: 0, h: "Time it with real people.", w: "A timed test gives data." },
+    { type: "mcq", q: "Which is an impact of a Safe Routes screen on students?", o: ["The screen is blue", "Students choose safer crossings and feel more confident walking to school", "It took 3 lessons", "It uses Canva"], a: 1, h: "How does it help people?", w: "Impact is about people's lives." },
+    { type: "mcq", q: "Which SDG could a 'Power Down School' solution help?", o: ["SDG 7 Affordable and Clean Energy", "SDG 14 Life Below Water", "SDG 2 Zero Hunger", "SDG 16 Peace"], a: 0, h: "It is about energy.", w: "SDG 7 = energy." }
+  ]
+});
+Object.assign(COURSE.gradeExercises["7"], {
+  C: [
+    { type: "mcq", q: "In Google Slides, how do you make a button jump to the result slide?", o: ["Select the button → Insert link → choose the slide", "Change the font", "Add a transition", "Print the slide"], a: 0, h: "Links can point to slides in the same deck.", w: "Insert link → slide." },
+    { type: "mcq", q: "Why use the same layout on every screen of your guide?", o: ["It is required by law", "Users learn where things are, so the guide is easier to use", "It saves colour ink", "It makes the file smaller"], a: 1, h: "Consistency helps users.", w: "Consistent layouts improve usability." },
+    { type: "mcq", q: "What is the best way to check all links work before you finish?", o: ["Hope they work", "Open Present mode and click every button", "Count the slides", "Ask the teacher to check"], a: 1, h: "Test it like a user.", w: "Present mode tests links." }
+  ],
+  D: [
+    { type: "mcq", q: "Which data shows your buyer's guide is easy to understand?", o: ["Number of slides", "How many hardware words testers still did not understand", "The file size", "Your favourite slide"], a: 1, h: "Measure understanding.", w: "Count of unexplained words is useful data." },
+    { type: "mcq", q: "A tester took 2 min 40 s but the target was under 2 minutes. This specification point is…", o: ["met", "not met (or partly met if most testers succeeded)", "irrelevant", "perfect"], a: 1, h: "Compare with the target.", w: "Data decides the judgement." },
+    { type: "mcq", q: "How could a buyer's guide reduce e-waste (SDG 12)?", o: ["People buy the right device first time and keep it longer", "It uses more paper", "It adds more slides", "It is colourful"], a: 0, h: "Fewer wrong purchases.", w: "Right choices reduce waste." }
+  ]
+});
+Object.assign(COURSE.gradeExercises["8"], {
+  C: [
+    { type: "mcq", q: "Why compress photos before adding them to a website?", o: ["So the page loads faster, especially on phones", "So they look blurry", "To change their colour", "It is not needed"], a: 0, h: "Big files = slow pages.", w: "Compression improves load time." },
+    { type: "mcq", q: "Alt text on an image…", o: ["describes the image for screen readers and when images fail to load", "is a caption joke", "changes the image size", "is a type of font"], a: 0, h: "Accessibility.", w: "Alt text supports accessibility." },
+    { type: "mcq", q: "Your builder cannot make a live booking calendar, so you use a booking form instead. You should…", o: ["hide this", "explain the change and how it still meets the booking specification point", "give up on booking", "remove the specification point"], a: 1, h: "Explain the change.", w: "Explain changes against the spec." }
+  ],
+  D: [
+    { type: "mcq", q: "Which test checks 'the site works on a 375 px phone screen'?", o: ["Open it on a phone or in mobile preview and check every page", "Ask the client if they like phones", "Count the pages", "Look at it on a laptop"], a: 0, h: "Test on the device.", w: "Device testing gives evidence." },
+    { type: "mcq", q: "Which is the best evidence of impact for a business website?", o: ["The site has 5 pages", "The owner received 8 online bookings in the first week", "The site is teal", "It took 4 lessons"], a: 1, h: "What changed for the business?", w: "Real outcomes show impact." },
+    { type: "mcq", q: "Which free tool measures how fast a page loads?", o: ["A page-speed testing tool such as PageSpeed Insights", "A spreadsheet", "A paint app", "A calculator"], a: 0, h: "Speed testing tools.", w: "Speed tools give load-time data." }
+  ]
+});
+Object.assign(COURSE.gradeExercises["10"], {
+  C: [
+    { type: "mcq", q: "Which spreadsheet feature stops someone entering a quantity of -5?", o: ["Data validation", "Bold text", "Freeze panes", "Merge cells"], a: 0, h: "Rules on input.", w: "Validation restricts input." },
+    { type: "mcq", q: "Which feature highlights expired items in red automatically?", o: ["Conditional formatting", "Sort A–Z", "Insert image", "Page break"], a: 0, h: "Formatting that depends on a condition.", w: "Conditional formatting." },
+    { type: "mcq", q: "Why protect the sheet that holds personal data?", o: ["So only authorised staff can edit or view it", "To make it load faster", "To change the font", "It is not necessary"], a: 0, h: "Privacy and integrity.", w: "Protection supports privacy." }
+  ],
+  D: [
+    { type: "mcq", q: "How do you test a validation rule properly?", o: ["Enter valid AND invalid data and record whether invalid data is rejected", "Enter only correct data", "Look at the rule", "Ask a friend"], a: 0, h: "Try to break it.", w: "Test both valid and invalid inputs." },
+    { type: "mcq", q: "How could you check the dashboard totals are accurate?", o: ["Compare them with a manual count of the same records", "Trust them", "Make the chart bigger", "Change the colours"], a: 0, h: "Verify against an independent count.", w: "Manual cross-checks verify accuracy." },
+    { type: "mcq", q: "Which is a long-term impact of a food-waste data system?", o: ["The dashboard is green", "Menus change based on data, reducing waste and cost over the year", "It has three tables", "It was built in Sheets"], a: 1, h: "Think months, not minutes.", w: "Long-term impact changes behaviour." }
+  ]
+});
+
+/* ---------- WORKED EXAMPLES C & D ---------- */
+Object.assign(COURSE.examples["6"], {
+  C: [
+    `<table><tr><th>Step</th><th>What I will do</th><th>Resources</th><th>Time</th></tr><tr><td>1</td><td>Collect icons and a sample bus timetable</td><td>Free icon library, laptop</td><td>Lesson 1 (20 min)</td></tr><tr><td>2</td><td>Set the screen to 1920 × 1080 and add the navy title bar</td><td>Canva</td><td>Lesson 1 (20 min)</td></tr><tr><td>3</td><td>Build the countdown box and next-buses list</td><td>Canva text tools</td><td>Lesson 2</td></tr><tr><td>4</td><td>Add the shade map with labels</td><td>Canva shapes</td><td>Lesson 2</td></tr><tr><td>5</td><td>Test from 2 metres and fix problems</td><td>Three classmates</td><td>Lesson 3</td></tr></table>`,
+    `<p>I used Canva's rulers and snap guides to line up every box. I kept one heading font and one body font, matched the navy exactly with the colour code, and grouped the countdown parts so they could not move by accident. I zoomed to 100% to check that the text was sharp.</p>`,
+    `<p><b>Finished solution:</b> the screen shows a large white "4 min" countdown, the next three buses and a shade map with green seats. It works as intended: three classmates read the arrival time from 2 metres and a tester found the shade in 3 seconds.</p>`,
+    `<table><tr><th>Change I made</th><th>Why I made it</th></tr><tr><td>Countdown numbers changed from yellow to white</td><td>Yellow was hard to read on navy</td></tr><tr><td>Added a water-fountain icon</td><td>A classmate asked where to get water</td></tr><tr><td>The plan took 3 lessons, not 2</td><td>The shade map took longer than expected</td></tr></table>`
+  ],
+  D: [
+    `<table><tr><th>What I will test</th><th>How I will test it</th><th>Data I will get</th></tr><tr><td>Arrival time readable from 2 m</td><td>3 classmates read it from 2 m</td><td>Correct or not, for each person</td></tr><tr><td>No more than 3 colours</td><td>Count the colours</td><td>Number of colours</td></tr><tr><td>Shade found within 5 seconds</td><td>Time 3 people</td><td>Seconds</td></tr><tr><td>Older people can read the text</td><td>An adult reads it aloud</td><td>Yes/no and comments</td></tr></table>`,
+    `<table><tr><th>Success criterion</th><th>Result</th><th>Met?</th></tr><tr><td>Readable from 2 m</td><td>3 out of 3 correct</td><td>Yes</td></tr><tr><td>3 colours or fewer</td><td>3 colours</td><td>Yes</td></tr><tr><td>Shade in 5 s</td><td>Average 4 seconds</td><td>Yes</td></tr><tr><td>Older people can read it</td><td>Read it, but said map labels were small</td><td>Partly</td></tr></table><p>Overall my screen is mostly successful: three criteria were fully met and one partly met.</p>`,
+    `<table><tr><th>Problem I found</th><th>How I could improve it</th></tr><tr><td>Map labels too small</td><td>Increase labels to at least 40 pt</td></tr><tr><td>English only</td><td>Add Arabic text for more passengers</td></tr><tr><td>Bus times are a picture</td><td>Link the screen to live bus data</td></tr></table>`,
+    `<p>Passengers at Seaview can see when their bus will arrive and where to wait in the shade, so they spend less time in the sun. Older passengers and children benefit most. If waiting is more comfortable, more people may take the bus instead of the car, which reduces traffic and pollution (SDG 11).</p>`
+  ]
+});
+Object.assign(COURSE.examples["7"], {
+  C: [
+    `<table><tr><th>Step</th><th>What I will do</th><th>Resources</th><th>Time</th></tr><tr><td>1</td><td>Write plain-language explanations of storage, battery, screen and processor</td><td>Google Docs, my research</td><td>Lesson 1</td></tr><tr><td>2</td><td>Create the 5 screens from my storyboard</td><td>Google Slides</td><td>Lesson 1</td></tr><tr><td>3</td><td>Add buttons and link them to the right slides</td><td>Slides link tool</td><td>Lesson 2</td></tr><tr><td>4</td><td>Add icons and the glossary</td><td>Free icon set</td><td>Lesson 2</td></tr><tr><td>5</td><td>Test with a classmate and fix the links</td><td>Present mode, a tester</td><td>Lesson 3</td></tr></table>`,
+    `<p>I edited the master slide so every screen has the same title, colours and button positions. I linked each button to a specific slide and checked it in Present mode. All body text is 20 pt, and I cropped the tablet images to the same size so the layout stays neat.</p>`,
+    `<p><b>Finished guide:</b> Welcome → three questions → result card → glossary. It works as intended: a tester reached a recommendation in 1 minute 40 seconds, and all 12 links go to the right place.</p>`,
+    `<table><tr><th>Change</th><th>Why</th><th>Effect</th></tr><tr><td>Budget slider became 3 buttons</td><td>Slides cannot make sliders</td><td>Still lets users choose a budget</td></tr><tr><td>Added a Back button to every screen</td><td>A tester got stuck</td><td>Easier to navigate</td></tr><tr><td>Removed the processor-speed question</td><td>The coach did not need it</td><td>Faster to finish</td></tr></table>`
+  ],
+  D: [
+    `<table><tr><th>What I will test</th><th>How</th><th>Data</th></tr><tr><td>Recommendation in under 2 minutes</td><td>Time 3 adults using the guide</td><td>Seconds</td></tr><tr><td>Every confusing word explained</td><td>The coach lists any words she still doesn't understand</td><td>Number of words</td></tr><tr><td>Text at least 18 pt</td><td>Check font sizes</td><td>Point size</td></tr><tr><td>Covers 4 components</td><td>Checklist</td><td>Yes/no</td></tr></table>`,
+    `<table><tr><th>Specification point</th><th>Result</th><th>Met?</th></tr><tr><td>Under 2 minutes</td><td>1:40, 2:10, 1:25</td><td>Partly (2 of 3)</td></tr><tr><td>Words explained</td><td>0 words not understood</td><td>Yes</td></tr><tr><td>Text ≥ 18 pt</td><td>20 pt</td><td>Yes</td></tr><tr><td>4 components</td><td>4 of 4</td><td>Yes</td></tr></table><p>The guide is mostly successful. The one slower tester read the whole glossary first, which shows the glossary is useful but could be optional.</p>`,
+    `<table><tr><th>Weakness</th><th>Improvement</th><th>How</th></tr><tr><td>One tester took over 2 minutes</td><td>Add a "skip the glossary" tip</td><td>A small note on the welcome screen</td></tr><tr><td>No prices shown</td><td>Add price ranges to each result</td><td>Research three shops</td></tr><tr><td>Hard to use on a phone</td><td>Make a phone-sized version</td><td>Change the slide size to portrait</td></tr></table>`,
+    `<p>Coach Sara chose a 128 GB tablet with confidence in under 2 minutes, instead of guessing. Other coaches at the club can use the same guide, which saves them money and time. Buying the right device first time also means fewer devices are returned or thrown away (SDG 12).</p>`
+  ]
+});
+Object.assign(COURSE.examples["8"], {
+  C: [
+    `<table><tr><th>Step</th><th>Task</th><th>Resources</th><th>Time</th><th>Why this order</th></tr><tr><td>1</td><td>Collect Layla's photos and price list</td><td>Email from Layla</td><td>Lesson 1 (15 min)</td><td>Content is needed for every page</td></tr><tr><td>2</td><td>Compress photos to under 300 KB</td><td>Image compressor</td><td>Lesson 1 (15 min)</td><td>Faster pages; done once</td></tr><tr><td>3</td><td>Set the theme colours and fonts</td><td>Google Sites</td><td>Lesson 1</td><td>Every page then inherits them</td></tr><tr><td>4</td><td>Build one service card and duplicate it</td><td>Google Sites</td><td>Lesson 2</td><td>Template saves time</td></tr><tr><td>5</td><td>Build the Book page with a request form</td><td>Google Forms</td><td>Lesson 3</td><td>Needs the services finished</td></tr><tr><td>6</td><td>About and Contact pages</td><td>Google Sites</td><td>Lesson 3</td><td>Simple pages last</td></tr><tr><td>7</td><td>Test on a phone and fix</td><td>Phone, mobile preview</td><td>Lesson 4</td><td>Final check</td></tr></table><p class="note">Efficiency: setting the theme first and duplicating one card meant I didn't format each page separately.</p>`,
+    `<p>I customised the theme to teal #1A9E9A and used the Poppins font throughout. I built one service card (photo, name, price, Book button) and duplicated it, so all cards match exactly. I compressed images, added alt text to every photo, embedded the booking form and checked every page in mobile preview.</p>`,
+    `<p><b>Finished website:</b> five pages with a navigation bar, service cards with prices, and a booking request form. It functions as intended: a test booking arrived in Layla's email, all prices match her list, and every page works on a 375-pixel phone screen.</p>`,
+    `<table><tr><th>Change</th><th>Reason</th><th>Effect</th></tr><tr><td>A booking request form instead of a live calendar</td><td>Google Sites cannot run a live calendar</td><td>Customers still book online; Layla confirms by message</td></tr><tr><td>Added a WhatsApp button</td><td>Layla asked for it during development</td><td>A faster way for customers to ask questions</td></tr><tr><td>Plan took 4 lessons, not 3</td><td>The form needed extra testing</td><td>Fewer errors at launch</td></tr></table><p>The most important change was the booking form: it kept the main specification point (online booking) while fitting the tool I had.</p>`
+  ],
+  D: [
+    `<table><tr><th>Specification point</th><th>Test method</th><th>Who / sample</th><th>Data collected</th></tr><tr><td>Book button on every page</td><td>Checklist of every page</td><td>Me and one peer</td><td>Yes/no per page</td></tr><tr><td>Form sends to Layla</td><td>Submit 3 test bookings</td><td>Layla</td><td>Number received</td></tr><tr><td>Works on 375 px</td><td>Open every page on a phone</td><td>Two different phones</td><td>Pass/fail per page</td></tr><tr><td>Booking takes under 1 minute</td><td>Timed task</td><td>5 pet owners</td><td>Seconds</td></tr><tr><td>Loads in under 3 s</td><td>Page-speed tool</td><td>Home page, 3 runs</td><td>Seconds</td></tr><tr><td>Every image has alt text</td><td>Inspect each image</td><td>Me</td><td>Count</td></tr></table><p class="note">Survey: "How easy was booking (1–5)?", "Was anything confusing?", "Would you book this way again?"</p>`,
+    `<table><tr><th>Specification point</th><th>Result</th><th>Met?</th></tr><tr><td>Book button</td><td>5 of 5 pages</td><td>Yes</td></tr><tr><td>Form to Layla</td><td>3 of 3 received</td><td>Yes</td></tr><tr><td>375 px</td><td>All pages passed</td><td>Yes</td></tr><tr><td>Under 1 minute</td><td>Average 48 s</td><td>Yes</td></tr><tr><td>Under 3 s</td><td>4.1 s average</td><td>No</td></tr><tr><td>Alt text</td><td>12 of 12</td><td>Yes</td></tr></table><p>Five of six points were met, so the site is successful for its main purpose. Load time was not met because the large homepage photo is still 900 KB; this matters because most customers use phones.</p>`,
+    `<table><tr><th>Weakness (evidence)</th><th>Improvement</th><th>How</th></tr><tr><td>Load time 4.1 s</td><td>Smaller hero image</td><td>Compress it to under 250 KB</td></tr><tr><td>2 of 5 users unsure if booking worked</td><td>Clear confirmation message</td><td>Edit the form's confirmation text</td></tr><tr><td>No customer reviews</td><td>Add a reviews section</td><td>Collect reviews from real customers</td></tr></table>`,
+    `<p>Layla received 3 online booking requests in the first week instead of missing those calls, and customers can see prices before contacting her. Pet owners can book at any time, even when the salon is closed. A possible negative impact is that Layla now has to check messages more often, so a clear booking routine will be important.</p><p class="note">Layla: "I can finally groom without worrying about the phone."</p>`
+  ]
+});
+Object.assign(COURSE.examples["10"], {
+  C: [
+    `<table><tr><th>Stage</th><th>Task</th><th>Resources</th><th>Time</th><th>Dependency</th><th>Contingency</th></tr><tr><td>1</td><td>Create Items, Borrowers, Loans sheets with headers</td><td>Google Sheets</td><td>L1</td><td>—</td><td>Use a template if time runs short</td></tr><tr><td>2</td><td>Add validation rules and data types</td><td>Sheets data validation</td><td>L1</td><td>1</td><td>Test each rule as it is added</td></tr><tr><td>3</td><td>Build the loan form</td><td>Google Forms</td><td>L2</td><td>1</td><td>—</td></tr><tr><td>4</td><td>Generate QR codes with pre-filled item IDs</td><td>QR generator</td><td>L2</td><td>3</td><td>Printed ID list as backup</td></tr><tr><td>5</td><td>Lookup formulas linking loans to items and borrowers</td><td>XLOOKUP</td><td>L3</td><td>1–3</td><td>Ask a peer to check formulas</td></tr><tr><td>6</td><td>Dashboard: current, overdue, chart</td><td>Charts, conditional formatting</td><td>L4</td><td>5</td><td>—</td></tr><tr><td>7</td><td>Protect personal data ranges</td><td>Protected ranges</td><td>L4</td><td>1</td><td>—</td></tr><tr><td>8</td><td>Test with 10 records and fix</td><td>Test plan</td><td>L5</td><td>All</td><td>Extra lunchtime session</td></tr></table><p class="note">Efficiency: the structure is built before any form or dashboard, so nothing has to be rebuilt.</p>`,
+    `<p>I used data validation (item IDs must exist in Items; dates must be dates), XLOOKUP to pull item and borrower details into each loan, a formula for the due date (=LoanDate+7), conditional formatting to turn overdue rows red, a pivot chart for loans by item type, and protected ranges so only staff can see borrower emails. I chose XLOOKUP over VLOOKUP because it still works if columns are moved.</p>`,
+    `<p><b>Finished system:</b> scanning an item's QR code opens a pre-filled form; the loan appears in the Loans sheet with its due date; the dashboard shows current loans, overdue items in red and a chart by type. It functions as intended with 10 test records. It is presented appropriately: the dashboard fits one laptop screen and is the first tab Mrs. Khan sees, and staff-only tabs are hidden from student view.</p>`,
+    `<table><tr><th>Change</th><th>Justification (evidence)</th><th>Impact on specification</th></tr><tr><td>Overdue emails replaced by a red-highlight list Mrs. Khan checks daily</td><td>The school account blocks scripts that send email automatically</td><td>The "overdue alert" point is still met, but manually</td></tr><tr><td>Added a "Condition on return" field</td><td>The IT technician asked to track damage</td><td>New point added: damage is recorded</td></tr><tr><td>Testing took 2 lessons, not 1</td><td>The validation rule failed with mixed-case IDs</td><td>Fixed with UPPER(), improving data accuracy</td></tr></table>`
+  ],
+  D: [
+    `<table><tr><th>Specification point</th><th>Test method</th><th>Sample</th><th>Data</th></tr><tr><td>Loan recorded in under 30 s</td><td>Timed loans, scanning to submit</td><td>5 students × 3 loans</td><td>Seconds</td></tr><tr><td>Invalid item ID rejected</td><td>Enter 5 invalid and 5 valid IDs</td><td>Me and the technician</td><td>Accepted/rejected</td></tr><tr><td>Due date correct</td><td>Compare 10 records with a manual calculation</td><td>10 records</td><td>Number correct</td></tr><tr><td>Overdue items red</td><td>Create 3 overdue test records</td><td>3 records</td><td>Highlighted yes/no</td></tr><tr><td>Students cannot see borrower data</td><td>Log in with a student account</td><td>2 student accounts</td><td>Access yes/no</td></tr><tr><td>Dashboard totals accurate</td><td>Compare with a manual count</td><td>2 different days</td><td>Difference</td></tr></table><p class="note">Reliability: each timed test is repeated three times with real borrowers, not friends, and recorded on the same sheet.</p>`,
+    `<table><tr><th>Specification point</th><th>Result</th><th>Met?</th></tr><tr><td>Under 30 s</td><td>Average 22 s (range 15–41 s)</td><td>Mostly</td></tr><tr><td>Invalid IDs rejected</td><td>5 of 5 rejected</td><td>Yes</td></tr><tr><td>Due date</td><td>10 of 10 correct</td><td>Yes</td></tr><tr><td>Overdue red</td><td>3 of 3</td><td>Yes</td></tr><tr><td>Privacy</td><td>No access</td><td>Yes</td></tr><tr><td>Totals accurate</td><td>0 difference</td><td>Yes</td></tr></table><p>The system meets five points fully and one mostly. The 41-second loan was the first attempt by a student who had never used QR scanning, so speed improves with familiarity. A limitation is that testing lasted two weeks with only 15 loans; a full term would give more reliable evidence about losses. The manual overdue check also depends on Mrs. Khan remembering to look.</p>`,
+    `<table><tr><th>Weakness (evidence)</th><th>Improvement</th><th>How</th></tr><tr><td>Overdue alerts are manual</td><td>Automatic reminder emails</td><td>Ask IT to approve a script</td></tr><tr><td>First-time users slower (41 s)</td><td>Instruction poster beside the QR codes</td><td>Three-step visual guide</td></tr><tr><td>No history of item faults</td><td>Fault report chart</td><td>Pivot on "Condition on return"</td></tr></table><p class="note">Priority: automatic reminders first, because they remove the biggest risk — overdue items being missed.</p>`,
+    `<p>Mrs. Khan reports chasing time fell from about 30 minutes a day to about 5, and no items were lost during the two-week trial. Students can now see which equipment is available, which makes borrowing fairer. Teachers can plan lessons knowing laptops will be returned. Ethically, borrower data is now protected, while the old paper sheet could be read by anyone. In the long term, fewer lost devices saves money and reduces e-waste (SDG 12).</p><p class="note">Mrs. Khan: "For the first time I know exactly where every laptop is."</p>`
+  ]
+});
+
+/* ---------- MAIN TASK FIELDS C & D ---------- */
+TASK_FIELDS.C = {
+  1: [
+    [ { t: "table", id: "c1t", label: "Your plan for making {product}", cols: ["Step", "What I will do", "Resources I need", "Time (lesson)"], rows: 5 } ],
+    [ { t: "sketch", id: "c2e1", label: "Evidence: screenshot or photo of you making your solution", evidence: true },
+      { t: "text", id: "c2n", label: "Which tools and skills did you use? How did you keep your work neat and accurate?", min: 40 } ],
+    [ { t: "sketch", id: "c3e1", label: "Your finished solution (screenshot or photo)", evidence: true },
+      { t: "text", id: "c3l", label: "Link to your solution (or write 'not online')", min: 1 },
+      { t: "text", id: "c3w", label: "Does your solution work as intended? Explain with an example.", min: 40 } ],
+    [ { t: "table", id: "c4t", label: "Changes you made to your design and plan", cols: ["Change I made", "Why I made it"], rows: 3 } ]
+  ],
+  2: [
+    [ { t: "table", id: "c1t", label: "Your plan for making {product}", cols: ["Step", "What I will do", "Resources I need", "Time (lesson)"], rows: 6 },
+      { t: "text", id: "c1n", label: "How did you make sure a classmate could follow your plan?", min: 25 } ],
+    [ { t: "sketch", id: "c2e1", label: "Evidence: screenshot or photo of your making process", evidence: true },
+      { t: "sketch", id: "c2e2", label: "Evidence: a close-up of a detail you are proud of", evidence: true },
+      { t: "text", id: "c2n", label: "Describe the technical skills you used and how you made the work accurate", min: 60 } ],
+    [ { t: "sketch", id: "c3e1", label: "Your finished solution (screenshot or photo)", evidence: true },
+      { t: "text", id: "c3l", label: "Link to your solution (or write 'not online')", min: 1 },
+      { t: "text", id: "c3w", label: "Explain how your solution works as intended, using your success criteria", min: 60 } ],
+    [ { t: "table", id: "c4t", label: "Changes to your design and plan", cols: ["Change", "Why", "Effect on the design"], rows: 3 } ]
+  ],
+  3: [
+    [ { t: "table", id: "c1t", label: "Logical plan for making {product}", cols: ["Step", "Task", "Resources", "Time", "Why this order"], rows: 7 },
+      { t: "text", id: "c1n", label: "How does your plan use time and resources efficiently?", min: 50 } ],
+    [ { t: "sketch", id: "c2e1", label: "Evidence of technical skill 1 (screenshot or photo)", evidence: true },
+      { t: "sketch", id: "c2e2", label: "Evidence of technical skill 2 (screenshot or photo)", evidence: true },
+      { t: "text", id: "c2n", label: "Describe the range of technical skills you used and how each improved the quality of the solution", min: 80 } ],
+    [ { t: "sketch", id: "c3e1", label: "Your finished solution (screenshot or photo)", evidence: true },
+      { t: "text", id: "c3l", label: "Link to your solution (or write 'not online')", min: 1 },
+      { t: "text", id: "c3w", label: "Explain how you followed your plan and how the solution functions as intended", min: 70 } ],
+    [ { t: "table", id: "c4t", label: "Changes to your design and plan", cols: ["Change", "Reason", "Effect"], rows: 3 },
+      { t: "text", id: "c4n", label: "Explain the most important change you made", min: 50 } ]
+  ],
+  5: [
+    [ { t: "table", id: "c1t", label: "Logical plan for making {product}", cols: ["Stage", "Task", "Resources", "Time", "Dependency", "Contingency"], rows: 8 },
+      { t: "text", id: "c1n", label: "Describe how your plan uses time and resources efficiently", min: 70 } ],
+    [ { t: "sketch", id: "c2e1", label: "Evidence of technical skill 1 (screenshot or photo)", evidence: true },
+      { t: "sketch", id: "c2e2", label: "Evidence of technical skill 2 (screenshot or photo)", evidence: true },
+      { t: "text", id: "c2n", label: "Explain the technical skills and techniques you used and why each was the best choice", min: 100 } ],
+    [ { t: "sketch", id: "c3e1", label: "Your finished solution — main view", evidence: true },
+      { t: "sketch", id: "c3e2", label: "Your finished solution — second view (for example the dashboard or form)", evidence: true },
+      { t: "text", id: "c3l", label: "Link to your solution (or write 'not online')", min: 1 },
+      { t: "text", id: "c3w", label: "Explain how the solution functions as intended and how it is presented appropriately for {client}", min: 100 } ],
+    [ { t: "table", id: "c4t", label: "Changes to your design and plan", cols: ["Change", "Justification (evidence)", "Impact on the specification"], rows: 3 },
+      { t: "text", id: "c4n", label: "Fully justify your most significant change", min: 80 } ]
+  ]
+};
+TASK_FIELDS.D = {
+  1: [
+    [ { t: "table", id: "d1t", label: "Your testing plan", cols: ["What I will test (success criterion)", "How I will test it", "What data I will get"], rows: 4 } ],
+    [ { t: "table", id: "d2t", label: "Your test results", cols: ["Success criterion", "Result", "Met? (Yes / Partly / No)"], rows: 4 },
+      { t: "text", id: "d2n", label: "Overall, how successful is your solution? Use your results.", min: 40 } ],
+    [ { t: "table", id: "d3t", label: "How your solution could be improved", cols: ["Problem I found", "How I could improve it"], rows: 3 } ],
+    [ { t: "text", id: "d4n", label: "How will your solution help {user}? What difference does it make to the problem?", min: 50 } ]
+  ],
+  2: [
+    [ { t: "table", id: "d1t", label: "Your testing plan", cols: ["Specification point", "Test method", "Who will test", "Data I will get"], rows: 5 } ],
+    [ { t: "table", id: "d2t", label: "Your test results", cols: ["Specification point", "Result / data", "Met? (Yes / Partly / No)"], rows: 5 },
+      { t: "text", id: "d2n", label: "Describe how successful your solution is, using your data", min: 60 } ],
+    [ { t: "table", id: "d3t", label: "Improvements", cols: ["Weakness", "Improvement", "How I would do it"], rows: 3 } ],
+    [ { t: "text", id: "d4n", label: "Describe the impact of your solution on {user}", min: 60 },
+      { t: "text", id: "d4f", label: "Feedback from a user or your client (write what they said)", min: 10 } ]
+  ],
+  3: [
+    [ { t: "table", id: "d1t", label: "Testing methods", cols: ["Specification point", "Test method", "Who tests / sample size", "Data collected"], rows: 6 },
+      { t: "text", id: "d1q", label: "Survey or interview questions you will use with users", min: 30 } ],
+    [ { t: "table", id: "d2t", label: "Test results", cols: ["Specification point", "Test data / result", "Met? (Yes / Partly / No)"], rows: 6 },
+      { t: "text", id: "d2n", label: "Explain the success of your solution against the specification, including why some points were or were not met", min: 80 } ],
+    [ { t: "table", id: "d3t", label: "Improvements", cols: ["Weakness (with evidence)", "Improvement", "How it would be done"], rows: 3 },
+      { t: "text", id: "d3n", label: "Explain which improvement matters most and why", min: 40 } ],
+    [ { t: "text", id: "d4n", label: "Explain the impact of your solution on {client} and {user}, positive and negative", min: 80 },
+      { t: "text", id: "d4f", label: "Feedback from your client or users (quote)", min: 15 } ]
+  ],
+  5: [
+    [ { t: "table", id: "d1t", label: "Detailed testing methods", cols: ["Specification point", "Test method", "Sample", "Data collected", "Success threshold"], rows: 8 },
+      { t: "text", id: "d1r", label: "How will you make your tests reliable and fair?", min: 50 } ],
+    [ { t: "table", id: "d2t", label: "Test results", cols: ["Specification point", "Test data / result", "Met? (Yes / Partly / No)"], rows: 8 },
+      { t: "text", id: "d2n", label: "Critically evaluate the success of your solution against the specification (strengths, limitations, reliability of evidence)", min: 150 } ],
+    [ { t: "table", id: "d3t", label: "Improvements", cols: ["Weakness (with evidence)", "Improvement", "How it would be done", "Priority"], rows: 4 },
+      { t: "text", id: "d3n", label: "Explain how you prioritised the improvements", min: 60 } ],
+    [ { t: "text", id: "d4n", label: "Explain the impact of your solution on {client} and {user}, including long-term, ethical and sustainability impacts", min: 120 },
+      { t: "text", id: "d4f", label: "Feedback from your client or users (quote)", min: 20 } ]
+  ]
+};
+
+</script>
+<script>
 (function(){
 "use strict";
 /* ================= UTILITIES ================= */
@@ -731,21 +1071,118 @@ function toast(msg, ms=3200){ const t = document.createElement("div"); t.classNa
 function settings(){ return Object.assign({}, CONFIG, DB.teacherSettings || {}); }
 
 /* ================= SPEECH ================= */
-const CHEERS_RIGHT = ["Brilliant, well done!", "Yes! You've got it.", "Great thinking, keep going!", "That's exactly right!", "Superb — you're on a roll!", "I knew you could do it!"];
-const CHEERS_WRONG = ["So close! Read the explanation and try the next one.", "Not quite — you can do it!", "Good try. I believe in you!", "Keep going, you're learning!"];
 function speak(text, opts={}){
   if (!DB.voice && !opts.force) return null;
   try {
     if (!("speechSynthesis" in window)) return null;
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = opts.rate || 1; u.pitch = 1; u.lang = "en-GB";
-    const v = speechSynthesis.getVoices().find(v => /en-GB/i.test(v.lang)) || speechSynthesis.getVoices().find(v=>/^en/i.test(v.lang));
-    if (v) u.voice = v;
+    u.rate = opts.rate || 1; u.lang = LANGS[lang()].voice; const v = voiceFor(lang()); if (v) u.voice = v;
     if (!opts.queue) speechSynthesis.cancel();
     speechSynthesis.speak(u);
     return u;
   } catch(e){ return null; }
 }
+/* ================= LANGUAGE & READ-ALOUD ================= */
+const LANGS = {
+  en: { label: "English", voice: "en-GB" },
+  fr: { label: "Français", voice: "fr-FR" },
+  ru: { label: "Русский", voice: "ru-RU" },
+  es: { label: "Español", voice: "es-ES" }
+};
+const PHRASES = {
+  en: { right: ["Brilliant, well done!", "Yes! You've got it.", "Great thinking, keep going!", "That's exactly right!", "Superb, you're on a roll!", "I knew you could do it!"],
+        wrong: ["So close! Read the explanation and try the next one.", "Not quite. You can do it!", "Good try. I believe in you!", "Keep going, you're learning!"],
+        welcome: n => `Welcome, ${n}. Let's design something great.`, unlocked: "Fantastic! You've unlocked your main task.", nearly: "Nearly there. Finish the parts that are missing.",
+        allDone: "Amazing work! All four strands are complete. Download your work and hand it in.", sketch: "Sketch saved. Nice work.", copy: "Your copy has been saved for your teacher. Brilliant work.", pdf: "Your PDF is downloading. Hand it in where your teacher asks." },
+  fr: { right: ["Bravo, bien joué !", "Oui ! C'est exact.", "Excellente réflexion, continue !", "Parfait !", "Superbe, tu es sur la bonne voie !"],
+        wrong: ["Presque ! Lis l'explication et essaie la suivante.", "Pas tout à fait. Tu peux y arriver !", "Bel essai. Je crois en toi !", "Continue, tu apprends !"],
+        welcome: n => `Bienvenue, ${n}. Créons quelque chose de formidable.`, unlocked: "Fantastique ! Ta tâche principale est débloquée.", nearly: "Presque fini. Complète les parties qui manquent.",
+        allDone: "Travail incroyable ! Les quatre volets sont terminés. Télécharge ton travail et rends-le.", sketch: "Croquis enregistré. Beau travail.", copy: "Une copie a été enregistrée pour ton professeur. Bravo.", pdf: "Ton PDF se télécharge. Rends-le là où ton professeur le demande." },
+  ru: { right: ["Отлично, молодец!", "Да! Правильно.", "Прекрасная мысль, продолжай!", "Совершенно верно!", "Превосходно, так держать!"],
+        wrong: ["Почти! Прочитай объяснение и попробуй следующий вопрос.", "Не совсем. У тебя получится!", "Хорошая попытка. Я в тебя верю!", "Продолжай, ты учишься!"],
+        welcome: n => `Добро пожаловать, ${n}. Давай создадим что-то замечательное.`, unlocked: "Великолепно! Основное задание открыто.", nearly: "Почти готово. Заполни недостающие части.",
+        allDone: "Потрясающая работа! Все четыре части выполнены. Скачай работу и сдай её.", sketch: "Эскиз сохранён. Хорошая работа.", copy: "Копия сохранена для учителя. Отличная работа.", pdf: "Твой PDF скачивается. Сдай его туда, куда скажет учитель." },
+  es: { right: ["¡Genial, bien hecho!", "¡Sí! Es correcto.", "¡Gran idea, sigue así!", "¡Exacto!", "¡Excelente, vas muy bien!"],
+        wrong: ["¡Casi! Lee la explicación e intenta la siguiente.", "No del todo. ¡Tú puedes!", "Buen intento. ¡Creo en ti!", "¡Sigue, estás aprendiendo!"],
+        welcome: n => `Bienvenido, ${n}. Vamos a diseñar algo genial.`, unlocked: "¡Fantástico! Has desbloqueado tu tarea principal.", nearly: "Casi terminado. Completa las partes que faltan.",
+        allDone: "¡Trabajo increíble! Las cuatro partes están completas. Descarga tu trabajo y entrégalo.", sketch: "Boceto guardado. Buen trabajo.", copy: "Se guardó una copia para tu profesor. ¡Excelente!", pdf: "Tu PDF se está descargando. Entrégalo donde indique tu profesor." }
+};
+function lang(){ return LANGS[DB.lang] ? DB.lang : "en"; }
+function P(){ return PHRASES[lang()]; }
+function pickOne(a){ return a[Math.floor(Math.random()*a.length)]; }
+function voiceFor(code){
+  try { const vs = speechSynthesis.getVoices(), want = LANGS[code].voice;
+    return vs.find(v => v.lang.replace("_","-") === want) || vs.find(v => v.lang.toLowerCase().startsWith(code)) || null; } catch(e){ return null; }
+}
+function chunks(text){
+  const parts = String(text).replace(/\s+/g, " ").trim().match(/[^.!?;:。]+[.!?;:。]*\s*/g) || [];
+  const out = []; let cur = "";
+  parts.forEach(p => { if ((cur + p).length > 220 && cur){ out.push(cur); cur = ""; } cur += p; });
+  if (cur.trim()) out.push(cur); return out;
+}
+let readToken = 0;
+function speakLong(text, opts={}){
+  try { if (!("speechSynthesis" in window)) { opts.onend && opts.onend(); return false; } } catch(e){ return false; }
+  const my = ++readToken; try { speechSynthesis.cancel(); } catch(e){}
+  const code = lang(), v = voiceFor(code), list = chunks(text);
+  let i = 0;
+  const next = () => {
+    if (my !== readToken) return;
+    if (i >= list.length){ opts.onend && opts.onend(); return; }
+    const u = new SpeechSynthesisUtterance(list[i++]); u.lang = LANGS[code].voice; if (v) u.voice = v; u.rate = opts.rate || 0.97;
+    let done = false; const fin = () => { if (!done){ done = true; next(); } };
+    u.onend = fin; u.onerror = fin; setTimeout(fin, Math.max(6000, u.text.length * 110));
+    speechSynthesis.speak(u);
+  };
+  next(); return true;
+}
+function stopReading(){ readToken++; try { speechSynthesis.cancel(); } catch(e){} document.querySelectorAll(".listen[aria-pressed=true]").forEach(b => { b.setAttribute("aria-pressed","false"); b.lastChild.textContent = " Listen"; }); }
+function readableText(el){
+  const c = el.cloneNode(true);
+  c.querySelectorAll(".listen,.btn,input,textarea,select,canvas,img,svg,.counter,.bands,.tools,.sw,.dots,script,style").forEach(n => n.remove());
+  const box = document.createElement("div"); box.style.cssText = "position:absolute;left:-10000px;top:0;width:700px"; box.appendChild(c); document.body.appendChild(box);
+  const t = box.innerText; box.remove(); return t;
+}
+function addListenButtons(root){
+  root.querySelectorAll("[data-read]").forEach(el => {
+    if (el.querySelector(":scope > .listen")) return;
+    const b = document.createElement("button"); b.type = "button"; b.className = "listen"; b.setAttribute("aria-pressed","false");
+    b.innerHTML = `${ICON.voiceOn}<span> Listen</span>`; b.title = "Read this section aloud";
+    b.onclick = () => {
+      if (b.getAttribute("aria-pressed") === "true"){ stopReading(); return; }
+      stopReading(); b.setAttribute("aria-pressed","true"); b.lastChild.textContent = " Stop";
+      if (lang() !== "en" && !voiceFor(lang())) toast(`This device has no ${LANGS[lang()].label} voice, so the default voice will read the translated text.`, 4500);
+      speakLong(readableText(el), { onend: () => { b.setAttribute("aria-pressed","false"); b.lastChild.textContent = " Listen"; } });
+    };
+    el.prepend(b);
+  });
+}
+/* Page translation via Google's website translator (works on the published site) */
+let gtLoaded = false;
+function setCookieLang(code){
+  const exp = code === "en" ? "; expires=Thu, 01 Jan 1970 00:00:00 GMT" : "";
+  document.cookie = `googtrans=${code === "en" ? "" : "/en/" + code}; path=/${exp}`;
+  try { document.cookie = `googtrans=${code === "en" ? "" : "/en/" + code}; path=/; domain=${location.hostname}${exp}`; } catch(e){}
+}
+function loadTranslator(){
+  if (gtLoaded) return; gtLoaded = true;
+  window.googleTranslateElementInit = () => { try { new google.translate.TranslateElement({ pageLanguage:"en", includedLanguages:"en,fr,ru,es", autoDisplay:false }, "gtHost"); } catch(e){} };
+  const s = document.createElement("script"); s.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+  s.onerror = () => toast("Translation needs an internet connection. The course is showing in English.", 5000);
+  document.body.appendChild(s);
+}
+function applyLang(code, first){
+  DB.lang = code; save(); document.documentElement.lang = code;
+  if (code === "en"){ setCookieLang("en"); if (!first && gtLoaded) location.reload(); return; }
+  setCookieLang(code); loadTranslator();
+  // if the translator is already on the page, switch it directly
+  let tries = 0; const t = setInterval(() => { const sel = document.querySelector(".goog-te-combo");
+    if (sel){ if (sel.value !== code){ sel.value = code; sel.dispatchEvent(new Event("change")); } clearInterval(t); } else if (++tries > 40) clearInterval(t); }, 250);
+}
+function langSelect(){
+  return `<label class="chip lang notranslate" title="Language"><span aria-hidden="true">🌐</span><select id="langSel" aria-label="Language">${Object.entries(LANGS).map(([k,v])=>`<option value="${k}" ${k===lang()?"selected":""}>${v.label}</option>`).join("")}</select></label>`;
+}
+function bindLang(){ const s = $("#langSel"); if (s) s.onchange = () => { stopReading(); applyLang(s.value); }; }
 
 /* ================= STATE ================= */
 let session = { email: null, preview: false, back: null };
@@ -893,23 +1330,24 @@ function badgeSVG(text, sub){
 /* ================= MASTHEAD ================= */
 function renderMast(){
   const u = user(); const r = $("#mastRight");
-  if (!u){ r.innerHTML = ""; return; }
+  if (!u){ r.innerHTML = langSelect(); bindLang(); return; }
   const signOut = `<button class="chip" id="signOut">Sign out</button>`;
   if (u.role === "teacher" && !session.preview){
-    r.innerHTML = `<span class="chip">${esc(u.name)} · Teacher</span>${signOut}`;
+    r.innerHTML = `${langSelect()}<span class="chip notranslate">${esc(u.name)}</span><span class="chip">Teacher</span>${signOut}`;
   } else {
     const pts = Object.values(u.progress||{}).reduce((s,p)=>s+(p.ex?.points||0),0);
-    r.innerHTML = `<span class="chip pts" title="Practice points">★ ${pts} pts</span>
+    r.innerHTML = `${langSelect()}<span class="chip pts notranslate" title="Practice points">★ ${pts} pts</span>
       <button class="chip" id="voiceBtn" aria-pressed="${DB.voice}">${DB.voice?ICON.voiceOn:ICON.voiceOff} Voice</button>
-      <span class="chip">${esc(u.name)} · G${esc(u.grade)}</span>${session.preview?"":signOut}`;
+      <span class="chip"><span class="notranslate">${esc(u.name)}</span>&nbsp;· G${esc(u.grade)}</span>${session.preview?"":signOut}`;
     $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
   }
+  bindLang();
   const so = $("#signOut"); if (so) so.onclick = () => { session = { email:null, preview:false, back:null }; staffIn = false; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} render(); };
 }
 
 /* ================= ROUTER ================= */
 let view = { name:"home", crit:null, step:0, strand:0 };
-function go(v){ view = Object.assign({ name:"home", crit:null, step:0, strand:0 }, v); try{speechSynthesis.cancel()}catch(e){} stopVideo(); render(); window.scrollTo({top:0}); }
+function go(v){ view = Object.assign({ name:"home", crit:null, step:0, strand:0 }, v); try{speechSynthesis.cancel()}catch(e){} stopVideo(); stopReading(); render(); window.scrollTo({top:0}); }
 function render(){
   renderMast();
   $("#previewBanner").hidden = !session.preview;
@@ -984,7 +1422,7 @@ function renderLogin(app){
           }
         }
         session.email = email; DB.session = email; save(); flushQueue();
-        if (u.role !== "teacher") speak(`Welcome back, ${u.name.split(" ")[0]}. Let's design something great.`);
+        if (u.role !== "teacher") speak(P().welcome(u.name.split(" ")[0]));
         return go({ name:"home" });
       }
       const name = $("#lName").value.trim();
@@ -1007,7 +1445,7 @@ function renderLogin(app){
       DB.users[email] = { role:"student", name, grade, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
       session.email = email; DB.session = email; save();
       logEvent("-", "Signed up", `Design challenge: ${scenarioFor(email, grade).title}`);
-      speak(`Welcome, ${name.split(" ")[0]}. Let's design something great.`);
+      speak(P().welcome(name.split(" ")[0]));
       go({ name:"home" });
     } catch(err){ msg(esc(err.message)); }
     finally { const b = $("#lGo"); if (b) b.disabled = false; }
@@ -1025,7 +1463,7 @@ function renderTeacherHome(app){
       <button class="crit open" data-go="preview"><span class="L">▶</span><h3>Preview as a student</h3><p class="muted" style="margin:0;font-size:13px">Open every criterion for any grade without sending data.</p></button>
       <button class="crit open" data-go="answers"><span class="L">✔</span><h3>Answer key</h3><p class="muted" style="margin:0;font-size:13px">All practice questions with answers and hints.</p></button>
       <button class="crit open" data-go="lookup"><span class="L">?</span><h3>Students</h3><p class="muted" style="margin:0;font-size:13px">Design challenges and password resets. ${mine} of your students on this device.</p></button>
-      <div class="crit locked"><span class="L">${Object.keys(COURSE.grades).filter(g=>["A","B"].some(c=>unlocks()[g]?.[c])).length}</span><h3>Grades with open criteria</h3><p class="muted" style="margin:0;font-size:13px">${Object.keys(COURSE.grades).map(g=>`G${g}: ${["A","B","C","D"].filter(c=>unlocks()[g]?.[c]).join(", ")||"none"}`).join(" · ")}</p></div>
+      <div class="crit locked"><span class="L">${Object.keys(COURSE.grades).filter(g=>["A","B","C","D"].some(c=>unlocks()[g]?.[c])).length}</span><h3>Grades with open criteria</h3><p class="muted" style="margin:0;font-size:13px">${Object.keys(COURSE.grades).map(g=>`G${g}: ${["A","B","C","D"].filter(c=>unlocks()[g]?.[c]).join(", ")||"none"}`).join(" · ")}</p></div>
     </div></div>`;
   app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => b.dataset.go === "preview" ? previewGradePicker() : staffPanel(b.dataset.go, "teacher"));
 }
@@ -1039,7 +1477,7 @@ function renderHome(app){
       <div class="stack" style="gap:6px">
         <div class="eyebrow">Grade ${g} · MYP Design Year ${gd.myp} · ${esc(gd.sdg)}</div>
         <h1>${esc(gd.unit)}</h1>
-        <div class="brief"><div class="eyebrow" style="color:var(--muted)">Your design challenge</div>
+        <div class="brief" data-read><div class="eyebrow" style="color:var(--muted)">Your design challenge</div>
           <h3 style="margin:4px 0">${esc(sc.title)}</h3>
           <p style="margin:0">${esc(sc.client)} needs your help: ${esc(sc.problem)}.</p>
           <p style="margin:.5em 0 0" class="muted">${esc(sc.brief)}</p></div>
@@ -1132,19 +1570,20 @@ function paneVideo(pane, ctx){
   const playScene = () => {
     if (!vid || !vid.playing) return;
     show();
-    const s = scenes[vid.i], done = () => { if (!vid || !vid.playing) return; if (vid.i < scenes.length-1){ vid.i++; playScene(); } else { vid.playing = false; $("#vPlay").textContent = "↺ Replay"; } };
+    const s = scenes[vid.i], done = () => { if (!vid || !vid.playing) return; if (vid.i < scenes.length-1){ vid.i++; playScene(); } else { vid.playing = false; vid.ended = true; $("#vPlay").textContent = "↺ Replay"; } };
     const ms = Math.max(4000, words(s.say) / 2.6 * 1000);
+    if (lang() !== "en"){ const me = vid; vid.timer = setTimeout(() => { if (vid !== me || !vid.playing) return; const st = $("#stage .txt"); speakLong(st ? st.innerText : s.say, { onend: () => { if (vid === me) vid.timer = setTimeout(done, 700); } }); }, 1600); return; }
     const u = speak(s.say, { force:true, rate:.98 });
     if (u){ let fired = false; u.onend = () => { if (!fired){ fired = true; clearTimeout(vid?.timer); vid && (vid.timer = setTimeout(done, 700)); } }; vid.timer = setTimeout(()=>{ if(!fired){ fired = true; done(); } }, ms + 6000); }
     else vid.timer = setTimeout(done, ms);
   };
   $("#vPlay").onclick = () => {
-    if (vid.playing){ vid.playing = false; clearTimeout(vid.timer); try{speechSynthesis.cancel()}catch(e){} $("#vPlay").textContent = "▶ Play"; return; }
-    if (vid.i === scenes.length-1 && $("#vPlay").textContent.includes("Replay")) vid.i = 0;
+    if (vid.playing){ vid.playing = false; clearTimeout(vid.timer); stopReading(); $("#vPlay").textContent = "▶ Play"; return; }
+    if (vid.ended){ vid.i = 0; vid.ended = false; }
     vid.playing = true; $("#vPlay").textContent = "❚❚ Pause"; playScene();
   };
-  $("#vPrev").onclick = () => { clearTimeout(vid.timer); try{speechSynthesis.cancel()}catch(e){} vid.i = Math.max(0, vid.i-1); vid.playing ? playScene() : show(); };
-  $("#vNext").onclick = () => { clearTimeout(vid.timer); try{speechSynthesis.cancel()}catch(e){} vid.i = Math.min(scenes.length-1, vid.i+1); vid.playing ? playScene() : show(); };
+  $("#vPrev").onclick = () => { clearTimeout(vid.timer); stopReading(); vid.i = Math.max(0, vid.i-1); vid.playing ? playScene() : show(); };
+  $("#vNext").onclick = () => { clearTimeout(vid.timer); stopReading(); vid.i = Math.min(scenes.length-1, vid.i+1); vid.playing ? playScene() : show(); };
   $("#nextStep").onclick = () => { stopVideo(); try{speechSynthesis.cancel()}catch(e){} logEvent(ctx.c, "Watched introduction", ""); advance(ctx); };
   show();
 }
@@ -1153,10 +1592,10 @@ function paneVideo(pane, ctx){
 function paneExample(pane, ctx){
   const { c, g, gd, cd } = ctx, ex = gd.example, Y = yearKey(gd.myp), model = COURSE.examples[g][c];
   pane.innerHTML = `<div class="stack">
-    <div class="card stack" style="gap:8px"><div class="eyebrow">Worked example — not your challenge</div>
+    <div class="card stack" data-read style="gap:8px"><div class="eyebrow">Worked example — not your challenge</div>
       <h2>${esc(ex.title)}</h2><p style="margin:0"><b>Client:</b> ${esc(ex.client)} · <b>Users:</b> ${esc(ex.user)}</p><p style="margin:0"><b>Problem:</b> ${esc(ex.problem)}.</p>
       <p class="muted" style="margin:0;font-size:13px">This example solves a <b>different</b> problem from yours. Study how each strand is answered, then apply the same thinking to your own challenge.</p></div>
-    ${cd.strands[Y].map((s,i)=>`<article class="card stack" style="gap:10px">
+    ${cd.strands[Y].map((s,i)=>`<article class="card stack" data-read style="gap:10px">
       <div class="strand-h"><span class="roman">${ROMAN[i]}</span><h3>${esc(s)}</h3></div>
       <div class="model scroll">${model[i]}</div>
       <div class="why"><b>Why this works:</b> ${esc(cd.strandTips[i])}</div></article>`).join("")}
@@ -1169,7 +1608,7 @@ function paneMethod(pane, ctx){
   const { c, gd, cd } = ctx, Y = yearKey(gd.myp);
   pane.innerHTML = `<div class="stack">
     <p class="muted" style="margin:0">Use these steps for every strand. They work for any design problem — including yours.</p>
-    ${COURSE.method[c].map((m,i)=>`<article class="card stack" style="gap:10px">
+    ${COURSE.method[c].map((m,i)=>`<article class="card stack" data-read style="gap:10px">
       <div class="strand-h"><span class="roman">${ROMAN[i]}</span><h3>${esc(cd.strands[Y][i])}</h3></div>
       <ol style="margin:0;padding-left:20px">${m.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
       <div><div class="eyebrow" style="color:var(--muted);margin-bottom:6px">Sentence starters</div><div class="starters">${m.starters.map(s=>`<span>${esc(s)}</span>`).join("")}</div></div>
@@ -1188,7 +1627,7 @@ function rubricTable(c, myp){
 function paneRubric(pane, ctx){
   const { c, gd, cd } = ctx, Y = yearKey(gd.myp);
   pane.innerHTML = `<div class="stack">
-    <div class="card stack"><div class="eyebrow">Criterion ${c}: ${esc(cd.name)} — maximum 8</div>
+    <div class="card stack" data-read><div class="eyebrow">Criterion ${c}: ${esc(cd.name)} — maximum 8</div>
       <ol style="margin:0;padding-left:20px">${cd.strands[Y].map((s,i)=>`<li value="${i+1}"><b>Strand ${ROMAN[i]}:</b> ${esc(s)}</li>`).join("")}</ol>
       ${rubricTable(c, gd.myp)}
       <p class="muted" style="margin:0;font-size:13px">The command word in each band (<b>state → outline → explain → justify</b>) tells you how deep your answer must go. You will rate yourself against this rubric after each strand.</p></div>
@@ -1217,7 +1656,7 @@ function panePractice(pane, ctx){
     if (!p.ex.queue.length) p.ex.queue = shuffle(pool.map((_,i)=>i));
     const q = pool[p.ex.queue[0]]; let hinted = false, answered = false;
     const dots = Array.from({length:NEED},(_,i)=>`<i class="${i<Math.min(p.ex.correct,NEED)?"on":""}"></i>`).join("");
-    pane.innerHTML = `<div class="card stack">
+    pane.innerHTML = `<div class="card stack" data-read>
       <div class="row" style="justify-content:space-between"><div class="dots" aria-label="${p.ex.correct} of ${NEED} correct">${dots}</div><span class="counter">${p.ex.correct} / ${NEED} correct · ${p.ex.points} pts</span></div>
       <div class="eyebrow">${q.type==="mcq"?"Choose one":q.type==="order"?"Put in order":"Sort each item"}</div>
       <div class="q">${esc(q.q)}</div><div id="qBody"></div>
@@ -1252,9 +1691,9 @@ function panePractice(pane, ctx){
         body.querySelectorAll(".seg").forEach(sg => { const ok = cls[sg.dataset.i] === q.items[sg.dataset.i][1]; sg.style.outline = `2px solid ${ok?"var(--ok)":"var(--bad)"}`; }); }
       answered = true; p.ex.attempts++;
       const qi = p.ex.queue.shift();
-      if (right){ p.ex.correct++; p.ex.points += 10; speak(CHEERS_RIGHT[Math.floor(Math.random()*CHEERS_RIGHT.length)]); }
-      else { p.ex.queue.push(qi); speak(CHEERS_WRONG[Math.floor(Math.random()*CHEERS_WRONG.length)]); }
-      if (!p.ex.done && p.ex.correct >= NEED){ p.ex.done = true; logEvent(ctx.c, "Practice passed", `Correct: ${p.ex.correct}; Points: ${p.ex.points}; Attempts: ${p.ex.attempts}; Hints: ${p.ex.hints}`); setTimeout(()=>speak("Fantastic! You've unlocked your main task."), 1400); }
+      if (right){ p.ex.correct++; p.ex.points += 10; speak(pickOne(P().right)); }
+      else { p.ex.queue.push(qi); speak(pickOne(P().wrong)); }
+      if (!p.ex.done && p.ex.correct >= NEED){ p.ex.done = true; logEvent(ctx.c, "Practice passed", `Correct: ${p.ex.correct}; Points: ${p.ex.points}; Attempts: ${p.ex.attempts}; Hints: ${p.ex.hints}`); setTimeout(()=>speak(P().unlocked), 1400); }
       save(); renderMast();
       const ans = q.type==="order" ? q.items.map((t,i)=>`${i+1}. ${esc(t)}`).join("<br>") : q.type==="classify" ? q.items.map(it=>`${esc(it[0])} → <b>${esc(q.cats[it[1]])}</b>`).join("<br>") : "";
       $("#qFb").innerHTML = `<div class="notice ${right?"ok":"bad"}"><b>${right?"Correct! +10":"Not this time."}</b> ${esc(q.w)}${!right&&ans?`<div style="margin-top:6px">${ans}</div>`:""}</div>`;
@@ -1275,9 +1714,9 @@ function strandValid(ctx, i){ const fs = TASK_FIELDS[ctx.c][yearKey(ctx.gd.myp)]
 function paneTask(pane, ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = TASK_FIELDS[c][Y], si = view.strand;
   pane.innerHTML = `<div class="stack">
-    <div class="brief"><b>${esc(sc.title)}</b> — ${esc(sc.client)}: ${esc(sc.problem)}. <span class="muted">${esc(sc.brief)}</span></div>
+    <div class="brief" data-read><b>${esc(sc.title)}</b> — ${esc(sc.client)}: ${esc(sc.problem)}. <span class="muted">${esc(sc.brief)}</span></div>
     <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}">Strand ${r}</button>`).join("")}</div>
-    <div class="card stack" id="strandCard">
+    <div class="card stack" id="strandCard" data-read>
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3></div>
       <p class="muted" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
       <div class="stack" id="fields"></div>
@@ -1296,11 +1735,11 @@ function paneTask(pane, ctx){
   $("#doneS").onclick = () => {
     const missing = F[si].filter(f => !fieldValid(f, p.fields[f.id])).map(f => fill(f.label, g, sc));
     if (!p.bands[si]) missing.push("Your self-rating for this strand");
-    if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak("Nearly there. Finish the highlighted parts."); return; }
+    if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak(P().nearly); return; }
     const was = p.done[si]; p.done[si] = true; save();
     if (!was) logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`);
-    if (p.done.every(Boolean)){ speak("Amazing work! All four strands are complete. Download your work and hand it in."); view.step = 6; render(); return; }
-    speak(CHEERS_RIGHT[Math.floor(Math.random()*CHEERS_RIGHT.length)]);
+    if (p.done.every(Boolean)){ speak(P().allDone); view.step = 6; render(); return; }
+    speak(pickOne(P().right));
     const next = p.done.findIndex(d=>!d); view.strand = next; render(); window.scrollTo({top:0, behavior:"smooth"});
   };
 }
@@ -1309,7 +1748,7 @@ function buildField(f, ctx){
   const label = fill(f.label, g, sc);
   if (f.t === "text"){
     const v = p.fields[f.id] || "";
-    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><textarea id="f_${f.id}" spellcheck="true">${esc(v)}</textarea><span class="counter" id="c_${f.id}"></span>`;
+    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><textarea id="f_${f.id}" class="notranslate" spellcheck="true">${esc(v)}</textarea><span class="counter" id="c_${f.id}"></span>`;
     const ta = el.querySelector("textarea"), cn = el.querySelector(".counter");
     const upd = () => { const w = words(ta.value); cn.textContent = `${w} / ${f.min} words minimum`; cn.classList.toggle("ok", w >= f.min); };
     ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(save, 400); };
@@ -1317,7 +1756,7 @@ function buildField(f, ctx){
   } else if (f.t === "table"){
     const v = p.fields[f.id] || Array.from({length:f.rows},()=>f.cols.map(()=>""));
     p.fields[f.id] = v;
-    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=>`<td><input type="text" id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" value="${esc(r[ci]||"")}" aria-label="${esc(f.cols[ci])} row ${ri+1}"></td>`).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
+    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=>`<td class="notranslate"><input type="text" id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" value="${esc(r[ci]||"")}" aria-label="${esc(f.cols[ci])} row ${ri+1}"></td>`).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
     const cn = el.querySelector(".counter");
     const upd = () => { const done = v.filter(r => f.cols.every((_,k)=>String(r[k]||"").trim())).length, need = tableRowsNeeded(f.rows); cn.textContent = `${done} of ${f.rows} rows complete (at least ${need} needed)`; cn.classList.toggle("ok", done >= need); };
     el.querySelectorAll("input").forEach(inp => inp.oninput = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(save, 400); });
@@ -1337,7 +1776,7 @@ function sketchBox(f, label, p){
           ${["#16223A","#DC2B3E","#1B6FD1","#1E8A55","#E39B00"].map((c,i)=>`<button class="sw" data-col="${c}" style="background:${c}" aria-label="Colour ${i+1}" aria-pressed="${i===0}"></button>`).join("")}
           <button class="btn sm sec" data-a="thin">Thin</button><button class="btn sm sec" data-a="thick">Thick</button><button class="btn sm sec" data-a="erase">Eraser</button><button class="btn sm sec" data-a="text">Add label</button><button class="btn sm ghost" data-a="clear">Clear</button></div>
         <canvas width="1200" height="900" aria-label="Sketch area"></canvas>
-        <div class="tools"><button class="btn sm ok" data-a="save">Save sketch</button><label class="btn sm sec" style="cursor:pointer">Upload a photo instead<input type="file" accept="image/*" hidden></label><span class="muted" style="font-size:12px">Draw on paper? Take a photo and upload it.</span></div>
+        <div class="tools"><button class="btn sm ok" data-a="save">Save sketch</button><label class="btn sm ${f.evidence?"":"sec"}" style="cursor:pointer">${f.evidence?"Upload screenshot or photo":"Upload a photo instead"}<input type="file" accept="image/*" hidden></label><span class="muted" style="font-size:12px">${f.evidence?"Upload a screenshot or photo of your work, or draw it here.":"Draw on paper? Take a photo and upload it."}</span></div>
         <div class="tools" data-labelbox hidden><input type="text" placeholder="Type a label, then tap the sketch to place it" style="flex:1;min-width:180px"></div>`}`;
     if (has){ wrap.querySelector('[data-a="redo"]').onclick = () => { p.fields[f.id] = null; save(); drawUI(); }; return; }
     const cv = wrap.querySelector("canvas"), cx = cv.getContext("2d");
@@ -1354,7 +1793,7 @@ function sketchBox(f, label, p){
     cv.onpointerup = cv.onpointercancel = () => { drawing = false; };
     wrap.querySelectorAll(".sw").forEach(b => b.onclick = () => { col = b.dataset.col; erase = false; wrap.querySelectorAll(".sw").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
     const act = a => ({ thin:()=>{w=4;erase=false}, thick:()=>{w=10;erase=false}, erase:()=>{erase=true}, clear:()=>{ drawUI(); }, text:()=>{ textMode = true; const lb = wrap.querySelector("[data-labelbox]"); lb.hidden = false; lb.querySelector("input").focus(); },
-      save:()=>{ if (!dirty) return toast("Draw your idea first, or upload a photo."); p.fields[f.id] = shrink(cv); save(); speak("Sketch saved. Nice work."); drawUI(); } })[a]?.();
+      save:()=>{ if (!dirty) return toast("Draw your idea first, or upload a photo."); p.fields[f.id] = shrink(cv); save(); speak(P().sketch); drawUI(); } })[a]?.();
     wrap.querySelectorAll("[data-a]").forEach(b => b.onclick = () => act(b.dataset.a));
     wrap.querySelector('input[type=file]').onchange = ev => {
       const file = ev.target.files[0]; if (!file) return;
@@ -1388,8 +1827,8 @@ function paneSubmit(pane, ctx){
     p.finished = true; p.savedAt = new Date().toISOString(); save();
     $("#subMsg").innerHTML = `<div class="notice ok">Copy saved for your teacher. Well done!</div>`;
   };
-  $("#saveCopy").onclick = () => { saveCopy(); speak("Your copy has been saved for your teacher. Brilliant work."); };
-  $("#dlPdf").onclick = async () => { try { await buildPDF(ctx); if (!p.finished) saveCopy(); speak("Your PDF is downloading. Hand it in where your teacher asks."); } catch(e){ $("#subMsg").innerHTML = `<div class="notice bad">The PDF could not be created on this device (${esc(e.message)}). Open the course in Chrome or Edge and try again.</div>`; } };
+  $("#saveCopy").onclick = () => { saveCopy(); speak(P().copy); };
+  $("#dlPdf").onclick = async () => { try { await buildPDF(ctx); if (!p.finished) saveCopy(); speak(P().pdf); } catch(e){ $("#subMsg").innerHTML = `<div class="notice bad">The PDF could not be created on this device (${esc(e.message)}). Open the course in Chrome or Edge and try again.</div>`; } };
   $("#edit").onclick = () => { view.step = 5; view.strand = 0; render(); };
 }
 
@@ -1488,7 +1927,7 @@ function staffPanel(tab, who="admin"){
       <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th></th></tr>${st.teachers.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.email)}</td><td><button class="btn sm ghost" data-rm="${esc(t.email)}">Remove access</button></td></tr>`).join("") || `<tr><td colspan="3" class="muted">No approved teachers yet.</td></tr>`}</table></div>
       <div id="tMsg"></div>`;
   } else if (tab === "answers"){
-    body = Object.keys(COURSE.grades).map(g => { const gd = COURSE.grades[g]; return ["A","B"].map(c => { const qs = COURSE.exercises[c].filter(q=>q.y<=gd.myp).concat(COURSE.gradeExercises[g][c]);
+    body = Object.keys(COURSE.grades).map(g => { const gd = COURSE.grades[g]; return ["A","B","C","D"].map(c => { const qs = COURSE.exercises[c].filter(q=>q.y<=gd.myp).concat(COURSE.gradeExercises[g][c]);
       return `<details><summary><b>Grade ${g} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
   } else if (tab === "lookup"){
     const studs = Object.entries(DB.users).filter(([e,u]) => u.role !== "teacher" && e !== PREVIEW);
@@ -1508,7 +1947,7 @@ function staffPanel(tab, who="admin"){
         <label class="f">Switches form — pre-filled link<input type="text" id="setCtl" value="${esc(s.controlForm)}"></label>
         <label class="f">Switches sheet — published CSV link<input type="text" id="setCsv" value="${esc(s.controlCsv)}" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"></label>
         <label class="f">New admin password (leave blank to keep the current one)<input type="password" id="setPw" autocomplete="new-password"></label>
-        <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B"].map(c=>`<label class="f">Grade ${g} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
+        <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B","C","D"].map(c=>`<label class="f">Grade ${g} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
         <div id="setMsg"></div>
         <div class="row"><button class="btn" id="saveSet">Save settings</button><button class="btn sec" id="dlFile2">${ICON.dl} Download course file</button><button class="btn ghost" id="testLog">Send a test entry</button></div></div>`;
   }
@@ -1583,7 +2022,9 @@ document.addEventListener("keydown", e => { if (e.ctrlKey && e.shiftKey && e.key
 $("#endPreview").onclick = () => { session.preview = false; session.email = session.back || null; session.back = null; go({ name:"home" }); };
 if (DB.session && DB.users[DB.session] && DB.session !== PREVIEW && DB.users[DB.session].hash) session.email = DB.session;
 try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
+new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = requestAnimationFrame(() => addListenButtons(document.getElementById("app"))); }).observe(document.getElementById("app"), { childList:true, subtree:true });
 render(); loadLive(); flushQueue();
+if (lang() !== "en") applyLang(lang(), true);
 setInterval(() => { loadLive(); flushQueue(); }, 60000);
 window.addEventListener("online", flushQueue);
 })();
