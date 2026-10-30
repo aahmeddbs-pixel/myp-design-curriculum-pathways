@@ -1897,6 +1897,7 @@ function renderHome(app){
       <div class="stack" style="gap:6px">
         <div class="eyebrow">${esc(gLabel(g))} · MYP ${esc(gd.subject||"Design")} Year ${gd.myp} · ${esc(gd.sdg)}</div>
         <h1>${esc(gd.unit)}</h1>
+        ${(g==="10"||g==="10IT") ? `<div class="row"><button class="btn ghost sm" id="courseSwitch" data-to="${g==="10"?"10IT":"10"}">Switch to ${g==="10"?"Grade 10 IT":"Grade 10 Design"} →</button></div>` : ""}
         <div class="brief" data-read><div class="eyebrow" style="color:var(--muted)">${gd.choose ? (g==="6"?"Your building for City 2050":"Your campaign cause") : "Your design challenge"}</div>
           <h3 style="margin:4px 0">${esc(sc.title)}</h3>
           <p style="margin:0">${esc(sc.client)} needs your help: ${esc(sc.problem)}.</p>
@@ -1916,6 +1917,7 @@ function renderHome(app){
   </div>`;
   app.querySelectorAll(".crit.open").forEach(b => b.onclick = () => go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }));
   const chg = $("#chChange"); if (chg) chg.onclick = () => { view.choosing = true; render(); };
+  const sw = $("#courseSwitch"); if (sw) sw.onclick = () => { const to = sw.dataset.to; u.progressBy = u.progressBy || {}; u.progressBy[u.grade] = u.progress || {}; u.grade = to; u.progress = u.progressBy[to] || {}; save(); logEvent("-", "Switched course", gLabel(to)); go({ name:"home" }); };
 }
 
 /* ================= CRITERION FLOW ================= */
