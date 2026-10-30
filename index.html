@@ -194,6 +194,8 @@ body{top:0!important}
 @media (max-width:640px){.checks{grid-template-columns:1fr}}
 .chk{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--paper);font-size:14px;cursor:pointer}
 .chk input{margin-top:3px}
+.view-only>:not(.listen){pointer-events:none;user-select:none}
+.view-only{opacity:.92}
 footer{font-size:12px;color:var(--muted);text-align:center;padding-block:20px}
 footer button{background:none;border:0;color:var(--muted);text-decoration:underline}
 code{font-family:var(--f-mono);font-size:12.5px;background:var(--soft);padding:1px 5px;border-radius:4px;word-break:break-all}
@@ -1395,6 +1397,438 @@ COURSE.gradeExercises["10IT"] = {
 
 </script>
 <script>
+/* ==========================================================
+   WORKBOOK-ALIGNED TASKS (from Mr. Ahmed's workbooks and slides)
+   ========================================================== */
+const T  = (id, label, min) => ({ t:"text", id, label, min });
+const TB = (id, label, cols, rows, need) => ({ t:"table", id, label, cols, rows, need });
+const RL = (id, label, head, rowLabels, cols) => ({ t:"table", id, label, cols:[head].concat(cols), rows: rowLabels.length, rowLabels, need: rowLabels.length });
+const SK = (id, label, evidence) => ({ t:"sketch", id, label, evidence: !!evidence });
+const CH = (id, label, options) => ({ t:"choice", id, label, options });
+const CL = (id, label, options, min) => ({ t:"checklist", id, label, options, min });
+
+/* ======================= GRADE 6 — CITY 2050 ======================= */
+Object.assign(COURSE.grades["6"], {
+  unit: "Smart & Sustainable City 2050",
+  product: "your Smart & Sustainable 2050 City, created digitally, with your key building designed in detail",
+  ideaLabel: "city design idea (labelled map or layout)", planLabel: "final detailed city plan",
+  choose: { title: "Choose the key building you will design in detail for your city", note: "You will design a whole Smart & Sustainable City for 2050. Pick one key building that you will design in extra detail in Criterion C. You can change it until you complete your first strand.", label: "Your key building for City 2050", titleLabel: "Name of your building or facility (for example Smart Airport)", userLabel: "Who is it for?", problemLabel: "What problem does it solve?", briefT: "Your key building: a smart, sustainable {t} for your 2050 city." },
+  example: { title: "Oasis Bay 2050", client: "the City 2050 Planning Council", user: "60,000 residents of a coastal desert city, including families, older people and workers",
+    problem: "a hot coastal city where traffic jams, high energy use and a lack of shade make daily life uncomfortable and polluting" },
+  lab: {
+    intro: "Create your city digitally (the Digital path from your workbook). Your finished product must show your city layout, label at least 3 smart or sustainable features, include a short written description of each, and show your key building in detail. Take a screenshot at each stage.",
+    tools: [
+      { name: "Tinkercad", url: "https://www.tinkercad.com", use: "Build a 3D city model and your key building. Free, in the browser, no download.", main: true },
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "A city design poster or infographic with labels." },
+      { name: "Google Slides", url: "https://slides.google.com", use: "An annotated city map across several slides using shapes, images and text boxes." },
+      { name: "Scratch", url: "https://scratch.mit.edu", use: "An interactive city tour or animated city guide." },
+      { name: "Excalidraw", url: "https://excalidraw.com", use: "Quick labelled sketches of city zones (no login needed)." }
+    ],
+    milestones: ["Early stage — getting started", "Mid stage — building and developing", "Final stage — finishing and refining"],
+    skills: ["Set sizes with the ruler and workplane", "Lay out city zones neatly (housing, green space, transport)", "Build buildings from shapes and cut doors and windows", "Align and group parts", "Duplicate repeated features (trees, solar panels, houses)", "Use colour coding for zones and materials", "Add labels and short descriptions to features", "Take clear screenshots from different angles"]
+  },
+  tasks: {
+    A: [
+      [ T("a1s", "Question 1: Why do we need cities to be SMART? Give at least 2 specific reasons.", 40),
+        T("a1u", "Question 2: Why do we need cities to be SUSTAINABLE? Give at least 2 specific reasons.", 40),
+        T("a1b", "Question 3: Can a city be BOTH smart and sustainable? Explain with a specific example from your research.", 30),
+        TB("a1p", "Question 4: What specific problems does YOUR 2050 city need to solve? (at least 3)", ["Problem", "Why does this problem matter?"], 3, 3) ],
+      [ RL("a2m", "Task 3: Mind map — write your ideas for each area of your city", "City area", ["Transport", "Energy", "Housing", "Green spaces", "Technology", "Education", "Security", "Lifestyle"], ["My ideas"]),
+        TB("a2t", "Task 4: Research priority table", ["What do I need to research?", "Why is this important for my city?", "Where will I find this information?", "Priority (High / Medium / Low)"], 5, 4),
+        T("a2r", "Which area of research is MOST important and why?", 25) ],
+      [ T("a3d1", "Task 1: What is a Smart City? Write your own definition.", 15),
+        T("a3d2", "Task 1: What is a Sustainable City? Write your own definition.", 15),
+        RL("a3t", "Task 2: Research two real smart and/or sustainable cities (for example Singapore, Copenhagen, Masdar City, Amsterdam, Vienna, Songdo, Curitiba)", "", ["Name of the city", "Country / location", "What makes it SMART? (2–3 features)", "What makes it SUSTAINABLE? (2–3 features)", "Who benefits from these features?", "One problem this city still has"], ["City 1", "City 2"]),
+        T("a3i", "What ideas from these cities will you use in your own 2050 city? Explain at least 2 ideas.", 40) ],
+      [ T("a4n", "My city is called:", 1), T("a4l", "My city will be located in / near:", 1),
+        T("a4a", "This city is designed for… (Who will live or work there? How many people? What kinds of people?)", 25),
+        T("a4p", "The main problems this city solves are… (2–3 specific problems from A.i)", 25),
+        T("a4r", "My research showed that existing cities like… (reference the cities you analysed)", 25),
+        T("a4f", "The most important features my city must include are… (at least 3 — these become your Criterion B specification)", 25),
+        T("a4d", "My city is different from existing cities because…", 20),
+        T("a4m", "By 2050, this city will matter because…", 20) ]
+    ],
+    B: [
+      [ TB("b1t", "Task 1: Your design specification — at least 6 success criteria you can tick YES or NO", ["Success criterion (what must your city include or achieve?)", "How will you know if it is met?", "MUST / SHOULD / COULD"], 8, 6) ],
+      [ T("b2n1", "Name of Design Idea 1", 1), SK("b2s1", "Design Idea 1 — label all key areas and features"), T("b2f1", "Key features of Design Idea 1 (at least 4)", 20), T("b2m1", "How does Design Idea 1 meet your specification? Which success criteria does it meet?", 20),
+        T("b2n2", "Name of Design Idea 2", 1), SK("b2s2", "Design Idea 2 — label all key areas and features"), T("b2f2", "Key features of Design Idea 2 (at least 4)", 20), T("b2m2", "How does Design Idea 2 meet your specification?", 20),
+        T("b2n3", "Name of Design Idea 3", 1), SK("b2s3", "Design Idea 3 — label all key areas and features"), T("b2f3", "Key features of Design Idea 3 (at least 4)", 20), T("b2m3", "How does Design Idea 3 meet your specification?", 20) ],
+      [ CH("b3c", "I have chosen:", ["Design Idea 1", "Design Idea 2", "Design Idea 3"]),
+        T("b3a", "I chose this design because…", 20),
+        T("b3b", "This design meets the following success criteria from my specification… (at least 3, by number)", 25),
+        T("b3s", "The features that make this design stand out are…", 20),
+        T("b3o", "Compared to my other design ideas, this one is better because…", 25),
+        T("b3i", "One thing I would still like to improve about this design is…", 15) ],
+      [ SK("b4s", "Task 3: Final detailed city plan — label every area and add notes explaining how each part works"),
+        CL("b4c", "City features — tick each item you have labelled in your final plan", ["Transport system", "Energy sources", "Green spaces", "Housing areas", "Business and commercial areas", "Education facilities", "Water management", "Waste management", "Technology features", "Public and community spaces"], 8),
+        RL("b4t", "Task 4: Requirements — what would be needed to build this city?", "City feature / area", ["Transport system", "Energy system", "Green spaces", "Housing", "Technology infrastructure", "Water and waste management"], ["What would be needed to build / create this?", "Why is this important?"]),
+        T("b4r", "What are the three most important requirements for your city, and why?", 30),
+        T("b4c2", "What is the biggest challenge in building your city, and how could it be overcome?", 30) ]
+    ],
+    C: [
+      [ CH("c1tool", "Which free platform will you use? (Digital path)", ["Tinkercad", "Canva for Education", "Google Slides", "Scratch", "Excalidraw", "Other free software"]),
+        T("c1w", "Step 1 — What will I make? Describe your chosen design from Criterion B, including your key building ({title}).", 40),
+        TB("c1r", "Step 2 — What do I need? (platform, accounts, images or assets)", ["Item / resource", "Where I will get it", "Do I have it?"], 5, 4),
+        RL("c1p", "Step 3 — My time plan", "Session", ["Session 1", "Session 2", "Session 3", "Session 4", "Session 5", "Session 6 (final check & presentation)"], ["Task I will complete", "Time needed (mins)"]) ],
+      [ T("c2a1", "Stage 1 (early stage — getting started): what did you do?", 15), T("c2b1", "Stage 1: what technical skills or techniques did you use?", 15), SK("c2e1", "Stage 1 — photo / screenshot (label key features)", true), T("c2c1", "Stage 1: what went well? What was difficult?", 15),
+        T("c2a2", "Stage 2 (mid stage — building and developing): what did you do?", 15), T("c2b2", "Stage 2: what technical skills or techniques did you use?", 15), SK("c2e2", "Stage 2 — photo / screenshot", true), T("c2c2", "Stage 2: what went well? What was difficult?", 15),
+        T("c2a3", "Stage 3 (final stage — finishing and refining): what did you do?", 15), T("c2b3", "Stage 3: what technical skills or techniques did you use?", 15), SK("c2e3", "Stage 3 — photo / screenshot", true), T("c2c3", "Stage 3: what went well? What was difficult?", 15),
+        CL("c2k", "Tick the technical skills you used (at least 4)", COURSE.grades["6"] ? [] : [], 4) ],
+      [ SK("c3f", "Final photo / screenshot — front view (the whole solution)", true),
+        SK("c3g", "Final photo / screenshot — second view or close-up of a smart / sustainable feature", true),
+        T("c3d", "What does your finished solution look like? Describe it in detail.", 40),
+        T("c3k", "What are the 3 most important smart or sustainable features? Explain what they do.", 40),
+        T("c3m", "Does your solution meet the success criteria from your Criterion B specification? Explain.", 40) ],
+      [ TB("c4t", "My changes log", ["What was the original plan?", "What change did I make?", "Why did I make this change?", "How did it affect my solution?"], 3, 2),
+        T("c4b", "What was the BIGGEST change you made? Explain it in detail and justify why it improved (or did not improve) your solution.", 40),
+        T("c4r", "Final reflection: if you could make your solution again, what ONE thing would you do differently and why?", 20) ]
+    ],
+    D: [
+      [ TB("d1t", "My test plan — a test for each success criterion from Criterion B (at least 4)", ["Success criterion (from Criterion B)", "How I will test it", "Expected result"], 5, 4),
+        TB("d1r", "My test results", ["Test #", "Expected result", "Actual result", "Did the test pass? Why / why not?"], 5, 4) ],
+      [ TB("d2t", "Evaluation against the design specification", ["Success criterion", "Met? (Yes / Partly / No)", "Evidence from my tests"], 5, 4),
+        T("d2o", "How successful was your solution overall? Use your test results.", 40),
+        T("d2n", "Were there any success criteria your solution did NOT fully meet? Why did this happen?", 30) ],
+      [ TB("d3t", "My improvement ideas", ["Weakness identified", "Specific improvement", "Why this would make it better"], 3, 3),
+        T("d3m", "Choose your MOST IMPORTANT improvement. Explain exactly what you would change and why.", 40),
+        T("d3b", "If you had more time and resources, what one BIG addition would you make to your city?", 30) ],
+      [ T("d4g", "Describe the main groups of people your city is designed for.", 30),
+        TB("d4t", "Positive impacts", ["Smart / sustainable feature", "Group of people it helps", "How it improves their lives"], 3, 3),
+        T("d4n", "What is one potential NEGATIVE impact or challenge your city design might create?", 30),
+        T("d4s", "How would the features of your city help address global sustainability goals?", 30),
+        T("d4f", "Final reflection: what would be the SINGLE most important positive change for the people living there?", 30) ]
+    ]
+  }
+});
+COURSE.grades["6"].tasks.C[1][12] = CL("c2k", "Tick the technical skills you used (at least 4)", COURSE.grades["6"].lab.skills, 4);
+COURSE.grades["6"].scenarios.forEach(s => { if (!s.custom) s.brief = s.brief.replace(/^Design a smart, sustainable /, "Your key building: a smart, sustainable "); });
+
+/* ======================= GRADE 7 — AWARENESS CAMPAIGN ======================= */
+Object.assign(COURSE.grades["7"].choose, { label: "Your campaign cause", titleLabel: "Your cause", userLabel: "Who is your target audience?", problemLabel: "What problem does your campaign address?", briefT: "Design an awareness campaign (a poster and a 30-second video) about {t}." });
+Object.assign(COURSE.grades["7"], {
+  unit: "Awareness Campaign",
+  product: "an awareness campaign: a poster and a 30-second video",
+  ideaLabel: "poster idea", planLabel: "final poster layout",
+  lab: {
+    intro: "You will create your final poster and a 30-second awareness video that follows your storyboard. Take screenshots as you work — they are your evidence of technical skill.",
+    tools: [
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "Posters and short videos. Free for students and teachers.", main: true },
+      { name: "Adobe Express", url: "https://www.adobe.com/express/", use: "Posters, animated graphics and short videos. Free plan available." },
+      { name: "Clipchamp", url: "https://clipchamp.com", use: "Video editing in the browser; included with school Microsoft accounts." }
+    ],
+    milestones: ["Poster process", "Video editing process"],
+    skills: ["Layout design and composition", "Colour theory (contrast and colour scheme)", "Typography choices (headline, body, sizes)", "Image editing (crop, remove background, adjust)", "Visual hierarchy (what is seen first)", "Timeline editing (cutting and ordering clips)", "Transitions", "Text and title overlays", "Audio mixing (music and voiceover levels)", "Captions or subtitles"]
+  },
+  tasks: {
+    A: [
+      [ T("a1t", "Question 1: You chose {title}. Why did you choose this topic for your awareness campaign?", 30),
+        T("a1r", "Question 2: Why does this issue need an awareness campaign? Give at least 2 specific reasons.", 40),
+        T("a1a", "Question 3: Who is your target audience? Explain why you are targeting them.", 30),
+        TB("a1p", "Question 4: What specific problems does your campaign need to address? (at least 3)", ["Problem", "Why does this problem matter?"], 3, 3) ],
+      [ RL("a2m", "Task 3: Mind map — write your ideas for each campaign component", "Campaign component", ["Message / slogan", "Visual style", "Target audience", "Call to action", "Facts / statistics", "Media channels", "Tone / mood", "My additional ideas"], ["My ideas"]),
+        TB("a2t", "Task 4: Research priority table", ["What do I need to research?", "Why is this important?", "Where will I find this?", "Priority (High / Medium / Low)"], 5, 4),
+        T("a2r", "Which area of research is MOST important and why?", 25) ],
+      [ T("a3d", "Task 1: What is an awareness campaign? Write your own definition.", 15),
+        T("a3e", "What makes a digital advert effective for raising awareness? List at least 3 features.", 20),
+        RL("a3t", "Task 2: Research two existing awareness campaigns (for example WWF, UNICEF, Anti-Bullying Week, road safety, ocean plastic)", "", ["Name of campaign", "Organisation", "What issue does it address?", "What media does it use? (poster / video / social)", "What makes it effective? (2–3 points)", "One thing that could be improved"], ["Campaign 1", "Campaign 2"]),
+        T("a3i", "What ideas from these campaigns will you use in your own design? Explain at least 2 ideas.", 40) ],
+      [ T("a4a", "My target audience is:", 2),
+        T("a4b", "This campaign is designed for… (Who is the audience? Why them?)", 20),
+        T("a4p", "The main problems this campaign addresses are… (2–3 from A.i)", 20),
+        T("a4r", "My research showed that existing campaigns like… (reference A.iii)", 20),
+        T("a4f", "The most important features my campaign must include are… (at least 3)", 20),
+        T("a4m", "My campaign will use these media… (poster and 30-second video — explain your approach)", 20),
+        T("a4w", "This campaign matters because… (long-term impact on awareness and behaviour)", 20) ]
+    ],
+    B: [
+      [ TB("b1t", "Your design specification — what your poster and video must achieve", ["Area (message, look, video, audience, action)", "Success criterion", "How I will test it"], 6, 5) ],
+      [ SK("b2s1", "Poster idea 1 — label headline, image, facts and call to action"), T("b2n1", "Explain poster idea 1", 20),
+        SK("b2s2", "Poster idea 2"), T("b2n2", "Explain poster idea 2", 20),
+        SK("b2s3", "Poster idea 3"), T("b2n3", "Explain poster idea 3", 20) ],
+      [ TB("b3t", "Compare your poster ideas against your specification", ["Idea", "Criteria met (out of your total)", "Main strength", "Main weakness"], 3, 3),
+        T("b3c", "Present your chosen design and outline the reasons for choosing it", 50) ],
+      [ SK("b4s", "Final poster layout — label sizes, colours, fonts and images"),
+        RL("b4v", "Video storyboard — 30 seconds in total", "Scene", ["Scene 1", "Scene 2", "Scene 3", "Scene 4", "Scene 5", "Scene 6"], ["Duration (seconds)", "What happens (visuals, text, sound)"]),
+        TB("b4t", "Requirements", ["Requirement (software, images, music, voiceover)", "Details"], 4, 3) ]
+    ],
+    C: [
+      [ TB("c1p", "Task 1: Logical plan — final poster (step-by-step instruction manual)", ["Step #", "What to do (detailed instruction)", "Tools / software / resources", "Time"], 6, 5),
+        T("c1r", "What resources will you need in total? (software, materials, images…)", 20),
+        TB("c1v", "Task 2: Logical plan — 30-second video (step-by-step instruction manual)", ["Step #", "What to do (detailed instruction)", "Tools / software / resources", "Time"], 6, 5),
+        T("c1c", "How does this plan connect to your Criterion B storyboard? Explain.", 25),
+        RL("c1s", "Scene plan — explain what happens in each scene, with transitions, sounds and animation", "Scene", ["Scene 1", "Scene 2", "Scene 3", "Scene 4", "Scene 5", "Scene 6"], ["Duration", "Scene description"]) ],
+      [ CH("c2tool", "Which software did you use?", ["Canva for Education", "Adobe Express", "Clipchamp", "Other free software"]),
+        SK("c2p11", "Poster 1 — screenshot 1", true), T("c2q11", "What does this show? What technical skills did you use at this stage?", 12),
+        SK("c2p12", "Poster 1 — screenshot 2", true), T("c2q12", "What does this show? What technical skills did you use?", 12),
+        SK("c2p13", "Poster 1 — screenshot 3", true), T("c2q13", "What does this show? What technical skills did you use?", 12),
+        SK("c2p21", "Poster 2 — screenshot 1", true), T("c2q21", "What does this show? What technical skills did you use?", 12),
+        SK("c2p22", "Poster 2 — screenshot 2", true), T("c2q22", "What does this show? What technical skills did you use?", 12),
+        SK("c2p23", "Poster 2 — screenshot 3", true), T("c2q23", "What does this show? What technical skills did you use?", 12),
+        T("c2pp", "What technical skills are you most proud of in your posters? Explain why.", 25),
+        SK("c2v1", "Video — editing screenshot 1", true), T("c2w1", "What does this show? What video editing skills did you demonstrate?", 12),
+        SK("c2v2", "Video — editing screenshot 2", true), T("c2w2", "What does this show? What video editing skills did you demonstrate?", 12),
+        SK("c2v3", "Video — editing screenshot 3", true), T("c2w3", "What does this show? What video editing skills did you demonstrate?", 12),
+        T("c2vp", "What technical skills are you most proud of in your video? Explain why.", 25),
+        CL("c2k", "Tick the technical skills you used (at least 5)", COURSE.grades["7"].lab.skills, 5) ],
+      [ TB("c3p", "Task 5: Plan vs final product — poster", ["Plan step", "What the plan said to do", "What the final poster shows", "Matched? (Yes / Partly / No)"], 4, 3),
+        T("c3f", "Does your final poster function as intended? Does it effectively raise awareness? Explain.", 30),
+        T("c3a", "Is your poster presented appropriately? (print quality, resolution, professionalism, layout)", 25),
+        TB("c3v", "Task 6: Storyboard vs final video", ["Storyboard frame", "What the storyboard showed", "What the final video shows", "Matched? (Yes / Partly / No)"], 4, 3),
+        T("c3g", "Does your final video function as intended? Does it raise awareness in 30 seconds? Explain.", 30),
+        T("c3b", "Is your video presented appropriately? (audio quality, transitions, title cards, overall polish)", 25) ],
+      [ TB("c4p", "Task 7: Changes to the poster design", ["What I originally planned / designed", "What I changed it to", "Why I made this change"], 3, 2),
+        TB("c4v", "Task 8: Changes to the video plan", ["What the plan / storyboard showed", "What I actually did", "Why I made this change"], 3, 2),
+        T("c4o", "Overall, were the changes you made improvements? Explain with specific examples.", 30) ]
+    ],
+    D: [
+      [ T("d1p", "Task 1: How will you test your POSTER? Describe at least 2 testing methods.", 30),
+        T("d1v", "How will you test your VIDEO? Describe at least 2 testing methods.", 30),
+        RL("d1f", "Task 2: Peer feedback survey — show your poster and video to at least 3 peers", "", ["Peer name", "What did they like about the poster?", "What did they like about the video?", "What would they improve?", "Did the campaign make them more aware of the issue? (Yes / No + why)"], ["Peer 1", "Peer 2", "Peer 3"]) ],
+      [ TB("d2t", "Task 3: Specification evaluation table", ["Specification point", "Met / Partly met / Not met", "Evidence and explanation"], 6, 5),
+        T("d2o", "Overall, how successful was your awareness campaign? Refer to your testing results and peer feedback.", 40) ],
+      [ TB("d3t", "Task 4: At least 3 specific improvements", ["Improvement", "What would you change?", "Why would this make it better?"], 3, 3) ],
+      [ T("d4i", "Describe the impact of your campaign on your target audience. What changed for them?", 30),
+        T("d4l", "What did you learn about designing an awareness campaign?", 25),
+        T("d4c", "Which stage of the design cycle did you find most challenging and why?", 20),
+        T("d4d", "If you could do this project again, what would you do differently?", 20),
+        T("d4m", "How has this project helped you understand the power of media for raising awareness?", 25) ]
+    ]
+  }
+});
+COURSE.examples["7"].C[1] = `<p>I created a brand kit so both posters use the same navy, yellow and white, with one headline font. I made two poster versions: one with a cartoon "energy vampire" and one with a photo of glowing chargers at night. On each I used size and colour to make the headline the first thing you see. In the video I cut clips on the timeline to fit exactly 30 seconds, added a title card, text overlays with my facts, a cross-fade between scenes, and captions so it works without sound. I lowered the music under my voiceover so every word is clear.</p>`;
+COURSE.examples["7"].C[2] = `<p><b>Plan vs final:</b> 5 of 6 poster steps matched exactly; the call-to-action banner changed colour (see changes). 6 of 6 storyboard frames appear in the video. The poster works as intended: classmates explained the action within 5 seconds. It is presented appropriately as a high-resolution A3 PDF. The 30-second video is captioned, the audio is clear and the transitions are smooth.</p>`;
+
+/* ======================= GRADE 8 — PARENT'S BUSINESS WEBSITE (WIX) ======================= */
+Object.assign(COURSE.grades["8"], {
+  unit: "Publishing on the Web: Your Parent's Business Website",
+  sdg: "SDG 8 Decent Work & Economic Growth · SDG 9 Innovation · UNCRC Articles 12 & 13",
+  product: "a website for your parent's business, built in Wix (at least 3 pages: Home, Products/Services, Contact)",
+  ideaLabel: "website design sketch", planLabel: "developed page design",
+  choose: { title: "Tell us about your parent's business", note: "Your parent has asked you to design and create an effective website for their new business. It should be easy to use, have a good layout and colour combinations, and include images, text and video.", ownOnly: true, label: "Your parent's business", titleLabel: "Business name", userLabel: "Who are its customers?", problemLabel: "What does the business do, and why does it need a website?", briefT: "Design and build an effective website for {t} in Wix, with at least 3 pages, images, text and video." },
+  scenarios: [ { id: "other", title: "My parent's business", client: "your parent, the business owner", user: "the business's customers", problem: "", brief: "", ideas: "", custom: true } ],
+  example: { title: "Paws & Bubbles", client: "Layla, owner of Paws & Bubbles pet-grooming salon", user: "pet owners aged 25–50 who mostly use phones", problem: "all bookings are taken by phone and the owner misses about 15 calls a week while she is grooming" },
+  lab: {
+    intro: "You will build your website in Wix, starting from a blank template, following your construction plan. Take a full-size screenshot at every build stage — this is your evidence of technical skill.",
+    tools: [
+      { name: "Wix", url: "https://www.wix.com", use: "Build your website. Free account: Create New Site → Start with a blank template.", main: true },
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "Logo, banners and graphics." },
+      { name: "Squoosh", url: "https://squoosh.app", use: "Compress photos so pages load fast." }
+    ],
+    milestones: ["Setup and homepage", "Products and contact pages", "Testing and mobile responsive"],
+    skills: ["Start from a blank template", "Build a header with logo and navigation", "Add text, images and buttons", "Create a products/services grid or list", "Add a contact form, map and contact details", "Link every page in the navigation menu", "Embed a video", "Check and fix the mobile view", "Preview and publish the site"]
+  },
+  tasks: {
+    A: [
+      [ T("a1d", "Use 2–4 sentences to describe your thoughts on digital products as ways to advertise and manage businesses.", 30),
+        T("a1b", "Explain your parent's business: (1) what it is, (2) how it currently operates (online / offline), (3) why its current mode of operation is an issue, (4) who it affects (target audience) and (5) how it affects them. Write a detailed paragraph.", 80) ],
+      [ TB("a2t", "State and prioritise your research questions (interview questions work well)", ["Research question", "Priority (H / M / L)", "Justification of need"], 6, 5) ],
+      [ T("a3n1", "Existing website 1 — name and web address", 1), SK("a3s1", "Existing website 1 — screenshot", true),
+        RL("a3t1", "Analyse existing website 1", "Feature", ["Function", "Colours", "Layout", "Safety", "Style / theme", "Inspirations"], ["What you notice and why it works (or not)"]),
+        T("a3n2", "Existing website 2 — name and web address", 1), SK("a3s2", "Existing website 2 — screenshot", true),
+        RL("a3t2", "Analyse existing website 2", "Feature", ["Function", "Colours", "Layout", "Safety", "Style / theme", "Inspirations"], ["What you notice and why it works (or not)"]) ],
+      [ T("a4b", "Write your design brief: what you are going to design; how it will work; measurements (pages, images, videos…); its theme, style and safety; and anything else you intend to include. Start with \"I am going to design…\"", 100) ]
+    ],
+    B: [
+      [ RL("b1t", "Develop your design specification — a full, specific sentence for each point", "Specification", ["Function — what will your website do?", "Material — what software will it be built in?", "Target market — who is it aimed at?", "Size — how many pages, images, videos?", "Aesthetics — what will it look like?"], ["Specification (full sentence)", "Why does the product need this?"]),
+        SK("b1d", "Evidence: screenshot or photo of your first rough specification draft, with the date visible", true),
+        T("b1r", "One revision: what did you change after feedback or re-reading your brief, and why?", 20) ],
+      [ ...[1,2,3,4,5,6].flatMap(n => [SK(`b2a${n}`, `Website Design 1 — Sketch Idea ${n} (show this stage being created)`, true), T(`b2x${n}`, `Design 1, Sketch ${n}: date and annotation`, 8)]),
+        ...[1,2,3,4,5,6].flatMap(n => [SK(`b2b${n}`, `Website Design 2 — Sketch Idea ${n}`, true), T(`b2y${n}`, `Design 2, Sketch ${n}: date and annotation`, 8)]) ],
+      [ RL("b3t", "Compare Design 1 vs Design 2 against your specification (Met / Partially met / Not met + reason)", "Specification", ["Function", "Material", "Target market", "Size", "Aesthetics"], ["Design 1 — rating and reason", "Design 2 — rating and reason"]),
+        T("b3c", "Which design have you chosen? Justify your choice against every specification point.", 50) ],
+      [ SK("b4h1", "Developed design — Homepage, version 1", true), SK("b4h2", "Developed design — Homepage, version 2", true), T("b4hn", "Homepage annotations: label each component D1 or D2 to show its source design", 20),
+        SK("b4p1", "Developed design — Products / Services page, version 1", true), SK("b4p2", "Developed design — Products / Services page, version 2", true), T("b4pn", "Products / Services annotations (D1 / D2)", 20),
+        SK("b4c1", "Developed design — Contact page, version 1", true), SK("b4c2", "Developed design — Contact page, version 2", true), T("b4cn", "Contact page annotations (D1 / D2)", 20) ]
+    ],
+    C: [
+      [ TB("c1t", "Your construction plan — a detailed, time-efficient step-by-step plan (for example: 1. Set up Wix account and choose blank template — 10 min)", ["Step", "Task (with tools)", "Time"], 10, 8) ],
+      [ ...[["Screenshot 1: Wix setup", "Wix dashboard with blank template selected"], ["Screenshot 2: Homepage header", "Homepage with header section built"], ["Screenshot 3: Homepage content", "Full homepage with text, images, buttons"], ["Screenshot 4: Products / Services page", "Products page with grid or list layout"], ["Screenshot 5: Contact page", "Contact page with form and contact info"], ["Screenshot 6: Navigation & video", "Navigation menu linking all pages + embedded video"], ["Screenshot 7: Desktop preview", "Website in preview mode — desktop view"], ["Screenshot 8: Mobile preview", "Website in mobile / phone view"], ["Screenshot 9: Published website", "Final published site with the address visible"]].flatMap((s,i) => [SK(`c2e${i+1}`, `${s[0]} — ${s[1]}`, true), T(`c2r${i+1}`, `${s[0]}: date, time and reflection — what did you do and why?`, 12)]),
+        CL("c2k", "Tick the Wix skills you used (at least 6)", COURSE.grades["8"].lab.skills, 6) ],
+      [ T("c3n", "Business name", 1), T("c3u", "Website address (URL) of your published site", 1),
+        SK("c3h", "Final homepage screenshot", true), SK("c3p", "Final products / services page screenshot", true), SK("c3c", "Final contact page screenshot", true) ],
+      [ TB("c4t", "Changes made to your original plan (if none, write 'No changes made — followed plan as outlined')", ["Original plan", "What changed", "Why (justification)"], 3, 1) ]
+    ],
+    D: [
+      [ RL("d1t", "Carry out your tests: fill in the method, carry out the test, add evidence and write your results", "Test for", ["Aesthetics", "Functional testing", "Performance testing", "Accessibility testing"], ["Testing method (survey, detailed feedback, expert opinion, observation, experimentation, comparison)", "Evidence", "Results / conclusion"]) ],
+      [ RL("d2t", "State the success of your website against your Criterion B specification", "Specification point", ["Function", "Material", "Target market", "Size", "Aesthetics"], ["Test result", "Success? (Met / Partial / Not met)"]) ],
+      [ TB("d3t", "Suggested changes / improvements based on your test results", ["Suggested change / improvement", "Reason (detailed and explained)"], 3, 2) ],
+      [ T("d4t", "Impact on your client / target audience: will the impact be positive or negative? Think about their behaviour and habits, and whether it adds convenience or inconvenience to their routine.", 80) ]
+    ]
+  }
+});
+COURSE.examples["8"] = {
+  A: [
+    `<p>Digital products such as websites let even a small business advertise all day, every day, and manage bookings without extra staff. Customers expect to find prices and book online before they visit.</p><p><b>The business:</b> Paws & Bubbles is a pet-grooming salon run by Layla. It operates offline: all bookings are by phone. This is an issue because Layla misses about 15 calls a week while grooming, and customers cannot see prices. It affects pet owners aged 25–50 in the neighbourhood, who give up and book with competitors, and it costs Layla income.</p>`,
+    `<table><tr><th>Research question</th><th>Priority</th><th>Justification</th></tr><tr><td>Which services and prices should the site show?</td><td>H</td><td>The site cannot exist without this content</td></tr><tr><td>How do customers prefer to book?</td><td>H</td><td>Decides the main feature</td></tr><tr><td>What do competitor sites offer?</td><td>M</td><td>Shows the minimum standard</td></tr><tr><td>Which photos does Layla have?</td><td>M</td><td>Images make the site trustworthy</td></tr><tr><td>Which colours match the salon's sign?</td><td>L</td><td>Nice for branding, not essential</td></tr></table>`,
+    `<table><tr><th>Feature</th><th>Existing website: a national pet-store chain's grooming page</th></tr><tr><td>Function</td><td>Online booking widget, price list, store finder</td></tr><tr><td>Colours</td><td>Blue and white — calm and clean</td></tr><tr><td>Layout</td><td>Large hero photo, then service cards in a grid</td></tr><tr><td>Safety</td><td>Secure (https) booking; privacy policy link in the footer</td></tr><tr><td>Style / theme</td><td>Friendly, professional, lots of real pet photos</td></tr><tr><td>Inspirations</td><td>Service cards with a "Book" button on each</td></tr></table><p class="note">The second analysis (a local groomer) showed friendly photos but no prices and a layout that breaks on phones.</p>`,
+    `<p>"I am going to design a 3-page website for Paws & Bubbles in Wix: Home, Services and Contact. The homepage will show a welcome video and photos of real pets; the Services page will show 6 service cards with prices and a Book button; the Contact page will have a booking form, a map and opening hours. It will use teal and white to match the salon sign, a rounded friendly font, and work on phones. It will be safe: no customer data is shown publicly and the form only asks for name, phone and pet type."</p>`
+  ],
+  B: [
+    `<table><tr><th>Specification</th><th>Full sentence</th><th>Why</th></tr><tr><td>Function</td><td>Customers can view prices and send a booking request from any page.</td><td>Most customers want to book without calling.</td></tr><tr><td>Material</td><td>Built in Wix from a blank template.</td><td>Free and lets me match my design exactly.</td></tr><tr><td>Target market</td><td>Pet owners aged 25–50 using phones.</td><td>From my research questions.</td></tr><tr><td>Size</td><td>3 pages, at least 8 images and 1 video.</td><td>Enough content without slowing the site.</td></tr><tr><td>Aesthetics</td><td>Teal #1A9E9A and white, rounded font, large photos.</td><td>Matches the salon sign and feels friendly.</td></tr></table>`,
+    `<p><b>Website Design 1</b> (photo-led): Sketch 1 blank page with grid → Sketch 2 header and menu → Sketch 3 hero photo → Sketch 4 service cards → Sketch 5 colour added → Sketch 6 video and footer. <b>Website Design 2</b> (price-led): a split homepage with a price list on the left and the booking form on the right, built up in the same 6 stages. Every sketch is labelled with the design number, sketch number and date.</p>`,
+    `<table><tr><th>Specification</th><th>Design 1</th><th>Design 2</th></tr><tr><td>Function</td><td>Met — Book button on every card</td><td>Met — form always visible</td></tr><tr><td>Material</td><td>Met</td><td>Met</td></tr><tr><td>Target market</td><td>Met — large photos work on phones</td><td>Partially met — split layout cramped on phones</td></tr><tr><td>Size</td><td>Met</td><td>Met</td></tr><tr><td>Aesthetics</td><td>Met — friendly and colourful</td><td>Partially met — looks like a spreadsheet</td></tr></table><p>I chose <b>Design 1</b> because it meets all five specification points, while Design 2 only partially meets target market and aesthetics.</p>`,
+    `<p><b>Homepage, version 2:</b> hero photo and welcome video (D1), a short price summary strip (D2), Book button (D1). <b>Services page:</b> service cards (D1) with prices in bold (D2). <b>Contact page:</b> booking form beside the map (D2), friendly photo header (D1). Each component is labelled D1 or D2.</p>`
+  ],
+  C: [
+    `<table><tr><th>Step</th><th>Task</th><th>Time</th></tr><tr><td>1</td><td>Set up Wix account and choose a blank template</td><td>10 min</td></tr><tr><td>2</td><td>Set site colours and fonts in the theme</td><td>10 min</td></tr><tr><td>3</td><td>Build the header: logo and menu</td><td>15 min</td></tr><tr><td>4</td><td>Homepage hero photo, welcome text and button</td><td>20 min</td></tr><tr><td>5</td><td>Embed the welcome video</td><td>10 min</td></tr><tr><td>6</td><td>Services page: build one card, duplicate to 6</td><td>25 min</td></tr><tr><td>7</td><td>Contact page: form, map, hours</td><td>20 min</td></tr><tr><td>8</td><td>Link all pages in the menu</td><td>10 min</td></tr><tr><td>9</td><td>Fix the mobile view</td><td>20 min</td></tr><tr><td>10</td><td>Preview, test and publish</td><td>15 min</td></tr></table>`,
+    `<p>Screenshots 1–9 show each build stage with the date and time. For example, screenshot 6 shows the menu linking Home, Services and Contact and the embedded video; I used the Wix Add panel → Video and set it to autoplay muted. In screenshot 8 I rearranged the service cards into one column in the mobile editor so they are readable on a phone.</p>`,
+    `<p><b>Business:</b> Paws & Bubbles. <b>Site:</b> published on a free Wix address. Final screenshots show the homepage with video, the services page with six priced cards, and the contact page with a working form and map. A test booking arrived in Layla's email, so the site functions as intended.</p>`,
+    `<table><tr><th>Original plan</th><th>What changed</th><th>Why</th></tr><tr><td>3-column services grid</td><td>2-column grid</td><td>3 columns looked crowded on mobile; 2 give better spacing</td></tr><tr><td>Video at the top</td><td>Video below the welcome text</td><td>Testers missed the Book button above it</td></tr></table>`
+  ],
+  D: [
+    `<table><tr><th>Test for</th><th>Method</th><th>Evidence</th><th>Results</th></tr><tr><td>Aesthetics</td><td>Survey of 8 pet owners (Google Form)</td><td>Form graph</td><td>7/8 rated the look 4 or 5 out of 5</td></tr><tr><td>Functional</td><td>Experimentation: click every link and submit 3 test bookings</td><td>Screenshots</td><td>All links work; 3/3 bookings received</td></tr><tr><td>Performance</td><td>Page-speed test on a phone, 3 runs</td><td>Screenshot of results</td><td>Average 4.1 s (target 3 s)</td></tr><tr><td>Accessibility</td><td>Direct observation: alt text, contrast, font size</td><td>Annotated screenshots</td><td>All images have alt text; contrast passes</td></tr></table>`,
+    `<table><tr><th>Specification</th><th>Test result</th><th>Success</th></tr><tr><td>Function</td><td>Prices visible; 3/3 bookings received</td><td>Met</td></tr><tr><td>Material</td><td>Built in Wix</td><td>Met</td></tr><tr><td>Target market</td><td>7/8 owners would use it on their phone</td><td>Met</td></tr><tr><td>Size</td><td>3 pages, 9 images, 1 video</td><td>Met</td></tr><tr><td>Aesthetics</td><td>Liked, but loads slowly because of large photos</td><td>Partial</td></tr></table>`,
+    `<table><tr><th>Improvement</th><th>Reason</th></tr><tr><td>Compress the hero photo to under 250 KB</td><td>The speed test averaged 4.1 s; a smaller photo should bring it under 3 s, which matters because most customers use phones.</td></tr><tr><td>Add a confirmation message after booking</td><td>2 of 8 testers weren't sure their booking had been sent.</td></tr></table>`,
+    `<p>The impact is mostly positive. Customers can see prices and book at any time, which adds convenience to their routine — they no longer have to call during opening hours. Layla received 3 online requests in the first week instead of missing those calls. One inconvenience is that Layla now needs to check her email several times a day; a booking routine or notification would help.</p>`
+  ]
+};
+Object.assign(COURSE.gradeExercises["8"], {
+  C: [
+    { type: "mcq", q: "In Wix, why start with a blank template?", o: ["It is faster", "It gives you full control to apply your own Criterion B design", "Templates are not allowed", "It uses less storage"], a: 1, h: "Your design, not someone else's.", w: "Blank templates let you follow your own design." },
+    { type: "mcq", q: "Which Wix panel lets you add a video, form or button?", o: ["The Add panel", "The Publish button", "The Help menu", "The Domain settings"], a: 0, h: "You add elements from it.", w: "The Add panel holds elements." },
+    { type: "mcq", q: "Why check the mobile view before publishing?", o: ["Wix requires it", "Most customers use phones, and layouts can break on small screens", "It changes the colours", "It is optional decoration"], a: 1, h: "Think about your target market.", w: "Mobile testing protects usability." }
+  ]
+});
+
+/* ======================= GRADE 10 DESIGN — REVEALING THE UNSEEN (IB ePortfolio Nov 2026) ======================= */
+COURSE.grades["10"] = {
+  myp: 5, label: "Grade 10 Design", subject: "Design",
+  unit: "Revealing the Unseen through Design (ePortfolio, November 2026)",
+  sdg: "Globalization and sustainability · Key concept: Systems · Related concepts: Resources, markets and trends",
+  product: "a solution that raises awareness of the hidden global connections and tells the story behind an everyday product",
+  ideaLabel: "solution concept (annotated sketch or storyboard)", planLabel: "accurate, detailed drawings or diagrams",
+  noUrls: true,
+  choose: { title: "Choose your target audience / client", note: "The IB task asks you to target ONE of these audiences. Then name the everyday product whose hidden story you will reveal. Statement of inquiry: Explore the hidden systems that connect everyday choices to the wider world.", titleLabel: "The everyday product or system you will reveal (for example a T-shirt, a smartphone, a school lunch)", problemLabel: "What is hidden about it, and why should your audience know? (one or two sentences)", label: "Your audience and everyday product", briefT: "Design a solution that reveals the hidden global story of {t} for {u}." },
+  scenarios: [
+    { id: "family", title: "Family members", client: "your family", user: "members of your family", problem: "", brief: "", ideas: "Ideas: a tool that reveals the carbon footprint of family meals; a guide for using food waste; a balanced dish that swaps imported ingredients for local ones.", custom: true, presetUser: "members of your family" },
+    { id: "school", title: "School community", client: "the school community (including administration and systems)", user: "students, staff or school administration", problem: "", brief: "", ideas: "Ideas: a digital tool tracing a canteen product from raw materials to disposal; impact videos; a 3D model revealing hidden energy or water flows in a school space.", custom: true, presetUser: "members of the school community" },
+    { id: "local", title: "Local community / small local business", client: "a local community group or small local business", user: "local community members or a small business and its customers", problem: "", brief: "", ideas: "Ideas: a system that communicates the origins and disposal of a shop's products; a menu carbon-footprint tool for a café; redesigned packaging using recycled materials.", custom: true, presetUser: "local community members or a small local business" }
+  ],
+  example: { title: "The Hidden Journey of a Cup of Coffee", client: "the owner of a small neighbourhood café", user: "the café's regular customers",
+    problem: "customers drink coffee every day without knowing it travels over 10,000 km, uses about 140 litres of water per cup and creates packaging waste" },
+  lab: {
+    intro: "Create your solution and record authentic evidence of every stage. The IB task says URLs must not be submitted: your evidence must be audio, photographic (including screenshots), video (including screencasts) or written.",
+    tools: [
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "Graphic designs, infographics and journey maps.", main: true },
+      { name: "Clipchamp", url: "https://clipchamp.com", use: "Documentaries and impact videos." },
+      { name: "Figma for Education", url: "https://www.figma.com/education/", use: "Interactive prototypes of a digital tracing tool." },
+      { name: "Tinkercad", url: "https://www.tinkercad.com", use: "3D models revealing hidden flows (energy, water, waste)." },
+      { name: "Google Sheets", url: "https://sheets.google.com", use: "Data and calculations, for example a carbon-footprint calculator." }
+    ],
+    milestones: ["Set-up and first draft", "Developing the main content", "Refining with feedback", "Final presentation"],
+    skills: ["Plan the layout or structure before building", "Use accurate data with acknowledged sources", "Apply a consistent visual style (colour, type, icons)", "Create original images, diagrams or footage", "Use the software's advanced tools (layers, masks, components, formulas)", "Edit and refine after feedback", "Make the solution accessible (contrast, captions, plain language)", "Export in a suitable format and capture screenshots or screencasts"]
+  }
+};
+COURSE.examples["10"] = {
+  A: [
+    `<p><b>The problem:</b> the café sells about 300 cups of coffee a day. Customers rarely think about where the beans come from, how they travel or what happens to the cups. Coffee grown in Ethiopia or Colombia travels over 10,000 km, and each cup has a large hidden water footprint.</p><p><b>Client and audience:</b> the café owner, who wants to promote her new reusable-cup discount; her regular customers, mostly office workers aged 25–45.</p><p><b>Justification:</b> in a quick survey, 18 of 20 customers could not name the country their coffee came from, and only 3 brought a reusable cup. Revealing the hidden journey connects a daily choice to global systems (globalization and sustainability) and could change behaviour at the counter.</p>`,
+    `<table><tr><th>Research question</th><th>Type</th><th>Method &amp; source</th><th>Priority</th><th>Justification</th></tr><tr><td>Where do the café's beans come from and how do they travel?</td><td>Primary</td><td>Interview with the owner; supplier invoices</td><td>1</td><td>The story depends on real data</td></tr><tr><td>What do customers already know?</td><td>Primary</td><td>Survey of 20 customers</td><td>2</td><td>Sets the starting point</td></tr><tr><td>What is the water and carbon footprint of a cup?</td><td>Secondary</td><td>Peer-reviewed or NGO footprint data</td><td>3</td><td>Credible numbers</td></tr><tr><td>How do other brands reveal product origins?</td><td>Secondary</td><td>Product websites, packaging</td><td>4</td><td>Existing solutions</td></tr></table><p class="note">The interview comes first because inventing a journey would make the whole solution inaccurate.</p>`,
+    `<table><tr><th>Existing product</th><th>Users</th><th>Key features</th><th>Strengths</th><th>Limitations</th><th>Implication</th></tr><tr><td>A chocolate brand's "trace your bar" code</td><td>Shoppers</td><td>Code on wrapper opens a farm map</td><td>Personal and specific</td><td>Few people scan it</td><td>Make the journey visible without scanning</td></tr><tr><td>A documentary about fast fashion</td><td>General public</td><td>Emotional stories, footage</td><td>Powerful</td><td>Too long for a café</td><td>Keep it under 60 seconds</td></tr><tr><td>A menu showing carbon labels</td><td>Restaurant diners</td><td>Footprint beside each dish</td><td>Seen at the moment of choice</td><td>Numbers alone feel abstract</td><td>Pair numbers with a visual journey</td></tr></table>`,
+    `<p><b>Detailed design brief.</b> I will design a counter-top journey map and a 45-second looping video for the café that reveal the hidden journey of a cup of coffee, from farm to cup to bin. It will use real supplier data and credible footprint figures, link to the reusable-cup discount, and be readable in under 30 seconds while customers queue. Constraints: counter space of 40 × 30 cm, the café's existing screen, 5 weeks. Global context: it connects a local daily habit to global trade, water and waste systems.</p>`
+  ],
+  B: [
+    `<table><tr><th>Area</th><th>Specification point</th><th>Justification</th><th>Measurable test</th></tr><tr><td>Content</td><td>Shows at least 5 stages: farm, processing, shipping, roasting, cup and disposal</td><td>Interview data</td><td>Count the stages</td></tr><tr><td>Accuracy</td><td>Every figure has a cited source</td><td>Credibility</td><td>Check sources</td></tr><tr><td>Readability</td><td>The main message is understood in under 30 seconds</td><td>Queue time</td><td>Timed test with 8 customers</td></tr><tr><td>Size</td><td>The map fits 40 × 30 cm</td><td>Counter space</td><td>Measure</td></tr><tr><td>Behaviour</td><td>Reusable-cup use rises during a 1-week trial</td><td>Owner's goal</td><td>Count reusable cups</td></tr></table>`,
+    `<p><b>Idea 1:</b> an illustrated world map with a dotted journey line. <b>Idea 2:</b> a "cup timeline" that unrolls from left to right. <b>Idea 3:</b> a 3D layered model of a cup with each layer showing a stage. Each concept is annotated with content, size, materials and how it links to the video.</p>`,
+    `<p>I chose <b>Idea 2</b> after a weighted comparison: it scored highest on readability (3 of 3 testers understood it in under 30 s) and fits the counter. I will add Idea 1's map as a small inset so customers still see the global distance.</p>`,
+    `<p><b>Drawings:</b> a scaled layout at 1:2 showing six stage panels (6 cm each), icon positions, typeface sizes (headline 48 pt, body 18 pt) and colour codes; a storyboard for the 45-second video (9 frames × 5 s). <b>Requirements:</b> Canva, Clipchamp, supplier data, printed A3 foam board, 5 lessons.</p>`
+  ],
+  C: [
+    `<table><tr><th>Stage</th><th>Task</th><th>Resources</th><th>Time</th><th>Dependency</th><th>Contingency</th></tr><tr><td>1</td><td>Collect and verify all figures</td><td>Interview notes, sources</td><td>L1</td><td>—</td><td>Use a range if exact data is missing</td></tr><tr><td>2</td><td>Build the timeline grid at full size</td><td>Canva</td><td>L1</td><td>1</td><td>—</td></tr><tr><td>3</td><td>Create icons and illustrations</td><td>Canva</td><td>L2</td><td>2</td><td>Simplify icons if behind</td></tr><tr><td>4</td><td>Write and record the video narration</td><td>Phone, Clipchamp</td><td>L3</td><td>1</td><td>Captions only</td></tr><tr><td>5</td><td>Edit the video to 45 s</td><td>Clipchamp</td><td>L3</td><td>4</td><td>—</td></tr><tr><td>6</td><td>Test with customers and refine</td><td>Test sheet</td><td>L4</td><td>3, 5</td><td>Extra session</td></tr><tr><td>7</td><td>Print and install</td><td>Print shop</td><td>L5</td><td>6</td><td>Display on screen only</td></tr></table>`,
+    `<p>Screenshots and a screencast show the layout grid at exact size, custom icons built from shapes, consistent colours from a five-colour palette, data checked against two sources, and the video timeline with captions, a voice-over at a consistent level and 5-second cuts matching the storyboard.</p>`,
+    `<p><b>Finished solution:</b> a printed 40 × 30 cm journey timeline and a 45-second captioned loop on the café screen. It functions as intended: in testing, 7 of 8 customers stated the main message in under 30 seconds. Evidence is presented as photographs and screenshots, not links.</p>`,
+    `<table><tr><th>Change</th><th>Justification (evidence)</th><th>Impact on specification</th></tr><tr><td>Reduced the stages from 7 to 6</td><td>Testers took 41 s with 7 stages</td><td>The readability point is now met</td></tr><tr><td>Added a QR-free "ask the barista" prompt</td><td>Customers didn't want to scan codes</td><td>Supports the behaviour-change point</td></tr></table>`
+  ],
+  D: [
+    `<table><tr><th>Specification point</th><th>Test method</th><th>Sample</th><th>Data</th><th>Threshold</th></tr><tr><td>5+ stages</td><td>Checklist</td><td>Final product</td><td>Count</td><td>≥ 5</td></tr><tr><td>Sources cited</td><td>Source audit</td><td>All figures</td><td>% cited</td><td>100%</td></tr><tr><td>Understood in 30 s</td><td>Timed recall test</td><td>8 customers</td><td>Seconds; correct yes/no</td><td>7 of 8</td></tr><tr><td>Behaviour</td><td>Count reusable cups, a week before and a week after</td><td>All sales</td><td>Daily counts</td><td>An increase</td></tr></table>`,
+    `<p>All points were met except behaviour, which was partly met: reusable cups rose from 3% to 7% of sales. That is a real increase, but one week is short and other factors (the weather, a discount email) may have contributed, so the evidence is promising rather than conclusive.</p>`,
+    `<table><tr><th>Weakness</th><th>Improvement</th><th>How</th><th>Priority</th></tr><tr><td>Short trial</td><td>Run a 4-week trial</td><td>Weekly counts with the owner</td><td>1</td></tr><tr><td>English only</td><td>Add Arabic</td><td>Translate, then test again</td><td>2</td></tr></table>`,
+    `<p>Customers now see the global system behind a daily habit, and reusable-cup use more than doubled during the trial. The owner can link her discount to a clear story. Long term, this could reduce cup waste and make customers more curious about sourcing. A possible negative is "information fatigue" if too many facts are added, so the design deliberately keeps one clear message.</p>`
+  ]
+};
+COURSE.gradeExercises["10"] = {
+  A: [
+    { type: "mcq", q: "The November 2026 global context is…", o: ["Identities and relationships", "Globalization and sustainability", "Scientific and technical innovation", "Fairness and development"], a: 1, h: "It is about how everything is connected.", w: "Globalization and sustainability." },
+    { type: "mcq", q: "Which audience is ALLOWED by the IB task?", o: ["A multinational company", "Family members, the school community, or local community / small local businesses", "Any celebrity", "Online strangers"], a: 1, h: "Three options are listed in the planner.", w: "Family, school community, local community or small business." },
+    { type: "mcq", q: "A product's 'life cycle' includes…", o: ["only its price", "raw materials, production, transport, use and disposal", "only its colour", "only the shop it is sold in"], a: 1, h: "From cradle to grave.", w: "Life cycles cover materials to disposal." }
+  ],
+  B: [
+    { type: "mcq", q: "Which specification point is measurable for an awareness solution?", o: ["It is interesting", "7 of 8 users state the main message within 30 seconds", "People enjoy it", "It looks professional"], a: 1, h: "A number and a test.", w: "Timed recall with a threshold is measurable." },
+    { type: "mcq", q: "Which is a 'hidden system' behind everyday products?", o: ["The product's logo", "The global transport and waste systems a product passes through", "The shop's opening hours", "The product's name"], a: 1, h: "Things customers never see.", w: "Transport and waste systems are usually hidden." },
+    { type: "mcq", q: "Why should every figure in your design be cited?", o: ["To fill space", "So the audience can trust the data and you maintain academic integrity", "The IB forbids numbers", "It looks colourful"], a: 1, h: "Credibility and integrity.", w: "Citations build trust." }
+  ],
+  C: [
+    { type: "mcq", q: "What evidence type does the IB task NOT accept for technical skills?", o: ["Screenshots", "Screencasts", "URLs (links)", "Written explanation"], a: 2, h: "Check the planner note.", w: "URLs must not be submitted." },
+    { type: "mcq", q: "Which shows authentic process evidence?", o: ["Only a final image", "Dated screenshots or photos of each stage, with explanations", "A link to the finished work", "A copied tutorial"], a: 1, h: "Show the journey, not just the result.", w: "Dated stage evidence is authentic." },
+    { type: "mcq", q: "Using AI to generate your final design and submitting it as your own is…", o: ["fine if it looks good", "a breach of academic integrity", "required by the IB", "allowed for Criterion C"], a: 1, h: "Authorship.", w: "Work must be authentically yours and acknowledged." }
+  ],
+  D: [
+    { type: "mcq", q: "Which test best shows behaviour change?", o: ["Asking if people like it", "Counting the target behaviour before and after the solution is introduced", "Measuring the poster", "Checking the spelling"], a: 1, h: "Before vs after.", w: "Before-and-after data shows change." },
+    { type: "mcq", q: "Why might a 1-week trial be a limitation?", o: ["It is too long", "Short trials can be affected by other factors and may not show lasting change", "It uses too many people", "It is always reliable"], a: 1, h: "Reliability.", w: "Short trials limit reliability." },
+    { type: "mcq", q: "Explaining 'impact' should include…", o: ["only positives", "positive and negative effects on the client and audience, with evidence", "only the cost", "only your opinion"], a: 1, h: "Balanced and evidenced.", w: "Impact is balanced and evidenced." }
+  ]
+};
+
+/* ======================= GRADE 10 IT — NETWORKS & NETWORK SECURITY ======================= */
+COURSE.grades["10IT"].choose = true;
+Object.assign(COURSE.grades["10IT"], {
+  unit: "Networks & Network Security",
+  sdg: "Global context: Scientific and technical innovation · Key concepts: Systems, Change",
+  product: "a secure network solution for your client",
+  choose: { title: "Choose the networking problem you will solve", note: "Identify a real networking problem that needs solving: for a school, business, home or community. Pick a starting scenario or describe your own real problem.", titleLabel: "Name of the place or organisation (for example our school's science block)", problemLabel: "Describe the networking problem in one or two sentences", userLabel: "Who uses this network?", label: "Your networking problem", briefT: "Design a secure, reliable network solution for {t}." },
+  scenarios: COURSE.grades["10IT"].scenarios.concat([{ id: "other", title: "My own networking problem", client: "the organisation you identify", user: "the people who use that network", problem: "", brief: "", ideas: "", custom: true }]),
+  tasks: {
+    A: [
+      [ T("a1p", "Task 1: What networking problem have you identified? Describe it in detail with specific evidence (who is affected, symptoms, speeds, complaints, incidents).", 80),
+        T("a1u", "Who is the client / target audience? Describe their specific needs.", 60),
+        T("a1c", "Why does this problem matter? What are the consequences of NOT solving it?", 50),
+        TB("a1g", "What should the solution achieve? List at least 5 specific goals.", ["Solution goal"], 5, 5) ],
+      [ TB("a2t", "Task 2: Research plan", ["Research needed", "Primary or secondary?", "Source / method", "Why important?", "Priority (H / M / L)"], 6, 5),
+        T("a2m", "What is your MOST important research and why?", 30) ],
+      [ RL("a3t", "Task 3: Analyse 3 existing network solutions critically, using technical terminology", "", ["Name / organisation", "Purpose", "Topology used", "Key components", "Security measures", "Strengths (2+)", "Weaknesses (2+)", "Ideas I will adopt"], ["Solution 1", "Solution 2", "Solution 3"]),
+        T("a3c", "Compare the three solutions. Which is most effective overall and why?", 60) ],
+      [ T("a4a", "The problem I am solving is…", 25), T("a4b", "My target users are… and their specific needs include…", 25), T("a4c", "My research (A.ii) revealed that…", 25), T("a4d", "From analysing existing solutions (A.iii), I learned that…", 25),
+        T("a4e", "My network solution must include the following features (at least 6)…", 30), T("a4f", "The constraints I must consider are (budget, space, existing infrastructure)…", 20), T("a4g", "My solution will be different from existing ones because…", 20) ]
+    ],
+    B: [
+      [ TB("b1t", "Task 1: 8–10 measurable, testable success criteria linked to your Criterion A research", ["Success criterion", "Linked to which research? (A.i / A.ii / A.iii)", "How will I test this?"], 10, 8) ],
+      [ SK("b2d1", "Design 1 — annotated network diagram (topology, devices, connections, security, IP scheme)"),
+        TB("b2c1", "Design 1 — components", ["Component", "Quantity", "Purpose", "Estimated cost"], 5, 3),
+        T("b2s1", "Explain the security measures in Design 1", 30),
+        SK("b2d2", "Design 2 — a GENUINELY different approach (topology, security or technology)"),
+        TB("b2c2", "Design 2 — components", ["Component", "Quantity", "Purpose", "Estimated cost"], 5, 3),
+        T("b2s2", "How does Design 2 differ from Design 1?", 30),
+        SK("b2d3", "Design 3 — third option"),
+        TB("b2c3", "Design 3 — components", ["Component", "Quantity", "Purpose", "Estimated cost"], 5, 3),
+        T("b2s3", "Explain the security measures and main difference in Design 3", 30) ],
+      [ TB("b3t", "Task 5: Weighted decision matrix (score 1–5; weight 1–3)", ["Success criterion", "Weight (1–3)", "Design 1 score", "Design 2 score", "Design 3 score"], 8, 6),
+        T("b3w", "Total weighted scores — Design 1: … Design 2: … Design 3: …", 3),
+        T("b3c", "Which design did you choose and why? Give at least 4 reasons linked to the matrix.", 60),
+        T("b3e", "What elements from the rejected designs will you incorporate into your chosen solution?", 25) ],
+      [ SK("b4d", "Accurate, detailed planning diagram of the chosen network"),
+        TB("b4a", "Addressing plan", ["Network / VLAN", "Subnet", "Gateway", "Purpose"], 4, 3),
+        TB("b4r", "Requirements for creating the solution", ["Requirement", "Specification / details"], 6, 5) ]
+    ],
+    C: [
+      [ TB("c1t", "Task 1: Step-by-step production plan (12+ steps) — another student must be able to follow it", ["Step", "Detailed instruction", "Software / tools / resources", "Time"], 12, 12),
+        T("c1tt", "Total estimated time", 2), T("c1r", "All resources needed", 15) ],
+      [ CH("c2tool", "Main software used", ["draw.io (diagrams.net)", "Cisco Packet Tracer", "Canva for Education", "Google Docs or Word", "Other free software"]),
+        SK("c2e1", "Screenshot: network diagram — early stage", true), T("c2q1", "What software skills did you use? How did you apply correct network symbols?", 20),
+        SK("c2e2", "Screenshot: network diagram — adding detail", true), T("c2q2", "What technical decisions did you make? How did you ensure accuracy?", 20),
+        SK("c2e3", "Screenshot: diagram — completed", true), T("c2q3", "What makes this professional? How does it demonstrate excellent technical skill?", 20),
+        SK("c2e4", "Screenshot: presentation — design process", true), T("c2q4", "What design principles did you apply? How does it communicate your solution?", 20),
+        CL("c2k", "Tick the technical skills you demonstrated (at least 7)", COURSE.grades["10IT"].lab.skills, 7) ],
+      [ TB("c3t", "Task 3: Plan vs product comparison", ["Plan step", "What I planned", "What I actually created", "Match? (Y / P / N)"], 6, 5),
+        T("c3f", "Does your solution function as intended? Explain with evidence.", 60) ],
+      [ TB("c4t", "Task 4: Changes log", ["Original plan / design", "What I changed", "Why (with evidence)", "Improvement? + how?"], 3, 2),
+        T("c4r", "Overall reflection: were your changes improvements? Explain with specific examples.", 50) ]
+    ]
+  }
+});
+
+/* ---------- shared: G10 IT D uses the Year 5 defaults; G10 Design uses Year 5 defaults minus links ---------- */
+
+</script>
+<script>
 (function(){
 "use strict";
 /* ================= UTILITIES ================= */
@@ -1701,6 +2135,7 @@ function render(){
   if (!u) return renderLogin(app);
   if (u.role === "teacher" && !session.preview) return renderTeacherHome(app);
   if (view.name === "crit") return renderCrit(app);
+  if (view.name === "explore") return renderExplore(app);
   return renderHome(app);
 }
 
@@ -1821,10 +2256,11 @@ function scenarioFor(email, g){
   if (gd.choose){
     const u = DB.users[email], ch = u && u.choice;
     if (!ch) return null;
-    if (ch.id === "other"){
-      const base = sc.find(s => s.id === "other");
-      const brief = g === "6" ? `Design a smart, sustainable ${ch.title} for City 2050.` : `Design a digital awareness campaign about ${ch.title}.`;
-      return { id:"other", title: ch.title, client: base.client, user: ch.user || base.user, problem: ch.problem, brief, ideas:"" };
+    const base = sc.find(s => s.id === ch.id);
+    if (base && base.custom){
+      const us = ch.user || base.presetUser || base.user;
+      const brief = (gd.choose.briefT || "Design a solution for {t}.").replace(/\{t\}/g, ch.title).replace(/\{u\}/g, us);
+      return { id: base.id, title: ch.title, client: base.client, user: us, problem: ch.problem, brief, ideas: base.ideas || "" };
     }
     return sc.find(s => s.id === ch.id) || sc[0];
   }
@@ -1835,29 +2271,36 @@ function renderChooser(app){
   const u = user(), g = u.grade, gd = gradeData(g), cur = u.choice?.id;
   app.innerHTML = `<div class="stack" style="gap:18px">
     <div><div class="eyebrow">${esc(gLabel(g))} · MYP ${gd.subject||"Design"} Year ${gd.myp}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.4vw,32px)">${esc(gd.unit)}</h1></div>
-    <div class="card stack" data-read><h2>${esc(gd.choose.title)}</h2><p class="muted" style="margin:0">${esc(gd.choose.note)}</p></div>
-    <div class="crit-grid">${gd.scenarios.map(s=>`<button class="crit open" data-ch="${s.id}" ${s.id===cur?'style="border-color:var(--accent)"':""}><h3>${esc(s.title)}</h3><p class="muted" style="margin:0;font-size:13px">${esc(s.custom ? "Suggest your own idea and explain the problem it solves." : s.brief)}</p>${s.ideas?`<p style="margin:0;font-size:12.5px">${esc(s.ideas)}</p>`:""}</button>`).join("")}</div>
+    <div class="card stack" data-read ${gd.choose.ownOnly?"hidden":""}><h2>${esc(gd.choose.title)}</h2><p class="muted" style="margin:0">${esc(gd.choose.note)}</p></div>
+    <div class="crit-grid" ${gd.choose.ownOnly?"hidden":""}>${gd.scenarios.map(s=>`<button class="crit open" data-ch="${s.id}" ${s.id===cur?'style="border-color:var(--accent)"':""}><h3>${esc(s.title)}</h3><p class="muted" style="margin:0;font-size:13px">${esc(s.custom ? "Suggest your own idea and explain the problem it solves." : s.brief)}</p>${s.ideas?`<p style="margin:0;font-size:12.5px">${esc(s.ideas)}</p>`:""}</button>`).join("")}</div>
     <form id="ownForm" class="card stack" hidden novalidate>
-      <h3>Your own idea</h3>
-      <label class="f">${g==="6"?"Name of your building or facility":"Your cause"}<input type="text" id="owT" placeholder="${g==="6"?"for example Smart Airport":"for example Road safety"}"></label>
-      <label class="f">Who is it for?<input type="text" id="owU" placeholder="the people it will help"></label>
-      <label class="f">What problem does it solve?<textarea id="owP" class="notranslate" style="min-height:80px" placeholder="Describe the problem in one or two sentences"></textarea></label>
+      <h3 id="owH">Your own idea</h3>
+      <p class="muted" id="owFor" style="margin:0" hidden></p>
+      <label class="f">${esc(gd.choose.titleLabel||"Name of your idea")}<input type="text" id="owT" class="notranslate"></label>
+      <label class="f" id="owURow">${esc(gd.choose.userLabel||"Who is it for?")}<input type="text" id="owU" class="notranslate" placeholder="the people it will help"></label>
+      <label class="f">${esc(gd.choose.problemLabel||"What problem does it solve?")}<textarea id="owP" class="notranslate" style="min-height:80px"></textarea></label>
       <div id="owMsg"></div>
       <div class="row"><button class="btn" type="submit">Choose my idea</button><button class="btn ghost" type="button" id="owCancel">Cancel</button></div>
     </form>
     ${u.choice?`<div class="row"><button class="btn ghost" id="chBack">← Keep ${esc(scenarioFor(session.email,g).title)}</button></div>`:""}
   </div>`;
-  const pickIt = ch => { u.choice = ch; save(); logEvent("-", g==="6" ? "Chose building" : "Chose cause", ch.title || ch.id); speak(pickOne(P().right)); view.choosing = false; go({ name:"home" }); };
+  let base = null;
+  const openForm = s => { base = s; $("#ownForm").hidden = false; $("#owH").textContent = s.id === "other" ? (gd.choose.ownOnly ? gd.choose.title : "Your own idea") : s.title;
+    $("#owURow").hidden = !!s.presetUser; const pre = u.choice && u.choice.id === s.id ? u.choice : null;
+    if (pre){ $("#owT").value = pre.title || ""; $("#owU").value = pre.user || ""; $("#owP").value = pre.problem || ""; } $("#owT").focus(); };
+  const pickIt = ch => { u.choice = ch; save(); logEvent("-", "Chose focus", ch.title || ch.id); speak(pickOne(P().right)); view.choosing = false; go({ name:"home" }); };
   app.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => {
     const s = gd.scenarios.find(x => x.id === b.dataset.ch);
-    if (s.custom){ $("#ownForm").hidden = false; $("#owT").focus(); return; }
+    if (s.custom){ openForm(s); return; }
     pickIt({ id: s.id, title: s.title });
   });
   $("#owCancel").onclick = () => { $("#ownForm").hidden = true; };
   $("#ownForm").onsubmit = e => { e.preventDefault(); const t = $("#owT").value.trim(), us = $("#owU").value.trim(), pr = $("#owP").value.trim();
     if (t.length < 3) return $("#owMsg").innerHTML = `<div class="notice bad">Give your idea a name.</div>`;
     if (words(pr) < 8) return $("#owMsg").innerHTML = `<div class="notice bad">Describe the problem in at least 8 words.</div>`;
-    pickIt({ id:"other", title:t, user:us, problem:pr.replace(/\.$/,"") }); };
+    pickIt({ id: base ? base.id : "other", title:t, user: base && base.presetUser ? "" : us, problem:pr.replace(/\.$/,"") }); };
+  if (gd.choose.ownOnly) openForm(gd.scenarios[0]);
+  if (gd.choose.ownOnly) $("#owCancel").hidden = !u.choice;
   const bk = $("#chBack"); if (bk) bk.onclick = () => { view.choosing = false; go({ name:"home" }); };
 }
 
@@ -1873,7 +2316,9 @@ function labCard(gd, compact){
   </div>`;
 }
 function fieldsFor(c, gd){
-  const Y = yearKey(gd.myp), base = TASK_FIELDS[c][Y];
+  if (gd.tasks && gd.tasks[c]) return gd.tasks[c];
+  const Y = yearKey(gd.myp), base0 = TASK_FIELDS[c][Y];
+  const base = gd.noUrls ? base0.map(fs => fs.filter(f => f.id !== "c3l")) : base0;
   if (c !== "C" || !gd.lab) return base;
   const L = gd.lab, old = base[1].find(f => f.id === "c2n") || { label:"Describe the technical skills you used", min:60 };
   const minSkills = { 1:4, 2:5, 3:6, 5:7 }[Y];
@@ -1888,6 +2333,25 @@ function fieldsFor(c, gd){
 
 /* ================= HOME ================= */
 function critProgress(p){ if (!p) return 0; let s = 0; if (p.watched) s++; ["ex","me","ru"].forEach(k=>{ if (p.seen?.[k]) s++; }); if (p.ex?.done) s++; s += p.done.filter(Boolean).length; return Math.round(s/9*100); }
+function renderExplore(app){
+  const u = user();
+  const others = Object.keys(COURSE.grades).filter(g => g !== u.grade);
+  app.innerHTML = `<div class="stack" style="gap:20px">
+    <div class="row" style="justify-content:space-between"><button class="btn ghost sm" id="exBack">← Back to my course</button><span class="counter">View only</span></div>
+    <div><div class="eyebrow">Explore</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.4vw,32px)">What other grades are learning</h1>
+      <p class="muted" style="margin:.4em 0 0;max-width:62ch">Have a look at the units in other grades. This page is view only, so nothing here can be opened or changed.</p></div>
+    ${others.map(g => { const gd = gradeData(g), Y = yearKey(gd.myp);
+      return `<section class="card stack view-only" data-read aria-label="${esc(gLabel(g))} (view only)" style="gap:12px">
+        <div class="eyebrow">${esc(gLabel(g))} · MYP ${esc(gd.subject||"Design")} Year ${gd.myp}</div>
+        <h2>${esc(gd.unit)}</h2>
+        <p style="margin:0"><b>What they create:</b> ${esc(gd.product)}.</p>
+        <p class="muted" style="margin:0;font-size:13px">${esc(gd.sdg)}</p>
+        <div class="crit-grid">${["A","B","C","D"].map(c => { const cd = COURSE.criteria[c];
+          return `<div class="crit locked" aria-disabled="true"><span class="L">${c}</span><h3>${esc(cd.name)}</h3><ol style="margin:0;padding-left:18px;font-size:12.5px">${cd.strands[Y].map(st=>`<li>${esc(st)}</li>`).join("")}</ol></div>`; }).join("")}</div>
+      </section>`; }).join("")}
+  </div>`;
+  $("#exBack").onclick = () => go({ name:"home" });
+}
 function renderHome(app){
   const u = user(), g = u.grade, gd = gradeData(g);
   if (gd.choose && (!u.choice || view.choosing)) return renderChooser(app);
@@ -1898,11 +2362,11 @@ function renderHome(app){
         <div class="eyebrow">${esc(gLabel(g))} · MYP ${esc(gd.subject||"Design")} Year ${gd.myp} · ${esc(gd.sdg)}</div>
         <h1>${esc(gd.unit)}</h1>
         ${(g==="10"||g==="10IT") ? `<div class="row"><button class="btn ghost sm" id="courseSwitch" data-to="${g==="10"?"10IT":"10"}">Switch to ${g==="10"?"Grade 10 IT":"Grade 10 Design"} →</button></div>` : ""}
-        <div class="brief" data-read><div class="eyebrow" style="color:var(--muted)">${gd.choose ? (g==="6"?"Your building for City 2050":"Your campaign cause") : "Your design challenge"}</div>
+        <div class="brief" data-read><div class="eyebrow" style="color:var(--muted)">${gd.choose ? esc(gd.choose.label || "Your design challenge") : "Your design challenge"}</div>
           <h3 style="margin:4px 0">${esc(sc.title)}</h3>
           <p style="margin:0">${esc(sc.client)} needs your help: ${esc(sc.problem)}.</p>
           <p style="margin:.5em 0 0" class="muted">${esc(sc.brief)}</p>${sc.ideas?`<p style="margin:.5em 0 0;font-size:13px"><b>Ideas to explore:</b> ${esc(sc.ideas)}</p>`:""}</div>
-        ${gd.choose ? (anyStrandDone(u) ? "" : `<div class="row"><button class="btn ghost sm" id="chChange">Change my ${g==="6"?"building":"cause"}</button></div>`) : `<p class="muted" style="font-size:12.5px;margin:4px 0 0">Students in your class have different challenges, so your work will be your own.</p>`}
+        ${gd.choose ? (anyStrandDone(u) ? "" : `<div class="row"><button class="btn ghost sm" id="chChange">Change</button></div>`) : `<p class="muted" style="font-size:12.5px;margin:4px 0 0">Students in your class have different challenges, so your work will be your own.</p>`}
       </div>
     </div>
     <div class="crit-grid">${["A","B","C","D"].map(c => {
@@ -1914,9 +2378,11 @@ function renderHome(app){
         ${open?`<div class="bar"><i style="width:${pc}%"></i></div>`:""}
         <div class="state" style="color:${open?"var(--ok)":"var(--muted)"}">${state}</div>
       </${open?"button":"div"}>`; }).join("")}</div>
+    <div class="row" style="justify-content:space-between"><p class="muted" style="margin:0;font-size:13px">You can go back into any open criterion to change your work, then download your PDF again.</p><button class="btn ghost sm" id="exploreBtn">See what other grades are learning →</button></div>
   </div>`;
   app.querySelectorAll(".crit.open").forEach(b => b.onclick = () => go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }));
   const chg = $("#chChange"); if (chg) chg.onclick = () => { view.choosing = true; render(); };
+  const ex = $("#exploreBtn"); if (ex) ex.onclick = () => go({ name:"explore" });
   const sw = $("#courseSwitch"); if (sw) sw.onclick = () => { const to = sw.dataset.to; u.progressBy = u.progressBy || {}; u.progressBy[u.grade] = u.progress || {}; u.grade = to; u.progress = u.progressBy[to] || {}; save(); logEvent("-", "Switched course", gLabel(to)); go({ name:"home" }); };
 }
 
@@ -1952,6 +2418,13 @@ function renderCrit(app){
   $("#back").onclick = () => go({ name:"home" });
   app.querySelectorAll(".step").forEach(b => b.onclick = () => { if (!b.disabled){ view.step = +b.dataset.i; stopVideo(); try{speechSynthesis.cancel()}catch(e){} render(); } });
   const pane = $("#pane");
+  setTimeout(() => {
+    if (view.step === 0 || $("#backStep")) return;
+    const bar = document.createElement("div"); bar.className = "row"; bar.style.marginTop = "16px";
+    bar.innerHTML = `<button class="btn ghost" id="backStep">← Back to ${esc(STEPS[view.step-1].t)}</button>`;
+    pane.appendChild(bar);
+    $("#backStep").onclick = () => { stopVideo(); stopReading(); view.step -= 1; render(); window.scrollTo({top:0, behavior:"smooth"}); };
+  }, 0);
   ({ video:paneVideo, ex:paneExample, me:paneMethod, ru:paneRubric, prac:panePractice, task:paneTask, sub:paneSubmit })[STEPS[view.step].k](pane, { u, c, g, gd, cd, p, sc });
 }
 function nextBtn(label, onClick){ return `<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="nextStep">${label} →</button></div>`; }
@@ -2128,10 +2601,11 @@ function panePractice(pane, ctx){
 }
 
 /* ---------- 6. MAIN TASK ---------- */
-function tableRowsNeeded(rows){ return Math.max(2, Math.ceil(rows * 2/3)); }
+function tableRowsNeeded(rows, f){ if (f && f.need != null) return f.need; return Math.max(2, Math.ceil(rows * 2/3)); }
+function rowDone(f, r){ return r && f.cols.every((_,k) => (f.rowLabels && k === 0) || String(r[k]||"").trim()); }
 function fieldValid(f, val){
   if (f.t === "text") return words(val) >= f.min;
-  if (f.t === "table"){ const rows = (val||[]).filter(r => r && f.cols.every((_,k)=>String(r[k]||"").trim())); return rows.length >= tableRowsNeeded(f.rows); }
+  if (f.t === "table"){ const rows = (val||[]).filter(r => rowDone(f, r)); return rows.length >= tableRowsNeeded(f.rows, f); }
   if (f.t === "sketch") return !!val;
   if (f.t === "choice") return !!val;
   if (f.t === "checklist") return (val||[]).length >= f.min;
@@ -2163,7 +2637,7 @@ function paneTask(pane, ctx){
     const missing = F[si].filter(f => !fieldValid(f, p.fields[f.id])).map(f => fill(f.label, g, sc));
     if (!p.bands[si]) missing.push("Your self-rating for this strand");
     if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak(P().nearly); return; }
-    const was = p.done[si]; p.done[si] = true; save();
+    const was = p.done[si]; p.done[si] = true; if (was && p.finished){ p.finished = false; p.edited = true; } save();
     if (!was) logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`);
     if (p.done.every(Boolean)){ speak(P().allDone); view.step = 6; render(); return; }
     speak(pickOne(P().right));
@@ -2182,10 +2656,11 @@ function buildField(f, ctx){
     upd();
   } else if (f.t === "table"){
     const v = p.fields[f.id] || Array.from({length:f.rows},()=>f.cols.map(()=>""));
+    if (f.rowLabels) v.forEach((r,ri) => { r[0] = f.rowLabels[ri]; });
     p.fields[f.id] = v;
-    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=>`<td class="notranslate"><input type="text" id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" value="${esc(r[ci]||"")}" aria-label="${esc(f.cols[ci])} row ${ri+1}"></td>`).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
+    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=> (f.rowLabels && ci===0) ? `<th scope="row" style="text-transform:none;letter-spacing:0;font-size:13px">${esc(f.rowLabels[ri])}</th>` : `<td class="notranslate"><input type="text" id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" value="${esc(r[ci]||"")}" aria-label="${esc(f.cols[ci] || "")} ${esc(f.rowLabels ? f.rowLabels[ri] : "row " + (ri+1))}"></td>`).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
     const cn = el.querySelector(".counter");
-    const upd = () => { const done = v.filter(r => f.cols.every((_,k)=>String(r[k]||"").trim())).length, need = tableRowsNeeded(f.rows); cn.textContent = `${done} of ${f.rows} rows complete (at least ${need} needed)`; cn.classList.toggle("ok", done >= need); };
+    const upd = () => { const done = v.filter(r => rowDone(f, r)).length, need = tableRowsNeeded(f.rows, f); cn.textContent = f.rowLabels ? `${done} of ${f.rows} rows complete` : `${done} of ${f.rows} rows complete (at least ${need} needed)`; cn.classList.toggle("ok", done >= need); };
     el.querySelectorAll("input").forEach(inp => inp.oninput = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(save, 400); });
     upd();
   } else if (f.t === "sketch"){
@@ -2246,7 +2721,7 @@ function answersText(ctx){
   let out = `Scenario: ${sc.title} | Practice: ${p.ex.correct} correct, ${p.ex.points} pts, ${p.ex.hints} hints\n`;
   F.forEach((fs,i) => { out += `\n== Strand ${ROMAN[i]} (self-rating ${p.bands[i]||"-"}) ==\n`;
     fs.forEach(f => { const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
-      if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>r.some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
+      if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
   return out;
 }
 function paneSubmit(pane, ctx){
@@ -2254,6 +2729,7 @@ function paneSubmit(pane, ctx){
   pane.innerHTML = `<div class="card stack">
     <div class="eyebrow">All four strands complete</div><h2>Download and hand in Criterion ${c}</h2>
     <div class="scroll"><table class="tbl"><tr><th>Strand</th><th>Status</th><th>Your self-rating</th></tr>${ROMAN.map((r,i)=>`<tr><td>${r}</td><td>${p.done[i]?"Complete ✓":"Not complete"}</td><td>${p.bands[i]||"—"}</td></tr>`).join("")}</table></div>
+    <p style="margin:0">Changed something? Use <b>Edit my answers</b>, then download your PDF and save a new copy for your teacher.</p>
     <p style="margin:0">Your PDF includes all your answers, tables and sketches. Upload it wherever your teacher asks (for example ManageBac or Teams). A copy is also saved for your teacher automatically.</p>
     <div class="row"><button class="btn" id="dlPdf">${ICON.dl} Download my work (PDF)</button><button class="btn sec" id="saveCopy">Save a copy for my teacher</button><button class="btn ghost" id="edit">Edit my answers</button></div>
     <div id="subMsg">${p.finished?`<div class="notice ok">Copy saved for your teacher on ${new Date(p.savedAt).toLocaleString()}.</div>`:""}</div>
@@ -2300,7 +2776,7 @@ function buildPDF(ctx){
       if (f.t === "text" || f.t === "choice") para(v || "(not answered)", 10.5);
       else if (f.t === "checklist") para((v||[]).map(x => "[x] " + x).join("\n") || "(none ticked)", 10);
       else if (f.t === "table"){
-        const body = (v||[]).filter(r=>r.some(x=>String(x).trim()));
+        const body = (v||[]).filter(r=>r.slice(f.rowLabels?1:0).some(x=>String(x).trim()));
         doc.autoTable({ startY: y, head:[f.cols.map(clean)], body: body.length?body.map(r=>r.map(clean)):[f.cols.map(()=>"")], margin:{left:M,right:M, top:30}, styles:{ fontSize:9, cellPadding:2, lineColor:[216,222,234], lineWidth:.2 }, headStyles:{ fillColor:NAVY, textColor:255 }, theme:"grid", didDrawPage: bar });
         y = doc.lastAutoTable.finalY + 5;
       } else if (f.t === "sketch"){
