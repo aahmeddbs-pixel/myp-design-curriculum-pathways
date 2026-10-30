@@ -190,6 +190,10 @@ textarea{min-height:110px;resize:vertical;line-height:1.5}
 #gtHost,.goog-te-banner-frame,.skiptranslate>iframe,#goog-gt-tt,.goog-te-balloon-frame,.VIpgJd-ZVi9od-ORHb-OEVmcd,.VIpgJd-ZVi9od-aZ2wEe-wOHMyf{display:none!important}
 body{top:0!important}
 .goog-text-highlight{background:none!important;box-shadow:none!important}
+.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+@media (max-width:640px){.checks{grid-template-columns:1fr}}
+.chk{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--paper);font-size:14px;cursor:pointer}
+.chk input{margin-top:3px}
 footer{font-size:12px;color:var(--muted);text-align:center;padding-block:20px}
 footer button{background:none;border:0;color:var(--muted);text-decoration:underline}
 code{font-family:var(--f-mono);font-size:12.5px;background:var(--soft);padding:1px 5px;border-radius:4px;word-break:break-all}
@@ -1048,6 +1052,349 @@ TASK_FIELDS.D = {
 
 </script>
 <script>
+/* ==========================================================
+   UNITS 2026–27 — overrides: G6 City 2050, G7 Raising Awareness,
+   G8 Publishing on the Web, G10 Design Harvest Hub, G10 IT Networks
+   ========================================================== */
+COURSE.teachers = ["Mr. Ahmed", "Miss Abdelaziz", "Mr. French"];
+
+/* ---------------- GRADE 6 — SMART & SUSTAINABLE CITY 2050 ---------------- */
+COURSE.grades["6"] = {
+  myp: 1, label: "Grade 6", subject: "Design",
+  unit: "Smart & Sustainable City 2050",
+  sdg: "SDG 11 Sustainable Cities · SDG 7 Clean Energy · SDG 9 Innovation",
+  product: "a 3D digital model of your building with labelled smart and sustainable features",
+  ideaLabel: "building idea (outside view with labels)", planLabel: "labelled floor plan and front view of your building",
+  choose: { title: "Choose the building you will design for City 2050", note: "Every smart city needs these. Pick the one you want to design. You can change it until you start your Criterion A task." },
+  scenarios: [
+    { id: "hospital", title: "Smart Hospital", client: "the City 2050 Health Authority", user: "patients, visitors, doctors and nurses",
+      problem: "the city is growing fast, patients wait too long to be seen, and hospitals use huge amounts of energy and water",
+      brief: "Design a smart, sustainable hospital that helps patients be seen faster and uses less energy and water.",
+      ideas: "Smart: AI check-in kiosks, sensor lighting, robot medicine delivery. Sustainable: solar roof, rainwater tanks, healing gardens." },
+    { id: "school", title: "Smart School", client: "the City 2050 Education Department", user: "students, teachers and families",
+      problem: "classrooms get too hot, lights and air-conditioning are left on, and students need flexible spaces to learn",
+      brief: "Design a smart, sustainable school with comfortable learning spaces that saves energy.",
+      ideas: "Smart: occupancy sensors, digital timetables, air-quality monitors. Sustainable: shaded courtyards, solar panels, green walls." },
+    { id: "police", title: "Smart Police Station", client: "the City 2050 Police Service", user: "police officers and residents who need help",
+      problem: "residents find it hard to report problems quickly, and stations are not designed to respond fast across a big city",
+      brief: "Design a smart, sustainable police station that helps officers respond quickly and welcomes the public.",
+      ideas: "Smart: 24-hour self-service report kiosks, drone launch pad, live city map room. Sustainable: electric vehicle charging, solar canopy." },
+    { id: "fire", title: "Smart Fire Station", client: "the City 2050 Civil Defence", user: "firefighters and the neighbourhood they protect",
+      problem: "fire engines must reach emergencies fast through busy streets, and stations use a lot of water and fuel",
+      brief: "Design a smart, sustainable fire station that gets crews out fast and saves water and energy.",
+      ideas: "Smart: automatic traffic-light control, alarm-linked doors, training tower with sensors. Sustainable: recycled training water, electric fire engines." },
+    { id: "water", title: "Water Treatment Plant", client: "the City 2050 Water Authority", user: "every household and business in the city",
+      problem: "a desert city needs clean water for millions of people, but making and cleaning water uses a lot of energy",
+      brief: "Design a smart, sustainable water treatment plant that cleans and recycles water for the city.",
+      ideas: "Smart: leak-detecting sensors, live water-quality screens. Sustainable: solar-powered desalination, recycled water for parks." },
+    { id: "recycling", title: "Recycling & Waste Centre", client: "the City 2050 Environment Department", user: "residents and waste workers",
+      problem: "the city produces mountains of rubbish and most of it ends up in landfill instead of being recycled",
+      brief: "Design a smart, sustainable recycling centre that makes recycling easy and turns waste into resources.",
+      ideas: "Smart: AI sorting robots, bins that report when full, reward app. Sustainable: compost for city farms, waste-to-energy." },
+    { id: "energy", title: "Clean Energy Power Station", client: "the City 2050 Energy Company", user: "homes, schools and businesses",
+      problem: "the city needs more electricity every year, but burning fossil fuels pollutes the air and heats the planet",
+      brief: "Design a smart, sustainable power station that produces clean energy for the city.",
+      ideas: "Smart: a control room that balances supply and demand, battery storage. Sustainable: solar fields, wind turbines, visitor learning centre." },
+    { id: "farm", title: "Vertical Farm", client: "the City 2050 Food Security Office", user: "families, restaurants and supermarkets",
+      problem: "most food is imported from far away, which is costly and polluting, and farmland in the desert is scarce",
+      brief: "Design a smart, sustainable vertical farm that grows fresh food inside the city.",
+      ideas: "Smart: sensor-controlled LED lighting and watering. Sustainable: recycled water, solar power, local deliveries by e-bike." },
+    { id: "library", title: "Community Library & Learning Hub", client: "the City 2050 Culture Department", user: "residents of all ages",
+      problem: "people need free places to learn, meet and use technology, but many buildings are not welcoming or accessible",
+      brief: "Design a smart, sustainable library and learning hub that is open and accessible to everyone.",
+      ideas: "Smart: self-service lending, maker space, digital wayfinding. Sustainable: natural light, cool roof, reused materials." },
+    { id: "housing", title: "Smart Apartment Building", client: "the City 2050 Housing Department", user: "families living in the city",
+      problem: "the city needs more homes, but apartments are often hot, expensive to run and have no green space",
+      brief: "Design a smart, sustainable apartment building that is comfortable and cheap to run.",
+      ideas: "Smart: home energy displays, smart locks, parcel lockers. Sustainable: roof gardens, solar glass, shared e-bikes." },
+    { id: "other", title: "My own idea", client: "the City 2050 Planning Council", user: "the people who will use your building",
+      problem: "", brief: "", ideas: "", custom: true }
+  ],
+  example: { title: "Smart Bus Shelter", client: "the City 2050 Transport Department", user: "bus passengers, especially older people and young children",
+    problem: "passengers wait in strong sun for up to 20 minutes and do not know when the next bus will arrive" },
+  lab: {
+    intro: "You will build your building as a 3D digital model. Work through the four milestones and take a screenshot at the end of each one.",
+    tools: [
+      { name: "Tinkercad", url: "https://www.tinkercad.com", use: "Build your 3D building from shapes. Free, works in the browser. Sign in with your school account.", main: true },
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "Turn your screenshots into a labelled poster of your building's features." },
+      { name: "SketchUp for Schools", url: "https://edu.sketchup.com", use: "A challenge option if you finish early. Free for schools with a Google or Microsoft school account." }
+    ],
+    milestones: ["Footprint and walls", "Roof, doors and windows", "Smart and sustainable features", "Labels and final views"],
+    skills: ["Set sizes with the ruler and workplane", "Make walls and floors from box shapes", "Cut doors and windows with Hole shapes", "Align objects neatly", "Group parts together", "Duplicate repeated parts (for example solar panels)", "Colour parts to show materials", "Add 3D text labels", "Rotate the view and take clear screenshots"]
+  }
+};
+
+/* ---------------- GRADE 7 — RAISING AWARENESS ---------------- */
+COURSE.grades["7"] = {
+  myp: 2, label: "Grade 7", subject: "Design",
+  unit: "Raising Awareness: Digital Campaigns",
+  sdg: "SDG 3 Good Health · SDG 12 Responsible Consumption · SDG 13 Climate Action",
+  product: "a digital awareness campaign (a poster, an infographic and a short video)",
+  ideaLabel: "campaign idea (poster or infographic layout)", planLabel: "poster layout and video storyboard",
+  choose: { title: "Choose the cause your campaign will raise awareness about", note: "Pick a cause you care about. You can change it until you start your Criterion A task." },
+  scenarios: [
+    { id: "ewaste", title: "E-waste", client: "the school's Eco Committee", user: "students and families who replace phones and laptops",
+      problem: "old phones, chargers and laptops are thrown in the bin, where toxic materials leak into the environment",
+      brief: "Design a digital campaign that persuades students and families to recycle electronics properly.", ideas: "Message ideas: where to recycle, what is inside a phone, repair before you replace." },
+    { id: "screens", title: "Digital Wellbeing", client: "the school's Wellbeing Team", user: "students aged 11–14",
+      problem: "many students spend hours on screens late at night, which affects their sleep, mood and schoolwork",
+      brief: "Design a digital campaign that helps students build healthier screen habits.", ideas: "Message ideas: screen-free bedtime, app timers, the 20-20-20 eye rule." },
+    { id: "cyberbullying", title: "Stop Cyberbullying", client: "the Student Council", user: "students who use social media and gaming chat",
+      problem: "hurtful messages and exclusion online make students feel unsafe, and bystanders often do not know how to help",
+      brief: "Design a digital campaign that shows students how to recognise, stop and report cyberbullying.", ideas: "Message ideas: be an upstander, screenshot and report, who to talk to." },
+    { id: "water", title: "Save Water", client: "the school's Sustainability Club", user: "families living in Dubai",
+      problem: "the UAE uses far more water per person than most countries, even though almost all of it comes from energy-hungry desalination",
+      brief: "Design a digital campaign that encourages families to save water at home.", ideas: "Message ideas: shorter showers, fixing leaks, watering plants at night." },
+    { id: "food", title: "Food Waste", client: "the school's Catering Team", user: "students who buy lunch at school",
+      problem: "a lot of school food is thrown away every day, wasting money, water and energy",
+      brief: "Design a digital campaign that reduces food waste in the school canteen.", ideas: "Message ideas: take what you'll eat, the journey of food, waste facts." },
+    { id: "plastic", title: "Single-use Plastic", client: "the school's Eco Committee", user: "students and staff",
+      problem: "single-use bottles and packaging are used once and then pollute beaches and the sea",
+      brief: "Design a digital campaign that persuades the school community to cut single-use plastic.", ideas: "Message ideas: refill stations, reusable bottles, where plastic ends up." },
+    { id: "idling", title: "Clean Air at the School Gate", client: "the school's Parent Association", user: "parents who drive to school",
+      problem: "cars left running at drop-off pollute the air right where children are walking",
+      brief: "Design a digital campaign that persuades parents to switch off their engines at the school gate.", ideas: "Message ideas: switch off when you stop, air-quality facts, walk the last 5 minutes." },
+    { id: "kindness", title: "Kindness & Inclusion", client: "the Student Council", user: "students new to the school",
+      problem: "new students can feel lonely and left out in their first weeks at a big school",
+      brief: "Design a digital campaign that helps new students feel welcome and included.", ideas: "Message ideas: buddy system, sit with someone new, clubs to join." },
+    { id: "other", title: "My own cause", client: "a school group that cares about your cause", user: "the people you want to reach", problem: "", brief: "", ideas: "", custom: true }
+  ],
+  example: { title: "Switch Off Standby", client: "the school's Energy Champions", user: "families with many devices at home",
+    problem: "TVs, consoles and chargers left on standby waste electricity all day and all night" },
+  lab: {
+    intro: "You will create a digital campaign with three parts: a poster, an infographic and a short video (30–60 seconds). Take a screenshot at each milestone.",
+    tools: [
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "Posters, infographics and simple videos. Free for students and teachers.", main: true },
+      { name: "Adobe Express", url: "https://www.adobe.com/express/", use: "Posters, animated graphics and short videos. Free plan available." },
+      { name: "Clipchamp", url: "https://clipchamp.com", use: "Video editing in the browser; included with school Microsoft accounts." },
+      { name: "Google Slides", url: "https://slides.google.com", use: "Simple infographics and an exported slideshow video." }
+    ],
+    milestones: ["Poster draft", "Infographic with facts and sources", "Video storyboard and first cut", "Final campaign pieces"],
+    skills: ["Use a clear visual hierarchy (headline, image, call to action)", "Keep a consistent colour scheme and fonts across all pieces", "Use icons or charts to show facts", "Credit sources and use copyright-free images", "Write a short, persuasive call to action", "Edit video clips, text and transitions", "Add captions or subtitles to the video", "Export each piece in the right format"]
+  }
+};
+
+/* ---------------- GRADE 8 — PUBLISHING ON THE WEB ---------------- */
+Object.assign(COURSE.grades["8"], {
+  label: "Grade 8", subject: "Design", unit: "Publishing on the Web",
+  lab: {
+    intro: "You will publish a real, working website for your client. Take a screenshot at each milestone.",
+    tools: [
+      { name: "Google Sites", url: "https://sites.google.com", use: "Build and publish your website. Free with your school Google account.", main: true },
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "Create the logo, banners and graphics." },
+      { name: "Squoosh", url: "https://squoosh.app", use: "Compress photos so pages load fast. Free, in the browser." },
+      { name: "Google Forms", url: "https://forms.google.com", use: "Booking, order or enquiry forms to embed on the site." }
+    ],
+    milestones: ["Theme, header and navigation", "Home page and main content pages", "Forms, images and accessibility", "Published site tested on a phone"],
+    skills: ["Set a consistent theme (colours and fonts)", "Build clear navigation between pages", "Create and re-use a section or card layout", "Compress and crop images", "Add alt text to every image", "Embed a form or map", "Check the mobile preview", "Publish the site and test the live link"]
+  }
+});
+
+/* ---------------- GRADE 10 DESIGN — HARVEST HUB ---------------- */
+Object.assign(COURSE.grades["10"], {
+  label: "Grade 10 Design", subject: "Design",
+  lab: {
+    intro: "You will build a working data system: an input form, a linked data structure and a dashboard. Take a screenshot at each milestone.",
+    tools: [
+      { name: "Google Sheets + Google Forms", url: "https://sheets.google.com", use: "Data tables, validation, formulas and charts, with a form for data entry.", main: true },
+      { name: "Microsoft Excel + Microsoft Forms", url: "https://www.office.com", use: "The same system using your school Microsoft account." },
+      { name: "Looker Studio", url: "https://lookerstudio.google.com", use: "A free, interactive dashboard connected to your sheet." }
+    ],
+    milestones: ["Data structure with validation", "Data-entry form linked to the data", "Formulas and automation", "Dashboard tested with sample data"],
+    skills: ["Design tables with correct data types", "Use data validation to stop bad input", "Link tables with lookup formulas", "Use calculated fields (for example dates or totals)", "Apply conditional formatting for alerts", "Build charts that answer the client's questions", "Protect personal data", "Test with valid and invalid data"]
+  }
+});
+
+/* ---------------- GRADE 10 IT — NETWORKS & CYBERSECURITY ---------------- */
+COURSE.grades["10IT"] = {
+  myp: 5, label: "Grade 10 IT", subject: "IT",
+  unit: "Secure by Design: Networks & Cybersecurity",
+  sdg: "SDG 9 Industry, Innovation & Infrastructure · SDG 16 Strong Institutions",
+  product: "a secure network design and a cybersecurity guide for your client's staff",
+  ideaLabel: "network concept (topology sketch with devices and security)", planLabel: "detailed network diagram with addressing and security layers",
+  scenarios: [
+    { id: "clinic", title: "Family Dental Clinic", client: "Dr. Noor, owner of a family dental clinic", user: "reception staff, dentists and patients",
+      problem: "the clinic stores patient records on one shared computer with a weak password, and patients use the same Wi-Fi as staff",
+      brief: "Design a secure network for the clinic and a short cybersecurity guide that protects patient data." },
+    { id: "cafe", title: "Café with Public Wi-Fi", client: "Mr. Sami, owner of a busy café", user: "baristas, the manager and customers",
+      problem: "customers and the card-payment machine share one open Wi-Fi network, and the router still uses its factory password",
+      brief: "Design a secure café network that separates customers from business systems, with a staff security guide." },
+    { id: "studio", title: "Architecture Studio", client: "Ms. Rania, director of a small architecture studio", user: "eight designers who share large project files",
+      problem: "staff email large files to each other, back-ups are irregular, and a phishing email nearly cost the studio a client's designs",
+      brief: "Design a reliable, secure studio network with file sharing and back-ups, plus a phishing-awareness guide." },
+    { id: "esports", title: "Esports Club", client: "the coach of a school esports club", user: "players, coaches and visiting teams",
+      problem: "the gaming room has unstable connections during matches, and players share accounts and passwords",
+      brief: "Design a fast, secure network for the esports room and an account-security guide for players." }
+  ],
+  example: { title: "Community Library Network", client: "Mr. Faris, manager of a community library", user: "librarians, public-computer users and visitors on Wi-Fi",
+    problem: "public computers, staff computers and visitor Wi-Fi are all on one network, and a visitor's infected laptop spread malware last month" },
+  lab: {
+    intro: "You will create a professional network diagram, configure or simulate the key security settings, and publish a cybersecurity guide for staff. Take a screenshot at each milestone.",
+    tools: [
+      { name: "draw.io (diagrams.net)", url: "https://app.diagrams.net", use: "Professional network diagrams with official device icons. Free, in the browser.", main: true },
+      { name: "Cisco Packet Tracer", url: "https://www.netacad.com", use: "Simulate and test your network. Free with a Cisco Networking Academy account." },
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "Design the staff cybersecurity guide." },
+      { name: "Google Docs or Word", url: "https://docs.google.com", use: "Write the security policy and addressing tables." }
+    ],
+    milestones: ["Network diagram with devices and connections", "Addressing plan and network segments (VLANs or guest Wi-Fi)", "Security configuration (firewall, passwords, encryption, back-ups)", "Staff cybersecurity guide"],
+    skills: ["Use standard network symbols and labels", "Choose a suitable topology", "Plan IP addresses and subnets", "Separate guest and business networks", "Configure firewall rules or router security", "Apply strong authentication (passwords, MFA)", "Plan encryption and back-ups", "Write clear, non-technical guidance for staff", "Test connectivity or settings and record results"]
+  }
+};
+
+/* ---------------- WORKED EXAMPLES — GRADE 6 (Smart Bus Shelter, 3D model) ---------------- */
+COURSE.examples["6"] = {
+  A: [
+    `<p><b>The problem:</b> in City 2050, passengers wait in strong sun for up to 20 minutes and do not know when the next bus will arrive. Older people and young children are affected most.</p><p><b>Why it needs solving:</b> standing in the heat can make people feel unwell, and if waiting is uncomfortable people drive instead, which adds traffic and pollution. A smart, sustainable shelter would keep people cool and informed using clean energy.</p>`,
+    `<table><tr><th>Research question</th><th>Why it matters</th><th>Priority</th></tr><tr><td>How hot does a bus stop get at midday?</td><td>Shows how serious the problem is</td><td>1</td></tr><tr><td>What do passengers need while they wait?</td><td>Tells me which features to include</td><td>2</td></tr><tr><td>How do other cities cool their bus shelters?</td><td>Gives me ideas</td><td>3</td></tr><tr><td>Which materials stay cool in the sun?</td><td>Helps me choose the roof and seats</td><td>4</td></tr></table><p class="note">Heat is first because it affects people's health.</p>`,
+    `<table><tr><th>Product</th><th>What it does</th><th>What I like</th><th>What I would change</th></tr><tr><td>Air-conditioned bus shelters in Dubai</td><td>A closed, cooled waiting room</td><td>Keeps passengers cool</td><td>Use solar power so it saves energy</td></tr><tr><td>Bus shelters with living green roofs</td><td>Plants grow on the roof</td><td>Cools the shelter and helps insects</td><td>Choose desert plants that need little water</td></tr><tr><td>Countdown screens at bus stops</td><td>Shows minutes until the bus</td><td>Quick to read</td><td>Brighter screen for strong sun</td></tr></table>`,
+    `<p><b>Main findings:</b> (1) shade and cool air matter most to passengers; (2) people want to know when the bus will come; (3) a green or solar roof can cool the shelter and power the screen.</p><p><b>What this means:</b> my smart bus shelter needs a solar roof, shaded seats, a cooling system and a countdown screen that is easy to read.</p>`
+  ],
+  B: [
+    `<table><tr><th>My design is successful if…</th><th>How I will test it</th></tr><tr><td>Every seat is under shade</td><td>Check the model from above</td></tr><tr><td>It has a solar roof that powers the screen</td><td>Find the panels and the label on the model</td></tr><tr><td>It shows when the next bus will arrive</td><td>A classmate finds the screen in 5 seconds</td></tr><tr><td>A wheelchair user can enter easily</td><td>Check there is a ramp and a wide gap</td></tr><tr><td>Every smart or sustainable feature is labelled</td><td>Count the labels</td></tr></table>`,
+    `<p><b>Idea 1 (sketch):</b> an open shelter with a large curved solar roof, mist fans and a countdown screen on the end wall. Labels: "solar panels", "mist fan", "ramp".</p><p><b>Idea 2 (sketch):</b> a closed glass pod with air-conditioning, a green roof and a screen above the door.</p>`,
+    `<p>I chose <b>Idea 1</b> because it meets all 5 success criteria. The open design is easy for wheelchair users, and the solar roof powers the fans and screen. Idea 2 would need much more energy to keep cool.</p>`,
+    `<p><b>Planning drawing:</b> floor plan 6 m × 2.5 m with 6 seats and a ramp at one end; front view showing the 3 m high curved roof with 8 solar panels, 2 mist fans and the screen on the right-hand wall.</p><p><b>What I need:</b> Tinkercad, my school login, 3 lessons; Canva for the labelled poster.</p>`
+  ],
+  C: [
+    `<table><tr><th>Step</th><th>What I will do</th><th>Resources</th><th>Time</th></tr><tr><td>1</td><td>Make the floor and back wall to size (6 × 2.5 m)</td><td>Tinkercad box shapes, ruler</td><td>Lesson 1</td></tr><tr><td>2</td><td>Add the curved roof and the ramp</td><td>Tinkercad roof and wedge shapes</td><td>Lesson 1</td></tr><tr><td>3</td><td>Add seats, 8 solar panels and 2 fans</td><td>Duplicate and Align tools</td><td>Lesson 2</td></tr><tr><td>4</td><td>Add the screen and 3D text labels</td><td>Text shapes</td><td>Lesson 2</td></tr><tr><td>5</td><td>Take screenshots and make the poster</td><td>Canva</td><td>Lesson 3</td></tr></table>`,
+    `<p>I used the ruler to set the floor to exactly 60 × 25 mm (1 mm = 10 cm). I cut the doorway with a Hole shape, made one solar panel and duplicated it 7 times so they were evenly spaced, and used Align so the seats lined up. I grouped the roof parts so they would not move, and coloured each material differently.</p>`,
+    `<p><b>Finished model:</b> an open shelter with a curved solar roof, six shaded seats, two mist fans, a ramp and a countdown screen, with labels on every feature. It works as intended: every seat is under the roof and a classmate found the screen in 3 seconds.</p>`,
+    `<table><tr><th>Change I made</th><th>Why I made it</th></tr><tr><td>Made the roof 50 cm wider</td><td>The end seats were not fully shaded</td></tr><tr><td>Added a water fountain</td><td>A classmate said people get thirsty while waiting</td></tr><tr><td>The plan took 4 lessons, not 3</td><td>The curved roof was hard to line up</td></tr></table>`
+  ],
+  D: [
+    `<table><tr><th>What I will test</th><th>How I will test it</th><th>Data I will get</th></tr><tr><td>Every seat is shaded</td><td>View the model from above</td><td>Number of shaded seats</td></tr><tr><td>Solar roof powers the screen</td><td>Check the panels and label</td><td>Yes/no</td></tr><tr><td>Screen found in 5 seconds</td><td>Time 3 classmates</td><td>Seconds</td></tr><tr><td>Wheelchair access</td><td>Check the ramp and the gap width</td><td>Yes/no</td></tr><tr><td>Features labelled</td><td>Count the labels</td><td>Number of labels</td></tr></table>`,
+    `<table><tr><th>Success criterion</th><th>Result</th><th>Met?</th></tr><tr><td>Seats shaded</td><td>6 of 6</td><td>Yes</td></tr><tr><td>Solar roof</td><td>8 panels, labelled</td><td>Yes</td></tr><tr><td>Screen in 5 s</td><td>Average 3 seconds</td><td>Yes</td></tr><tr><td>Wheelchair access</td><td>Ramp, but the gap is narrow</td><td>Partly</td></tr><tr><td>Labels</td><td>6 of 7 features labelled</td><td>Partly</td></tr></table><p>Overall my shelter is mostly successful: three criteria were fully met and two partly met.</p>`,
+    `<table><tr><th>Problem I found</th><th>How I could improve it</th></tr><tr><td>The gap beside the seats is narrow</td><td>Move the seats back to leave a 1.5 m gap</td></tr><tr><td>The fan has no label</td><td>Add a 3D label "solar-powered mist fan"</td></tr><tr><td>No bike parking</td><td>Add e-bike racks so people can cycle to the bus</td></tr></table>`,
+    `<p>Passengers in City 2050 can wait in the shade, stay cool and see when their bus is coming, so older people and children are safer in the heat. Because the shelter runs on solar power, it does not add pollution. If waiting is comfortable, more people will take the bus, which means less traffic and cleaner air (SDG 11).</p>`
+  ]
+};
+
+/* ---------------- WORKED EXAMPLES — GRADE 7 (Switch Off Standby campaign) ---------------- */
+COURSE.examples["7"] = {
+  A: [
+    `<p><b>The problem:</b> in many homes, TVs, consoles and chargers are left on standby all day and night. They waste electricity even when nobody is using them.</p><p><b>Target audience:</b> families with many devices at home, reached through students.</p><p><b>Why it matters:</b> standby power can make up a noticeable part of a home's electricity bill, and in the UAE most electricity still comes from burning gas. Families often don't know it happens, so an awareness campaign could change habits quickly and cheaply.</p>`,
+    `<table><tr><th>Research question</th><th>Primary / secondary</th><th>How</th><th>Priority</th></tr><tr><td>How many devices do our families leave on standby?</td><td>Primary</td><td>Survey of 20 students</td><td>1</td></tr><tr><td>How much energy does standby waste?</td><td>Secondary</td><td>Energy-agency websites</td><td>2</td></tr><tr><td>What kind of message makes teenagers act?</td><td>Primary</td><td>Show 3 sample posters to classmates</td><td>3</td></tr><tr><td>What have other energy campaigns done?</td><td>Secondary</td><td>Look at real campaigns online</td><td>4</td></tr></table><p class="note">The survey comes first because it proves the problem exists in our own community.</p>`,
+    `<table><tr><th>Existing campaign</th><th>Strengths</th><th>Weaknesses</th><th>Idea I can use</th></tr><tr><td>Earth Hour</td><td>Simple action, global reach</td><td>Only one hour a year</td><td>A simple, clear action</td></tr><tr><td>A local electricity provider's saving tips</td><td>Real local numbers</td><td>Lots of small text</td><td>Use local facts, but in big visuals</td></tr><tr><td>A school "switch off" sticker campaign</td><td>A reminder where the action happens</td><td>Plain design</td><td>Put stickers or QR codes near plugs</td></tr></table>`,
+    `<p><b>Findings:</b> 17 of 20 students said their family leaves at least 3 devices on standby overnight; standby is a hidden cost families don't notice; classmates preferred short messages with one bold image and a clear action.</p><p><b>Design brief:</b> I am going to design a digital campaign for families with many devices, because standby wastes electricity without them noticing. It will include a poster, an infographic and a 45-second video with one clear action: switch off at the wall.</p>`
+  ],
+  B: [
+    `<table><tr><th>Area</th><th>Success criterion</th><th>Test</th></tr><tr><td>Message</td><td>The main action can be understood in 5 seconds</td><td>Time 5 classmates</td></tr><tr><td>Facts</td><td>At least 3 facts, each with a source</td><td>Count the facts and sources</td></tr><tr><td>Look</td><td>Same 3 colours and 2 fonts on all pieces</td><td>Check each piece</td></tr><tr><td>Video</td><td>30–60 seconds, with captions</td><td>Time it and check the captions</td></tr><tr><td>Audience</td><td>Families say they would switch off after seeing it</td><td>Ask 5 families</td></tr><tr><td>Action</td><td>A clear call to action on every piece</td><td>Checklist</td></tr></table>`,
+    `<p><b>Idea 1:</b> a "Vampire Devices" theme — cartoon chargers draining energy at night. <b>Idea 2:</b> a money theme — "Your TV costs you money while you sleep." <b>Idea 3:</b> a planet theme — a melting globe plugged into a socket. Each poster sketch is labelled with headline, image, facts and call to action.</p>`,
+    `<p>I chose <b>Idea 1</b> because it meets all 6 criteria. Classmates remembered the "vampire" message best (4 of 5), and it works for both children and parents. Idea 3 was less clear about the action, and Idea 2 did not appeal to students.</p>`,
+    `<p><b>Poster layout:</b> headline at the top "Stop the Energy Vampires!", the cartoon charger in the centre, 3 facts with icons below, and the call to action "Switch off at the wall" in a red banner.</p><p><b>Video storyboard (6 frames, 45 s):</b> dark room → glowing devices → vampire appears → fact on screen → a student switches off → logo and call to action.</p><p><b>Requirements:</b> Canva, copyright-free images, my own voice-over, 4 lessons.</p>`
+  ],
+  C: [
+    `<table><tr><th>Step</th><th>What I will do</th><th>Resources</th><th>Time</th></tr><tr><td>1</td><td>Set up a brand kit (3 colours, 2 fonts, logo)</td><td>Canva</td><td>Lesson 1</td></tr><tr><td>2</td><td>Make the poster</td><td>Canva, cartoon images</td><td>Lesson 1</td></tr><tr><td>3</td><td>Make the infographic with sourced facts</td><td>Canva charts, my research</td><td>Lesson 2</td></tr><tr><td>4</td><td>Film and edit the video</td><td>Phone camera, Canva video</td><td>Lesson 3</td></tr><tr><td>5</td><td>Add captions and export all pieces</td><td>Canva</td><td>Lesson 4</td></tr><tr><td>6</td><td>Test with 5 classmates and fix</td><td>Testers</td><td>Lesson 4</td></tr></table>`,
+    `<p>I created a brand kit so every piece uses the same navy, yellow and white, with one headline font. On the poster I used size and colour to make the headline the first thing you see. I turned my survey data into a bar chart on the infographic, cut the video to 45 seconds with transitions on the beat, and added captions so it works without sound.</p>`,
+    `<p><b>Finished campaign:</b> an A3 poster, a portrait infographic for the school screens and a 45-second captioned video. It works as intended: classmates explained the action within 5 seconds, and all three pieces share one look.</p>`,
+    `<table><tr><th>Change</th><th>Why</th><th>Effect</th></tr><tr><td>Cut the video from 70 s to 45 s</td><td>Testers lost interest after 40 s</td><td>Keeps attention</td></tr><tr><td>Added a QR code linking to energy tips</td><td>A parent asked where to learn more</td><td>Gives a next step</td></tr><tr><td>Changed the red banner to yellow</td><td>Red text on navy was hard to read</td><td>Better contrast</td></tr></table>`
+  ],
+  D: [
+    `<table><tr><th>Specification point</th><th>Test method</th><th>Who will test</th><th>Data</th></tr><tr><td>Action understood in 5 s</td><td>Show the poster, ask "What should you do?"</td><td>5 classmates</td><td>Correct answers and seconds</td></tr><tr><td>3 sourced facts</td><td>Checklist</td><td>Me and a peer</td><td>Count</td></tr><tr><td>Consistent look</td><td>Compare the 3 pieces side by side</td><td>A peer</td><td>Yes/no for each piece</td></tr><tr><td>Video 30–60 s with captions</td><td>Time it and check the captions</td><td>Me</td><td>Seconds; yes/no</td></tr><tr><td>Families would switch off</td><td>Short survey after watching</td><td>5 families</td><td>Number who say yes</td></tr></table>`,
+    `<table><tr><th>Specification point</th><th>Result / data</th><th>Met?</th></tr><tr><td>Understood in 5 s</td><td>5/5 correct, average 3 s</td><td>Yes</td></tr><tr><td>Sourced facts</td><td>3 facts, 3 sources</td><td>Yes</td></tr><tr><td>Consistent look</td><td>3/3 match</td><td>Yes</td></tr><tr><td>Video</td><td>45 s, captioned</td><td>Yes</td></tr><tr><td>Families would act</td><td>4 of 5 families</td><td>Mostly</td></tr></table><p>The campaign is successful: four points were fully met. One family said they already switch off, so the message did not change their behaviour, but they still found it clear.</p>`,
+    `<table><tr><th>Weakness</th><th>Improvement</th><th>How I would do it</th></tr><tr><td>No proof that families actually changed</td><td>Do a one-week follow-up survey</td><td>Ask the same families again</td></tr><tr><td>English only</td><td>Arabic and French versions</td><td>Translate the text, keep the design</td></tr><tr><td>The poster is only on one wall</td><td>Stickers beside classroom plugs</td><td>Print small "vampire" stickers</td></tr></table>`,
+    `<p>Families who saw the campaign now know that standby wastes energy, and 4 of 5 said they would switch off at the wall. If even half the school's families do this, it could save a noticeable amount of electricity each year and reduce emissions from power stations (SDG 13). Students also became messengers at home, which spreads the habit further.</p><p class="note">A parent said: "My son now goes around switching everything off at night!"</p>`
+  ]
+};
+
+/* ---------------- WORKED EXAMPLES — GRADE 10 IT (Community Library Network) ---------------- */
+COURSE.examples["10IT"] = {
+  A: [
+    `<p><b>The problem:</b> the community library runs 12 public computers, 4 staff computers and free visitor Wi-Fi on one flat network. Last month a visitor's infected laptop spread malware to two staff computers, and the catalogue was offline for a day.</p><p><b>Client and stakeholders:</b> Mr. Faris (manager); librarians who handle members' personal data; public-computer users; Wi-Fi visitors; the city council that funds the library.</p><p><b>Justification:</b> one flat network lets any device reach any other, so a single infected device can compromise members' personal data. The outage cost a day of service, and a data breach could bring legal penalties and loss of public trust. Segmentation and staff awareness would remove the main risk at low cost.</p>`,
+    `<table><tr><th>Research question</th><th>Type</th><th>Method &amp; source</th><th>Priority</th><th>Justification</th></tr><tr><td>Which devices and services does the library use?</td><td>Primary</td><td>Site visit and device audit</td><td>1</td><td>Defines everything to be protected</td></tr><tr><td>What data is stored and who can access it?</td><td>Primary</td><td>Interview with Mr. Faris</td><td>2</td><td>Decides security priorities</td></tr><tr><td>What threats target small public organisations?</td><td>Secondary</td><td>National cybersecurity guidance</td><td>3</td><td>Focuses the controls</td></tr><tr><td>How do other libraries separate public and staff networks?</td><td>Secondary</td><td>Case studies, vendor guides</td><td>4</td><td>Proven designs</td></tr><tr><td>What does UAE data-protection law require?</td><td>Secondary</td><td>Official guidance</td><td>5</td><td>Legal constraint</td></tr></table><p class="note">The device audit comes first: you cannot secure what you have not identified.</p>`,
+    `<table><tr><th>Product / system</th><th>Users</th><th>Key features</th><th>Strengths</th><th>Limitations</th><th>Implication</th></tr><tr><td>A consumer router with guest Wi-Fi</td><td>Homes</td><td>Separate guest network</td><td>Cheap and simple</td><td>Limited control and logging</td><td>Guest separation is essential, but needs business features</td></tr><tr><td>A small-business firewall with VLANs</td><td>Offices</td><td>Segments, rules, logs</td><td>Strong control</td><td>Needs configuration skill</td><td>Use VLANs for staff, public PCs and guests</td></tr><tr><td>A cloud-managed Wi-Fi system</td><td>Schools, cafés</td><td>Captive portal, remote management</td><td>Easy to monitor</td><td>Subscription cost</td><td>Add a portal with acceptable-use terms</td></tr></table><p>Analysis: every successful design separates untrusted users from staff systems and keeps logs; the main trade-off is between cost and control.</p>`,
+    `<p><b>Detailed design brief.</b> Context: a public library with mixed trusted and untrusted users. Analysis: the main risk is lateral movement on a flat network; staff passwords are reused; there are no tested back-ups. Constraints: a budget for one business router or firewall, no full-time IT staff, member data must stay private. Goal: a segmented network (staff, public PCs, guest Wi-Fi), hardened devices, a back-up plan and a one-page staff security guide.</p>`
+  ],
+  B: [
+    `<table><tr><th>Area</th><th>Specification point</th><th>Justification</th><th>Measurable test</th></tr><tr><td>Segmentation</td><td>Three separate networks: staff, public PCs, guests</td><td>Malware incident</td><td>A guest device cannot reach a staff PC</td></tr><tr><td>Wi-Fi</td><td>WPA3 (or WPA2) encryption; guest portal with terms</td><td>Best practice</td><td>Check the settings</td></tr><tr><td>Access</td><td>Unique staff accounts with MFA for the catalogue</td><td>Password reuse</td><td>Log in test</td></tr><tr><td>Back-up</td><td>Daily automatic back-up, one copy offsite</td><td>Outage</td><td>Restore one file</td></tr><tr><td>Performance</td><td>Each public PC at least 20 Mbps</td><td>User needs</td><td>Speed test on 3 PCs</td></tr><tr><td>Training</td><td>Staff guide readable in under 5 minutes</td><td>No IT staff</td><td>Time 3 staff</td></tr></table>`,
+    `<p><b>Idea 1:</b> a business router with three VLANs and guest Wi-Fi. <b>Idea 2:</b> separate physical switches and two internet connections. <b>Idea 3:</b> cloud-managed Wi-Fi and a firewall with a captive portal. Each topology sketch labels devices, segments and security controls.</p>`,
+    `<table><tr><th>Criterion</th><th>Weight</th><th>Idea 1</th><th>Idea 2</th><th>Idea 3</th></tr><tr><td>Security</td><td>3</td><td>4</td><td>5</td><td>5</td></tr><tr><td>Cost</td><td>3</td><td>5</td><td>2</td><td>3</td></tr><tr><td>Ease of management</td><td>2</td><td>3</td><td>2</td><td>5</td></tr><tr><td>Scalability</td><td>2</td><td>4</td><td>2</td><td>4</td></tr><tr><td><b>Total</b></td><td></td><td><b>41</b></td><td>29</td><td>40</td></tr></table><p>I chose <b>Idea 1</b>: it scores highest because it gives proper segmentation within the budget. I will add Idea 3's guest portal, which the chosen router supports.</p>`,
+    `<p><b>Diagram:</b> ISP modem → firewall router → managed switch with VLAN 10 Staff (192.168.10.0/24), VLAN 20 Public PCs (192.168.20.0/24), VLAN 30 Guest Wi-Fi (192.168.30.0/24, internet only). Firewall rules: deny VLAN 20/30 → VLAN 10.</p><p><b>Requirements:</b> a business router with VLAN support, a managed 24-port switch, 2 access points, a NAS for back-ups, draw.io, Packet Tracer for testing, 5 lessons.</p>`
+  ],
+  C: [
+    `<table><tr><th>Stage</th><th>Task</th><th>Resources</th><th>Time</th><th>Dependency</th><th>Contingency</th></tr><tr><td>1</td><td>Draw the final topology</td><td>draw.io</td><td>L1</td><td>—</td><td>—</td></tr><tr><td>2</td><td>Write the addressing and VLAN table</td><td>Docs</td><td>L1</td><td>1</td><td>—</td></tr><tr><td>3</td><td>Build the network in Packet Tracer</td><td>Packet Tracer</td><td>L2</td><td>1, 2</td><td>Use a simpler model if devices are missing</td></tr><tr><td>4</td><td>Configure VLANs, DHCP and firewall rules</td><td>Packet Tracer</td><td>L3</td><td>3</td><td>Use teacher checkpoints</td></tr><tr><td>5</td><td>Write the security policy and back-up plan</td><td>Docs</td><td>L4</td><td>2</td><td>—</td></tr><tr><td>6</td><td>Design the staff guide</td><td>Canva</td><td>L4</td><td>5</td><td>—</td></tr><tr><td>7</td><td>Test connectivity and isolation, then fix</td><td>Ping, test log</td><td>L5</td><td>4</td><td>Extra lunchtime session</td></tr></table><p class="note">Efficiency: addressing is planned once before any configuration, so devices don't have to be re-addressed later.</p>`,
+    `<p>I used standard Cisco icons and colour-coded each VLAN in draw.io. In Packet Tracer I created VLANs 10, 20 and 30 on the switch, set trunk ports to the router, configured DHCP pools for each subnet, and added access-control rules that block traffic from Public and Guest to Staff. I set WPA2-PSK on the access points with a 16-character passphrase. In Canva I wrote the guide in plain language with icons.</p>`,
+    `<p><b>Finished solution:</b> a labelled diagram, a working Packet Tracer simulation, a security policy and a one-page staff guide. It functions as intended: devices get the correct addresses, guests reach the internet, and a guest cannot ping a staff PC. It is presented appropriately: Mr. Faris receives a one-page summary first, with the technical detail in an appendix for an IT contractor.</p>`,
+    `<table><tr><th>Change</th><th>Justification (evidence)</th><th>Impact on specification</th></tr><tr><td>WPA2 instead of WPA3 on the access points</td><td>The Packet Tracer access points don't support WPA3; the real devices do</td><td>Encryption point met in the simulation; WPA3 recommended in the policy</td></tr><tr><td>Added a separate printer VLAN</td><td>Testing showed public PCs could print to the staff printer</td><td>Segmentation strengthened</td></tr><tr><td>Guide cut from 2 pages to 1</td><td>A staff tester took 9 minutes to read 2 pages</td><td>The 5-minute training point can now be met</td></tr></table>`
+  ],
+  D: [
+    `<table><tr><th>Specification point</th><th>Test method</th><th>Sample</th><th>Data</th><th>Success threshold</th></tr><tr><td>Segmentation</td><td>Ping from guest and public to staff</td><td>3 devices per VLAN</td><td>Replies / timeouts</td><td>100% blocked</td></tr><tr><td>Internet for all segments</td><td>Browse a web page from each VLAN</td><td>3 devices per VLAN</td><td>Success / fail</td><td>100% success</td></tr><tr><td>Correct addressing</td><td>Check each device's IP address</td><td>All devices</td><td>Correct / incorrect</td><td>100%</td></tr><tr><td>Wi-Fi encryption</td><td>Inspect the access-point settings</td><td>2 access points</td><td>Mode</td><td>WPA2 or better</td></tr><tr><td>Back-up</td><td>Restore a test file</td><td>3 files</td><td>Restored yes/no</td><td>3 of 3</td></tr><tr><td>Staff guide</td><td>Timed reading and a 5-question quiz</td><td>3 staff</td><td>Minutes; quiz score</td><td>Under 5 min; 4/5</td></tr></table><p class="note">Reliability: each network test is repeated after a device restart, and results are recorded in one test log.</p>`,
+    `<table><tr><th>Specification point</th><th>Result</th><th>Met?</th></tr><tr><td>Segmentation</td><td>18 of 18 pings blocked</td><td>Yes</td></tr><tr><td>Internet</td><td>9 of 9 succeeded</td><td>Yes</td></tr><tr><td>Addressing</td><td>All correct after a DHCP fix</td><td>Yes</td></tr><tr><td>Encryption</td><td>WPA2</td><td>Yes (WPA3 recommended)</td></tr><tr><td>Back-up</td><td>3 of 3 restored</td><td>Yes</td></tr><tr><td>Guide</td><td>Average 4 min; quiz average 4.3/5</td><td>Yes</td></tr></table><p>The design meets all six points in the simulation. However, the evidence has limits: a simulation cannot reproduce real interference, real user behaviour or actual malware, and only three staff tested the guide. The segmentation result is strong evidence because it was repeated after restarts. The back-up test only proves restoration, not that back-ups run every day without someone checking.</p>`,
+    `<table><tr><th>Weakness (evidence)</th><th>Improvement</th><th>How</th><th>Priority</th></tr><tr><td>No monitoring of alerts</td><td>Weekly log review</td><td>Add a checklist to the policy</td><td>1</td></tr><tr><td>Back-ups not verified automatically</td><td>Back-up success email</td><td>Turn on NAS notifications</td><td>2</td></tr><tr><td>Only simulated</td><td>Pilot on real equipment</td><td>One-day pilot with a contractor</td><td>3</td></tr><tr><td>Guide only in English</td><td>Arabic version</td><td>Translate and test with staff</td><td>4</td></tr></table>`,
+    `<p>The library can now offer free Wi-Fi without exposing members' personal data, because an infected visitor device can no longer reach staff systems. Staff have a clear routine for passwords, phishing and back-ups, so an incident is less likely and recovery is faster. In the long term, protecting public services builds trust in digital infrastructure (SDG 9, SDG 16). An ethical consideration is that the guest portal logs connections, so the library must tell users what is logged and keep it only as long as needed.</p><p class="note">Mr. Faris: "I finally understand what our network looks like and what to check each week."</p>`
+  ]
+};
+
+/* ---------------- GRADE-SPECIFIC PRACTICE ---------------- */
+COURSE.gradeExercises["6"] = {
+  A: [
+    { type: "mcq", q: "What makes a city 'smart'?", o: ["It has tall buildings", "It uses technology and data to improve services and people's lives", "It has many shops", "It is very old"], a: 1, h: "Think sensors, data and helpful technology.", w: "Smart cities use technology and data to help people." },
+    { type: "mcq", q: "What makes a building 'sustainable'?", o: ["It is painted green", "It meets people's needs while using less energy, water and resources", "It is the biggest in the city", "It has no windows"], a: 1, h: "Think about the planet and the future.", w: "Sustainable design saves resources." },
+    { type: "mcq", q: "Which SDG is about sustainable cities and communities?", o: ["SDG 2", "SDG 4", "SDG 11", "SDG 14"], a: 2, h: "It is the main SDG in your unit.", w: "SDG 11 = Sustainable Cities and Communities." }
+  ],
+  B: [
+    { type: "mcq", q: "Which success criterion can be tested on a 3D building model?", o: ["It looks cool", "It has at least 6 solar panels on the roof", "People will love it", "It is modern"], a: 1, h: "Can you count or check it?", w: "Counting panels is a clear test." },
+    { type: "mcq", q: "A floor plan shows…", o: ["the building from above, showing rooms and walls", "the price of the building", "a photo of the city", "the building at night"], a: 0, h: "Looking down from above.", w: "Floor plans show layout from above." },
+    { type: "classify", q: "Sort these features into Smart or Sustainable.", cats: ["Smart", "Sustainable"], items: [["Sensors that switch lights off in empty rooms", 0], ["A green roof with desert plants", 1], ["A screen showing live energy use", 0], ["Rainwater collection tank", 1], ["App to book an appointment", 0], ["Solar panels", 1]], h: "Smart = technology and data. Sustainable = saving resources.", w: "Some features can be both, but these lean one way." }
+  ],
+  C: [
+    { type: "mcq", q: "In Tinkercad, how do you cut a window into a wall?", o: ["Place a Hole shape over the wall and group them", "Delete the wall", "Change the wall's colour", "Make the wall taller"], a: 0, h: "Hole + group.", w: "Grouping a Hole with a solid cuts it out." },
+    { type: "mcq", q: "You need 10 identical solar panels. The quickest way is…", o: ["Draw each one separately", "Make one, then duplicate it and space the copies evenly", "Use one big panel", "Skip the panels"], a: 1, h: "Make one, copy it.", w: "Duplicating saves time and keeps them identical." },
+    { type: "mcq", q: "Why should you group the parts of your roof?", o: ["So they move together and don't get knocked out of place", "To change their colour", "To delete them", "To make them invisible"], a: 0, h: "Keep parts together.", w: "Grouping keeps parts aligned." }
+  ],
+  D: [
+    { type: "mcq", q: "How could you test 'a wheelchair user can enter easily' on your model?", o: ["Check there is a ramp and measure that doorways are wide enough", "Ask if people like the colour", "Count the windows", "Look at the roof"], a: 0, h: "Measure and check.", w: "Measuring gives data." },
+    { type: "mcq", q: "Which is an impact of a smart water treatment plant on City 2050?", o: ["The plant is blue", "Families get clean water and less water is wasted through leaks", "It took 3 lessons", "It was made in Tinkercad"], a: 1, h: "How does it help people and the planet?", w: "Impact is about people and the environment." },
+    { type: "mcq", q: "Which SDG does a solar-powered building help most directly?", o: ["SDG 7 Affordable and Clean Energy", "SDG 14 Life Below Water", "SDG 2 Zero Hunger", "SDG 16 Peace"], a: 0, h: "It is about energy.", w: "SDG 7 = clean energy." }
+  ]
+};
+COURSE.gradeExercises["7"] = {
+  A: [
+    { type: "mcq", q: "What is the main purpose of an awareness campaign?", o: ["To sell a product", "To inform people about an issue and persuade them to take action", "To entertain only", "To win an award"], a: 1, h: "Inform + persuade + act.", w: "Awareness campaigns aim to change behaviour." },
+    { type: "mcq", q: "Which is the best way to prove your cause matters to YOUR audience?", o: ["Say it is important", "Survey people in your school community about the issue", "Copy a fact without a source", "Ask one friend"], a: 1, h: "Primary data from your community.", w: "Local survey data is strong evidence." },
+    { type: "mcq", q: "A 'call to action' is…", o: ["a phone number", "the specific thing you want your audience to do", "a type of font", "the title of the video"], a: 1, h: "What should people DO after seeing it?", w: "A call to action names the action." }
+  ],
+  B: [
+    { type: "mcq", q: "Which campaign success criterion is measurable?", o: ["It is eye-catching", "4 out of 5 viewers can say the action in 5 seconds", "People like it", "It is creative"], a: 1, h: "Look for numbers.", w: "A timed test with a count is measurable." },
+    { type: "mcq", q: "A video storyboard shows…", o: ["the music only", "each scene in order, with images, text and timing", "the final video", "the poster colours"], a: 1, h: "Like a comic strip of your video.", w: "Storyboards plan scenes and timing." },
+    { type: "mcq", q: "Why should all three campaign pieces share the same colours and fonts?", o: ["It's required by law", "So people recognise them as one campaign and remember it", "To save ink", "It doesn't matter"], a: 1, h: "Brand recognition.", w: "Consistency builds recognition." }
+  ],
+  C: [
+    { type: "mcq", q: "What is the first thing viewers should notice on a poster?", o: ["The small print", "The headline or main image", "Your name", "The sources"], a: 1, h: "Visual hierarchy.", w: "Headline and hero image come first." },
+    { type: "mcq", q: "Why add captions to your campaign video?", o: ["They look nice", "Many people watch without sound, and captions help everyone understand", "To make it longer", "They are required by Canva"], a: 1, h: "Think about phones on silent.", w: "Captions improve reach and accessibility." },
+    { type: "mcq", q: "Which images can you use safely in your campaign?", o: ["Any image from Google", "Your own photos or copyright-free images that you credit", "Logos from famous brands", "Screenshots of films"], a: 1, h: "Copyright!", w: "Use your own or properly licensed images." }
+  ],
+  D: [
+    { type: "mcq", q: "Which data best shows your campaign changed behaviour?", o: ["The number of slides", "How many people did the action one week later", "The poster size", "How long it took to make"], a: 1, h: "Action, not just opinion.", w: "Follow-up data shows real change." },
+    { type: "mcq", q: "5 classmates saw your poster and 3 could say the action. This criterion (target 4/5) is…", o: ["met", "not met (or partly met)", "irrelevant", "perfect"], a: 1, h: "Compare with your target.", w: "3 of 5 is below the target." },
+    { type: "mcq", q: "Which is an impact of an e-waste campaign?", o: ["Phones are recycled properly, so fewer toxic materials pollute the environment", "The poster was blue", "The video was 45 seconds", "It used Canva"], a: 0, h: "Effect on people and the planet.", w: "Impact = effect on the world." }
+  ]
+};
+COURSE.gradeExercises["10IT"] = {
+  A: [
+    { type: "mcq", q: "Why is a 'flat' network (everything on one segment) a security risk?", o: ["It is slower to install", "One infected device can reach every other device", "It uses more cables", "It needs more IP addresses"], a: 1, h: "Think about how malware spreads.", w: "Flat networks allow lateral movement." },
+    { type: "classify", q: "Sort these into Threat or Control.", cats: ["Threat", "Control"], items: [["Phishing email", 0], ["Multi-factor authentication", 1], ["Ransomware", 0], ["Firewall rule", 1], ["Weak default router password", 0], ["Regular back-ups", 1]], h: "A threat causes harm; a control reduces risk.", w: "Threats vs. protections." },
+    { type: "mcq", q: "The 'CIA triad' in cybersecurity stands for…", o: ["Confidentiality, Integrity, Availability", "Control, Internet, Access", "Computers, Information, Applications", "Cyber, Intelligence, Agency"], a: 0, h: "Keep data secret, correct and available.", w: "Confidentiality, Integrity, Availability." }
+  ],
+  B: [
+    { type: "mcq", q: "What does a VLAN do?", o: ["Makes Wi-Fi faster", "Splits one physical network into separate logical networks", "Encrypts emails", "Stores back-ups"], a: 1, h: "Virtual LAN.", w: "VLANs segment networks logically." },
+    { type: "mcq", q: "Which subnet gives a small office up to 254 usable host addresses?", o: ["/8", "/16", "/24", "/30"], a: 2, h: "256 addresses minus network and broadcast.", w: "A /24 has 254 usable hosts." },
+    { type: "mcq", q: "Which specification point is measurable?", o: ["The network is secure", "A guest device cannot ping any staff device (100% of tests)", "Staff like the Wi-Fi", "The network is modern"], a: 1, h: "Look for a test and a threshold.", w: "Ping tests with a threshold are measurable." }
+  ],
+  C: [
+    { type: "mcq", q: "Which Wi-Fi security mode is the strongest of these?", o: ["Open", "WEP", "WPA2", "WPA3"], a: 3, h: "The newest standard.", w: "WPA3 is the current strongest." },
+    { type: "mcq", q: "What does DHCP do?", o: ["Blocks viruses", "Automatically gives devices IP addresses", "Encrypts files", "Translates website names"], a: 1, h: "Dynamic Host Configuration Protocol.", w: "DHCP assigns addresses automatically." },
+    { type: "mcq", q: "Following the 3-2-1 back-up rule means…", o: ["3 copies of data, on 2 types of storage, with 1 copy offsite", "Back up every 3 days", "3 passwords for 2 users", "1 back-up is enough"], a: 0, h: "Copies, media, location.", w: "3-2-1 is the standard back-up rule." }
+  ],
+  D: [
+    { type: "mcq", q: "How do you test that guest Wi-Fi is isolated from staff devices?", o: ["Look at the diagram", "From a guest device, try to ping or reach staff devices and record the results", "Ask staff", "Check the Wi-Fi name"], a: 1, h: "Try to break the rule.", w: "Active tests give evidence." },
+    { type: "mcq", q: "Which is a limitation of testing only in Packet Tracer?", o: ["It is free", "It cannot show real interference, real users or real malware", "It has icons", "It saves files"], a: 1, h: "Simulation vs. reality.", w: "Simulations have limits." },
+    { type: "mcq", q: "Which is an ethical consideration for a guest Wi-Fi portal?", o: ["The colour of the login page", "Telling users what is logged and keeping logs only as long as needed", "The internet speed", "The router brand"], a: 1, h: "Privacy and transparency.", w: "Users must know how their data is handled." }
+  ]
+};
+
+</script>
+<script>
 (function(){
 "use strict";
 /* ================= UTILITIES ================= */
@@ -1191,7 +1538,6 @@ let REQUESTS = [];    // teacher sign-up requests read from the switches sheet
 const PREVIEW = "teacher.preview@sisd.ae";
 function user(){ return session.email ? DB.users[session.email] : null; }
 function gradeData(g){ return COURSE.grades[g]; }
-function scenarioFor(email, g){ const sc = gradeData(g).scenarios; return sc[hash(email.toLowerCase()+"|"+g) % sc.length]; }
 function yearKey(myp){ return myp >= 5 ? 5 : myp; }
 function prog(u, c){ u.progress = u.progress || {}; u.progress[c] = u.progress[c] || { watched:false, seen:{}, ex:{correct:0, points:0, done:false, hints:0, attempts:0}, fields:{}, bands:{}, done:[false,false,false,false], finished:false }; return u.progress[c]; }
 function fill(str, g, sc){
@@ -1249,7 +1595,7 @@ async function postForm(link, values){
 }
 function logEvent(crit, event, details){
   const u = user(); if (!u || session.preview) return;
-  const item = [session.email, u.name, u.role === "teacher" ? "Staff" : "Grade " + u.grade, u.role === "teacher" ? "-" : u.teacher, crit === "-" ? "-" : "Criterion " + crit, event, u.role === "teacher" ? "Teacher" : "Student", details, new Date().toISOString()];
+  const item = [session.email, u.name, u.role === "teacher" ? "Staff" : gLabel(u.grade), u.role === "teacher" ? "-" : u.teacher, crit === "-" ? "-" : "Criterion " + crit, event, u.role === "teacher" ? "Teacher" : "Student", details, new Date().toISOString()];
   DB.queue.push(item); save(); flushQueue();
 }
 
@@ -1338,7 +1684,7 @@ function renderMast(){
     const pts = Object.values(u.progress||{}).reduce((s,p)=>s+(p.ex?.points||0),0);
     r.innerHTML = `${langSelect()}<span class="chip pts notranslate" title="Practice points">★ ${pts} pts</span>
       <button class="chip" id="voiceBtn" aria-pressed="${DB.voice}">${DB.voice?ICON.voiceOn:ICON.voiceOff} Voice</button>
-      <span class="chip"><span class="notranslate">${esc(u.name)}</span>&nbsp;· G${esc(u.grade)}</span>${session.preview?"":signOut}`;
+      <span class="chip"><span class="notranslate">${esc(u.name)}</span>&nbsp;· ${esc(gLabel(u.grade))}</span>${session.preview?"":signOut}`;
     $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
   }
   bindLang();
@@ -1379,7 +1725,7 @@ function renderLogin(app){
         <div id="upOnly" class="stack" hidden>
           <label class="f">Full name<input type="text" id="lName" autocomplete="name" placeholder="First and last name"></label>
           <div class="grid2" id="studentOnly">
-            <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.grades).map(g=>`<option value="${g}">Grade ${g} (MYP ${COURSE.grades[g].myp})</option>`).join("")}</select></label>
+            <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.grades).map(g=>`<option value="${g}">${esc(gLabel(g))} (MYP ${COURSE.grades[g].myp})</option>`).join("")}</select></label>
             <label class="f">Teacher<select id="lTeacher"><option value="">Choose…</option>${teacherNames().map(t=>`<option>${esc(t)}</option>`).join("")}</select></label>
           </div>
         </div>
@@ -1444,7 +1790,7 @@ function renderLogin(app){
       if (!grade) return msg("Choose your grade."); if (!teacher) return msg("Choose your teacher.");
       DB.users[email] = { role:"student", name, grade, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
       session.email = email; DB.session = email; save();
-      logEvent("-", "Signed up", `Design challenge: ${scenarioFor(email, grade).title}`);
+      logEvent("-", "Signed up", gradeData(grade).choose ? "Choosing their focus" : `Design challenge: ${scenarioFor(email, grade).title}`);
       speak(P().welcome(name.split(" ")[0]));
       go({ name:"home" });
     } catch(err){ msg(esc(err.message)); }
@@ -1463,25 +1809,99 @@ function renderTeacherHome(app){
       <button class="crit open" data-go="preview"><span class="L">▶</span><h3>Preview as a student</h3><p class="muted" style="margin:0;font-size:13px">Open every criterion for any grade without sending data.</p></button>
       <button class="crit open" data-go="answers"><span class="L">✔</span><h3>Answer key</h3><p class="muted" style="margin:0;font-size:13px">All practice questions with answers and hints.</p></button>
       <button class="crit open" data-go="lookup"><span class="L">?</span><h3>Students</h3><p class="muted" style="margin:0;font-size:13px">Design challenges and password resets. ${mine} of your students on this device.</p></button>
-      <div class="crit locked"><span class="L">${Object.keys(COURSE.grades).filter(g=>["A","B","C","D"].some(c=>unlocks()[g]?.[c])).length}</span><h3>Grades with open criteria</h3><p class="muted" style="margin:0;font-size:13px">${Object.keys(COURSE.grades).map(g=>`G${g}: ${["A","B","C","D"].filter(c=>unlocks()[g]?.[c]).join(", ")||"none"}`).join(" · ")}</p></div>
+      <div class="crit locked"><span class="L">${Object.keys(COURSE.grades).filter(g=>["A","B","C","D"].some(c=>unlocks()[g]?.[c])).length}</span><h3>Grades with open criteria</h3><p class="muted" style="margin:0;font-size:13px">${Object.keys(COURSE.grades).map(g=>`${gLabel(g)}: ${["A","B","C","D"].filter(c=>unlocks()[g]?.[c]).join(", ")||"none"}`).join(" · ")}</p></div>
     </div></div>`;
   app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => b.dataset.go === "preview" ? previewGradePicker() : staffPanel(b.dataset.go, "teacher"));
+}
+
+/* ================= FOCUS CHOICE (G6 building, G7 cause) ================= */
+function gLabel(g){ return (COURSE.grades[g] && COURSE.grades[g].label) || ("Grade " + g); }
+function scenarioFor(email, g){
+  const gd = gradeData(g), sc = gd.scenarios;
+  if (gd.choose){
+    const u = DB.users[email], ch = u && u.choice;
+    if (!ch) return null;
+    if (ch.id === "other"){
+      const base = sc.find(s => s.id === "other");
+      const brief = g === "6" ? `Design a smart, sustainable ${ch.title} for City 2050.` : `Design a digital awareness campaign about ${ch.title}.`;
+      return { id:"other", title: ch.title, client: base.client, user: ch.user || base.user, problem: ch.problem, brief, ideas:"" };
+    }
+    return sc.find(s => s.id === ch.id) || sc[0];
+  }
+  return sc[hash(email.toLowerCase()+"|"+g) % sc.length];
+}
+function anyStrandDone(u){ return Object.values(u.progress||{}).some(p => p.done && p.done.some(Boolean)); }
+function renderChooser(app){
+  const u = user(), g = u.grade, gd = gradeData(g), cur = u.choice?.id;
+  app.innerHTML = `<div class="stack" style="gap:18px">
+    <div><div class="eyebrow">${esc(gLabel(g))} · MYP ${gd.subject||"Design"} Year ${gd.myp}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.4vw,32px)">${esc(gd.unit)}</h1></div>
+    <div class="card stack" data-read><h2>${esc(gd.choose.title)}</h2><p class="muted" style="margin:0">${esc(gd.choose.note)}</p></div>
+    <div class="crit-grid">${gd.scenarios.map(s=>`<button class="crit open" data-ch="${s.id}" ${s.id===cur?'style="border-color:var(--accent)"':""}><h3>${esc(s.title)}</h3><p class="muted" style="margin:0;font-size:13px">${esc(s.custom ? "Suggest your own idea and explain the problem it solves." : s.brief)}</p>${s.ideas?`<p style="margin:0;font-size:12.5px">${esc(s.ideas)}</p>`:""}</button>`).join("")}</div>
+    <form id="ownForm" class="card stack" hidden novalidate>
+      <h3>Your own idea</h3>
+      <label class="f">${g==="6"?"Name of your building or facility":"Your cause"}<input type="text" id="owT" placeholder="${g==="6"?"for example Smart Airport":"for example Road safety"}"></label>
+      <label class="f">Who is it for?<input type="text" id="owU" placeholder="the people it will help"></label>
+      <label class="f">What problem does it solve?<textarea id="owP" class="notranslate" style="min-height:80px" placeholder="Describe the problem in one or two sentences"></textarea></label>
+      <div id="owMsg"></div>
+      <div class="row"><button class="btn" type="submit">Choose my idea</button><button class="btn ghost" type="button" id="owCancel">Cancel</button></div>
+    </form>
+    ${u.choice?`<div class="row"><button class="btn ghost" id="chBack">← Keep ${esc(scenarioFor(session.email,g).title)}</button></div>`:""}
+  </div>`;
+  const pickIt = ch => { u.choice = ch; save(); logEvent("-", g==="6" ? "Chose building" : "Chose cause", ch.title || ch.id); speak(pickOne(P().right)); view.choosing = false; go({ name:"home" }); };
+  app.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => {
+    const s = gd.scenarios.find(x => x.id === b.dataset.ch);
+    if (s.custom){ $("#ownForm").hidden = false; $("#owT").focus(); return; }
+    pickIt({ id: s.id, title: s.title });
+  });
+  $("#owCancel").onclick = () => { $("#ownForm").hidden = true; };
+  $("#ownForm").onsubmit = e => { e.preventDefault(); const t = $("#owT").value.trim(), us = $("#owU").value.trim(), pr = $("#owP").value.trim();
+    if (t.length < 3) return $("#owMsg").innerHTML = `<div class="notice bad">Give your idea a name.</div>`;
+    if (words(pr) < 8) return $("#owMsg").innerHTML = `<div class="notice bad">Describe the problem in at least 8 words.</div>`;
+    pickIt({ id:"other", title:t, user:us, problem:pr.replace(/\.$/,"") }); };
+  const bk = $("#chBack"); if (bk) bk.onclick = () => { view.choosing = false; go({ name:"home" }); };
+}
+
+/* ================= BUILD LAB (Criterion C) ================= */
+function labCard(gd, compact){
+  const L = gd.lab; if (!L) return "";
+  return `<div class="card stack" data-read style="gap:12px">
+    <div class="eyebrow">Build Lab — create your solution digitally</div>
+    <p style="margin:0">${esc(L.intro)}</p>
+    <div class="scroll"><table class="tbl"><tr><th>Free software</th><th>Use it to…</th></tr>${L.tools.map(t=>`<tr><td><a href="${esc(t.url)}" target="_blank" rel="noopener"><b class="notranslate">${esc(t.name)}</b></a>${t.main?` <span class="counter ok">recommended</span>`:""}</td><td>${esc(t.use)}</td></tr>`).join("")}</table></div>
+    <div><div class="eyebrow" style="color:var(--muted);margin-bottom:6px">Milestones — take a screenshot at the end of each</div><ol style="margin:0;padding-left:20px">${L.milestones.map(m=>`<li>${esc(m)}</li>`).join("")}</ol></div>
+    ${compact?"":`<div><div class="eyebrow" style="color:var(--muted);margin-bottom:6px">Technical skills to show</div><div class="starters">${L.skills.map(s=>`<span>${esc(s)}</span>`).join("")}</div></div>`}
+  </div>`;
+}
+function fieldsFor(c, gd){
+  const Y = yearKey(gd.myp), base = TASK_FIELDS[c][Y];
+  if (c !== "C" || !gd.lab) return base;
+  const L = gd.lab, old = base[1].find(f => f.id === "c2n") || { label:"Describe the technical skills you used", min:60 };
+  const minSkills = { 1:4, 2:5, 3:6, 5:7 }[Y];
+  const s2 = [
+    { t:"choice", id:"c2tool", label:"Which software did you use to create your solution?", options: L.tools.map(t=>t.name).concat(["Other free software"]) },
+    { t:"checklist", id:"c2skills", label:`Tick the technical skills you used (at least ${minSkills})`, options: L.skills, min: minSkills },
+    ...L.milestones.map((m,i) => ({ t:"sketch", evidence:true, id:"c2m"+i, label:`Milestone ${i+1} evidence — ${m}` })),
+    { t:"text", id:"c2n", label: old.label, min: old.min }
+  ];
+  return [base[0], s2, base[2], base[3]];
 }
 
 /* ================= HOME ================= */
 function critProgress(p){ if (!p) return 0; let s = 0; if (p.watched) s++; ["ex","me","ru"].forEach(k=>{ if (p.seen?.[k]) s++; }); if (p.ex?.done) s++; s += p.done.filter(Boolean).length; return Math.round(s/9*100); }
 function renderHome(app){
-  const u = user(), g = u.grade, gd = gradeData(g), sc = scenarioFor(session.email, g);
+  const u = user(), g = u.grade, gd = gradeData(g);
+  if (gd.choose && (!u.choice || view.choosing)) return renderChooser(app);
+  const sc = scenarioFor(session.email, g);
   app.innerHTML = `<div class="stack" style="gap:22px">
     <div class="unitbar">
       <div class="stack" style="gap:6px">
-        <div class="eyebrow">Grade ${g} · MYP Design Year ${gd.myp} · ${esc(gd.sdg)}</div>
+        <div class="eyebrow">${esc(gLabel(g))} · MYP ${esc(gd.subject||"Design")} Year ${gd.myp} · ${esc(gd.sdg)}</div>
         <h1>${esc(gd.unit)}</h1>
-        <div class="brief" data-read><div class="eyebrow" style="color:var(--muted)">Your design challenge</div>
+        <div class="brief" data-read><div class="eyebrow" style="color:var(--muted)">${gd.choose ? (g==="6"?"Your building for City 2050":"Your campaign cause") : "Your design challenge"}</div>
           <h3 style="margin:4px 0">${esc(sc.title)}</h3>
           <p style="margin:0">${esc(sc.client)} needs your help: ${esc(sc.problem)}.</p>
-          <p style="margin:.5em 0 0" class="muted">${esc(sc.brief)}</p></div>
-        <p class="muted" style="font-size:12.5px;margin:4px 0 0">Students in your class have different challenges, so your work will be your own.</p>
+          <p style="margin:.5em 0 0" class="muted">${esc(sc.brief)}</p>${sc.ideas?`<p style="margin:.5em 0 0;font-size:13px"><b>Ideas to explore:</b> ${esc(sc.ideas)}</p>`:""}</div>
+        ${gd.choose ? (anyStrandDone(u) ? "" : `<div class="row"><button class="btn ghost sm" id="chChange">Change my ${g==="6"?"building":"cause"}</button></div>`) : `<p class="muted" style="font-size:12.5px;margin:4px 0 0">Students in your class have different challenges, so your work will be your own.</p>`}
       </div>
     </div>
     <div class="crit-grid">${["A","B","C","D"].map(c => {
@@ -1495,6 +1915,7 @@ function renderHome(app){
       </${open?"button":"div"}>`; }).join("")}</div>
   </div>`;
   app.querySelectorAll(".crit.open").forEach(b => b.onclick = () => go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }));
+  const chg = $("#chChange"); if (chg) chg.onclick = () => { view.choosing = true; render(); };
 }
 
 /* ================= CRITERION FLOW ================= */
@@ -1516,12 +1937,12 @@ function firstStep(c){ const p = prog(user(), c); for (let i=0;i<STEPS.length;i+
 
 function renderCrit(app){
   const u = user(), c = view.crit, g = u.grade, gd = gradeData(g), cd = COURSE.criteria[c], p = prog(u,c), sc = scenarioFor(session.email, g);
-  if (!isOpen(g,c)) return go({ name:"home" });
+  if (!isOpen(g,c) || !sc) return go({ name:"home" });
   if (!stepUnlocked(p, view.step)) view.step = firstStep(c);
   app.innerHTML = `<div class="stack">
     <div class="row" style="justify-content:space-between">
       <button class="btn ghost sm" id="back">← All criteria</button>
-      <div class="muted" style="font-size:13px">Grade ${g} · MYP ${gd.myp} · ${esc(sc.title)}</div>
+      <div class="muted" style="font-size:13px">${esc(gLabel(g))} · MYP ${gd.myp} · ${esc(sc.title)}</div>
     </div>
     <div><div class="eyebrow">Criterion ${c}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.2vw,30px)">${esc(cd.name)}</h1></div>
     <nav class="steps" aria-label="Steps">${STEPS.map((s,i)=>`<button class="step ${stepDone(p,i)?"done":""}" data-i="${i}" ${stepUnlocked(p,i)?"":"disabled"} aria-current="${view.step===i}"><span class="n">${i+1} / ${STEPS.length}</span><b>${s.t}</b><span class="muted">${s.s}</span></button>`).join("")}</nav>
@@ -1607,6 +2028,7 @@ function paneExample(pane, ctx){
 function paneMethod(pane, ctx){
   const { c, gd, cd } = ctx, Y = yearKey(gd.myp);
   pane.innerHTML = `<div class="stack">
+    ${c === "C" ? labCard(gd) : ""}
     <p class="muted" style="margin:0">Use these steps for every strand. They work for any design problem — including yours.</p>
     ${COURSE.method[c].map((m,i)=>`<article class="card stack" data-read style="gap:10px">
       <div class="strand-h"><span class="roman">${ROMAN[i]}</span><h3>${esc(cd.strands[Y][i])}</h3></div>
@@ -1709,16 +2131,19 @@ function fieldValid(f, val){
   if (f.t === "text") return words(val) >= f.min;
   if (f.t === "table"){ const rows = (val||[]).filter(r => r && f.cols.every((_,k)=>String(r[k]||"").trim())); return rows.length >= tableRowsNeeded(f.rows); }
   if (f.t === "sketch") return !!val;
+  if (f.t === "choice") return !!val;
+  if (f.t === "checklist") return (val||[]).length >= f.min;
 }
-function strandValid(ctx, i){ const fs = TASK_FIELDS[ctx.c][yearKey(ctx.gd.myp)][i]; return fs.every(f => fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
+function strandValid(ctx, i){ const fs = fieldsFor(ctx.c, ctx.gd)[i]; return fs.every(f => fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
 function paneTask(pane, ctx){
-  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = TASK_FIELDS[c][Y], si = view.strand;
+  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd), si = view.strand;
   pane.innerHTML = `<div class="stack">
     <div class="brief" data-read><b>${esc(sc.title)}</b> — ${esc(sc.client)}: ${esc(sc.problem)}. <span class="muted">${esc(sc.brief)}</span></div>
     <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}">Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3></div>
       <p class="muted" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
+      ${c === "C" && si === 1 && gd.lab ? `<details open class="notranslate-none"><summary><b>Build Lab: software, milestones and skills</b></summary><div style="margin-top:10px">${labCard(gd, true)}</div></details>` : ""}
       <div class="stack" id="fields"></div>
       <div class="field"><span class="lbl">Rate yourself against the rubric for this strand</span>
         <div class="bands">${["1–2","3–4","5–6","7–8"].map(b=>`<button data-b="${b}" aria-pressed="${p.bands[si]===b}">${b}</button>`).join("")}</div></div>
@@ -1763,6 +2188,15 @@ function buildField(f, ctx){
     upd();
   } else if (f.t === "sketch"){
     el.appendChild(sketchBox(f, label, p));
+  } else if (f.t === "choice"){
+    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><select id="f_${f.id}"><option value="">Choose…</option>${f.options.map(o=>`<option ${p.fields[f.id]===o?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
+    el.querySelector("select").onchange = e => { p.fields[f.id] = e.target.value; save(); };
+  } else if (f.t === "checklist"){
+    const v = p.fields[f.id] = p.fields[f.id] || [];
+    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="checks">${f.options.map((o,i)=>`<label class="chk"><input type="checkbox" id="k_${f.id}_${i}" ${v.includes(o)?"checked":""} data-o="${esc(o)}"> <span>${esc(o)}</span></label>`).join("")}</div><span class="counter"></span>`;
+    const cn = el.querySelector(".counter"), upd = () => { cn.textContent = `${v.length} ticked (at least ${f.min} needed)`; cn.classList.toggle("ok", v.length >= f.min); };
+    el.querySelectorAll("input").forEach(cb => cb.onchange = () => { const o = cb.dataset.o, k = v.indexOf(o); if (cb.checked && k < 0) v.push(o); if (!cb.checked && k >= 0) v.splice(k,1); upd(); save(); });
+    upd();
   }
   return el;
 }
@@ -1806,11 +2240,11 @@ function shrink(cv){ const c2 = document.createElement("canvas"); c2.width = 900
 
 /* ---------- 7. SUBMIT ---------- */
 function answersText(ctx){
-  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = TASK_FIELDS[c][Y];
+  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
   let out = `Scenario: ${sc.title} | Practice: ${p.ex.correct} correct, ${p.ex.points} pts, ${p.ex.hints} hints\n`;
   F.forEach((fs,i) => { out += `\n== Strand ${ROMAN[i]} (self-rating ${p.bands[i]||"-"}) ==\n`;
     fs.forEach(f => { const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
-      if (f.t==="text") out += (v||"") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>r.some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
+      if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>r.some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
   return out;
 }
 function paneSubmit(pane, ctx){
@@ -1834,21 +2268,21 @@ function paneSubmit(pane, ctx){
 
 /* ================= PDF ================= */
 function buildPDF(ctx){
-  const { c, g, gd, cd, p, sc } = ctx, u = user(), Y = yearKey(gd.myp), F = TASK_FIELDS[c][Y];
+  const { c, g, gd, cd, p, sc } = ctx, u = user(), Y = yearKey(gd.myp), F = fieldsFor(c, gd);
   if (!window.jspdf) throw new Error("PDF tool not loaded — check the internet connection");
   const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit:"mm", format:"a4" });
   const W = 210, M = 16, NAVY = [27,45,78], RED = [220,43,62];
   let y = 0;
   const bar = () => { doc.setFillColor(...NAVY); doc.rect(0,0,W,22,"F"); doc.setFillColor(...RED); doc.rect(0,22,W,1.6,"F");
-    doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text("SISD Design Studio · MYP Design Year " + gd.myp, M, 10);
-    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.text(`Criterion ${c}: ${cd.name}  ·  ${u.name}  ·  Grade ${g}  ·  ${u.teacher}`, M, 16.5); doc.setTextColor(20); };
+    doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text(`SISD Design Studio · MYP ${gd.subject||"Design"} Year ${gd.myp}`, M, 10);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.text(`Criterion ${c}: ${cd.name}  ·  ${u.name}  ·  ${gLabel(g)}  ·  ${u.teacher}`, M, 16.5); doc.setTextColor(20); };
   const header = () => { bar(); y = 32; };
   const need = h => { if (y + h > 282){ doc.addPage(); header(); } };
   const clean = t => String(t||"").replace(/[–—]/g,"-").replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,"...").replace(/·/g,"-").replace(/[^\x00-\xFF]/g,"");
   const para = (t, size=10.5, style="normal", color=[22,34,58]) => { doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color);
     doc.splitTextToSize(clean(t), W-2*M).forEach(line => { need(5.4); doc.text(line, M, y); y += size*0.47; }); y += 1.5; };
   header();
-  para(gd.unit, 16, "bold"); para(`Design challenge: ${sc.title} — ${sc.client}: ${sc.problem}.`, 10.5); para(sc.brief, 10, "italic", [91,103,130]);
+  para(gd.unit, 16, "bold"); para(`${gd.choose ? (g==="6"?"Building":"Cause") : "Design challenge"}: ${sc.title} — ${sc.client}: ${sc.problem}.`, 10.5); para(sc.brief, 10, "italic", [91,103,130]);
   para(`Email: ${session.email}   ·   Date: ${new Date().toLocaleDateString("en-GB")}   ·   Practice: ${p.ex.correct} correct, ${p.ex.points} points`, 9, "normal", [91,103,130]);
   y += 2;
   F.forEach((fs,i) => {
@@ -1861,7 +2295,8 @@ function buildPDF(ctx){
       if (f.t === "sketch" && v){ const pr = doc.getImageProperties(v); need(Math.min(120, (W-2*M) * pr.height / pr.width) + 12); }
       else if (f.t === "table") need(24); else need(12);
       para(fill(f.label, g, sc), 10, "bold", NAVY);
-      if (f.t === "text") para(v || "(not answered)", 10.5);
+      if (f.t === "text" || f.t === "choice") para(v || "(not answered)", 10.5);
+      else if (f.t === "checklist") para((v||[]).map(x => "[x] " + x).join("\n") || "(none ticked)", 10);
       else if (f.t === "table"){
         const body = (v||[]).filter(r=>r.some(x=>String(x).trim()));
         doc.autoTable({ startY: y, head:[f.cols.map(clean)], body: body.length?body.map(r=>r.map(clean)):[f.cols.map(()=>"")], margin:{left:M,right:M, top:30}, styles:{ fontSize:9, cellPadding:2, lineColor:[216,222,234], lineWidth:.2 }, headStyles:{ fillColor:NAVY, textColor:255 }, theme:"grid", didDrawPage: bar });
@@ -1879,7 +2314,7 @@ function buildPDF(ctx){
   need(26); para("Teacher mark: ______ / 8        Comment:", 10.5, "bold"); doc.setDrawColor(200); for (let k=0;k<3;k++){ need(8); doc.line(M, y+2, W-M, y+2); y += 8; }
   const n = doc.getNumberOfPages(); for (let i=1;i<=n;i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(120); doc.text(`Page ${i} of ${n}`, W-M, 292, { align:"right" }); doc.text("Swiss International Scientific School Dubai", M, 292); }
   const nm = u.name.replace(/[^a-z0-9]+/gi,"_");
-  return saveFile(`G${g}_Criterion${c}_${nm}.pdf`, doc.output("blob"), () => doc.save(`G${g}_Criterion${c}_${nm}.pdf`));
+  return saveFile(`${gLabel(g).replace(/\s+/g,"")}_Criterion${c}_${nm}.pdf`, doc.output("blob"), () => doc.save(`${gLabel(g).replace(/\s+/g,"")}_Criterion${c}_${nm}.pdf`));
 }
 async function saveFile(name, blob, fallback){
   try { const dl = window.claude && window.claude.use ? await Promise.race([window.claude.use("downloads"), new Promise(r=>setTimeout(()=>r(null),1500))]) : null;
@@ -1916,7 +2351,7 @@ function staffPanel(tab, who="admin"){
   if (tab === "switches"){
     body = `<p class="muted" style="margin:0">Switch a criterion on and it appears for every student in that grade. ${liveNote}</p>
       <div class="scroll"><table class="tbl toggle-grid"><tr><th>Grade</th>${["A","B","C","D"].map(c=>`<th>Criterion ${c}${COURSE.criteria[c].comingSoon?"<br><span class='muted' style='font-weight:normal;text-transform:none'>coming soon</span>":""}</th>`).join("")}</tr>
-      ${Object.keys(COURSE.grades).map(g=>`<tr><td><b>Grade ${g}</b><br><span class="muted">MYP ${COURSE.grades[g].myp}</span></td>${["A","B","C","D"].map(c=>`<td><button class="sw-t" role="switch" aria-checked="${!!U[g]?.[c]}" data-g="${g}" data-c="${c}" aria-label="Grade ${g} Criterion ${c}" ${COURSE.criteria[c].comingSoon?"disabled":""}></button></td>`).join("")}</tr>`).join("")}</table></div>
+      ${Object.keys(COURSE.grades).map(g=>`<tr><td><b>${esc(gLabel(g))}</b><br><span class="muted">MYP ${COURSE.grades[g].myp}</span></td>${["A","B","C","D"].map(c=>`<td><button class="sw-t" role="switch" aria-checked="${!!U[g]?.[c]}" data-g="${g}" data-c="${c}" aria-label="Grade ${g} Criterion ${c}" ${COURSE.criteria[c].comingSoon?"disabled":""}></button></td>`).join("")}</tr>`).join("")}</table></div>
       <div id="swMsg"></div>
       <div class="row"><button class="btn" id="pubSw">Apply switches</button><button class="btn sec" id="dlFile">${ICON.dl} Download course file</button><button class="btn ghost" id="previewBtn">Preview as a student</button></div>`;
   } else if (tab === "teachers"){
@@ -1928,15 +2363,13 @@ function staffPanel(tab, who="admin"){
       <div id="tMsg"></div>`;
   } else if (tab === "answers"){
     body = Object.keys(COURSE.grades).map(g => { const gd = COURSE.grades[g]; return ["A","B","C","D"].map(c => { const qs = COURSE.exercises[c].filter(q=>q.y<=gd.myp).concat(COURSE.gradeExercises[g][c]);
-      return `<details><summary><b>Grade ${g} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
+      return `<details><summary><b>${esc(gLabel(g))} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
   } else if (tab === "lookup"){
     const studs = Object.entries(DB.users).filter(([e,u]) => u.role !== "teacher" && e !== PREVIEW);
-    body = `<p class="muted" style="margin:0">Each student gets one of four design challenges, chosen from their email, so neighbours rarely have the same task.</p>
-      <div class="grid2"><label class="f">Student email<input type="email" id="luE" placeholder="name@sisd.ae"></label><label class="f">Grade<select id="luG">${Object.keys(COURSE.grades).map(g=>`<option>${g}</option>`).join("")}</select></label></div>
-      <div id="luR"></div>
+    body = `<p class="muted" style="margin:0">Grade 6 students choose a building and Grade 7 students choose a cause. Grade 8 and Grade 10 students are given one of four challenges, chosen from their email, so neighbours rarely have the same task.</p>
       <h3 style="margin-top:8px">Students on this device</h3>
       <p class="muted" style="margin:0;font-size:13px">Passwords are stored scrambled, so nobody can read them. If a student forgets theirs, reset it here and give them the temporary password.</p>
-      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Grade</th><th>A</th><th>B</th><th></th></tr>${studs.map(([e,u])=>`<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(u.grade)}</td><td>${critProgress(u.progress?.A)}%</td><td>${critProgress(u.progress?.B)}%</td><td><button class="btn sm sec" data-rs="${esc(e)}">Reset password</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">No student accounts on this device.</td></tr>`}</table></div><div id="rsMsg"></div>`;
+      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Course</th><th>Challenge</th><th>A</th><th>B</th><th>C</th><th>D</th><th></th></tr>${studs.map(([e,u])=>{ const sc = COURSE.grades[u.grade] ? scenarioFor(e, u.grade) : null; return `<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(gLabel(u.grade))}</td><td>${sc?esc(sc.title):"<span class='muted'>not chosen yet</span>"}</td>${["A","B","C","D"].map(c=>`<td>${critProgress(u.progress?.[c])}%</td>`).join("")}<td><button class="btn sm sec" data-rs="${esc(e)}">Reset password</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="muted">No student accounts on this device.</td></tr>`}</table></div><div id="rsMsg"></div>`;
   } else {
     body = `<ol class="guide">
       <li><b>Student copies (one-time).</b> In Google Forms create a form called <i>Design Studio Log</i> with 8 <b>Short answer</b> questions in this order: Email, Name, Grade, Teacher, Criterion, Event, Role, Details (make Details a <b>Paragraph</b>). Turn off "Collect email addresses" and sign-in. Open ⋮ → <b>Get pre-filled link</b>, type <code>x</code> in every box, click <b>Get link</b> → <b>Copy link</b>, and paste it below. In the Responses tab, click <b>Link to Sheets</b>, and turn on email notifications if you want them sent to your Gmail.</li>
@@ -1947,7 +2380,7 @@ function staffPanel(tab, who="admin"){
         <label class="f">Switches form — pre-filled link<input type="text" id="setCtl" value="${esc(s.controlForm)}"></label>
         <label class="f">Switches sheet — published CSV link<input type="text" id="setCsv" value="${esc(s.controlCsv)}" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"></label>
         <label class="f">New admin password (leave blank to keep the current one)<input type="password" id="setPw" autocomplete="new-password"></label>
-        <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B","C","D"].map(c=>`<label class="f">Grade ${g} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
+        <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B","C","D"].map(c=>`<label class="f">${esc(gLabel(g))} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
         <div id="setMsg"></div>
         <div class="row"><button class="btn" id="saveSet">Save settings</button><button class="btn sec" id="dlFile2">${ICON.dl} Download course file</button><button class="btn ghost" id="testLog">Send a test entry</button></div></div>`;
   }
@@ -1968,7 +2401,6 @@ function staffPanel(tab, who="admin"){
     document.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { st.teachers = st.teachers.filter(t => t.email !== b.dataset.rm); st.declined.push(b.dataset.rm); after(); });
   }
   if (tab === "lookup"){
-    const f = () => { const e = $("#luE").value.trim(); if (!e) { $("#luR").innerHTML=""; return; } const sc = scenarioFor(e, $("#luG").value); $("#luR").innerHTML = `<div class="notice ok"><b>${esc(sc.title)}</b> — ${esc(sc.brief)}</div>`; }; $("#luE").oninput = f; $("#luG").onchange = f;
     document.querySelectorAll("[data-rs]").forEach(b => b.onclick = async () => { const temp = "Design" + Math.floor(1000 + Math.random()*9000); const u = DB.users[b.dataset.rs]; Object.assign(u, await hashPw(temp)); save();
       $("#rsMsg").innerHTML = `<div class="notice ok">New password for <b>${esc(u.name)}</b>: <code style="font-size:15px">${temp}</code> — give it to the student. Their work is kept.</div>`; });
   }
@@ -1988,7 +2420,7 @@ function staffPanel(tab, who="admin"){
 }
 function previewGradePicker(){
   modal(`<div class="stack"><h2>Preview as a student</h2><p class="muted" style="margin:0">Choose a grade. Every criterion opens for this preview only; no data is sent.</p>
-    <div class="row">${Object.keys(COURSE.grades).map(g=>`<button class="btn sec" data-pg="${g}">Grade ${g}</button>`).join("")}</div></div>`);
+    <div class="row">${Object.keys(COURSE.grades).map(g=>`<button class="btn sec" data-pg="${g}">${esc(gLabel(g))}</button>`).join("")}</div></div>`);
   document.querySelectorAll("[data-pg]").forEach(b => b.onclick = () => {
     if (!session.preview) session.back = session.email;
     session.preview = true; session.email = PREVIEW;
