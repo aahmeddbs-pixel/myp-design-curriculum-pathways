@@ -1891,10 +1891,29 @@ const PHRASES = {
 function lang(){ return LANGS[DB.lang] ? DB.lang : "en"; }
 function P(){ return PHRASES[lang()]; }
 function pickOne(a){ return a[Math.floor(Math.random()*a.length)]; }
-function voiceFor(code){
-  try { const vs = speechSynthesis.getVoices(), want = LANGS[code].voice;
-    return vs.find(v => v.lang.replace("_","-") === want) || vs.find(v => v.lang.toLowerCase().startsWith(code)) || null; } catch(e){ return null; }
+/* pick the most natural-sounding voice the device offers */
+function voiceScore(v, code){
+  const n = v.name.toLowerCase(), l = v.lang.replace("_","-").toLowerCase(), want = LANGS[code].voice.toLowerCase();
+  if (!l.startsWith(code)) return -1;
+  let s = 0;
+  if (l === want) s += 15;
+  if (/natural/.test(n)) s += 100;           // Microsoft Edge neural voices ("… Online (Natural)")
+  if (/neural|premium|enhanced|siri/.test(n)) s += 80;
+  if (/google/.test(n)) s += 45;              // Chrome's online voices
+  if (/online/.test(n)) s += 20;
+  if (/(sonia|libby|ryan|thomas|maisie|daniel|serena|kate|jamie|arthur|martha|stephanie)/.test(n)) s += 12;
+  if (/(compact|espeak|robot|novelty|zarvox|whisper|bells|bad news|trinoids|albert|bubbles|cellos|organ|jester|superstar|wobble)/.test(n)) s -= 200;
+  if (!v.localService) s += 5;
+  return s;
 }
+let voiceCache = {};
+function voiceFor(code){
+  try { if (voiceCache[code]) return voiceCache[code];
+    const vs = speechSynthesis.getVoices(); if (!vs.length) return null;
+    const best = vs.map(v => [voiceScore(v, code), v]).filter(x => x[0] >= 0).sort((a,b) => b[0]-a[0])[0];
+    return (voiceCache[code] = best ? best[1] : null); } catch(e){ return null; }
+}
+try { speechSynthesis.onvoiceschanged = () => { voiceCache = {}; }; } catch(e){}
 function chunks(text){
   const parts = String(text).replace(/\s+/g, " ").trim().match(/[^.!?;:。]+[.!?;:。]*\s*/g) || [];
   const out = []; let cur = "";
@@ -1912,7 +1931,7 @@ function speakLong(text, opts={}){
     if (i >= list.length){ opts.onend && opts.onend(); return; }
     const u = new SpeechSynthesisUtterance(list[i++]); u.lang = LANGS[code].voice; if (v) u.voice = v; u.rate = opts.rate || 0.97;
     let done = false; const fin = () => { if (!done){ done = true; next(); } };
-    u.onend = fin; u.onerror = fin; setTimeout(fin, Math.max(6000, u.text.length * 110));
+    u.pitch = 1; u.onend = fin; u.onerror = fin; setTimeout(fin, Math.max(6000, u.text.length * 110));
     speechSynthesis.speak(u);
   };
   next(); return true;
@@ -2338,17 +2357,9 @@ function renderExplore(app){
   const others = Object.keys(COURSE.grades).filter(g => g !== u.grade);
   app.innerHTML = `<div class="stack" style="gap:20px">
     <div class="row" style="justify-content:space-between"><button class="btn ghost sm" id="exBack">← Back to my course</button><span class="counter">View only</span></div>
-    <div><div class="eyebrow">Explore</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.4vw,32px)">What other grades are learning</h1>
-      <p class="muted" style="margin:.4em 0 0;max-width:62ch">Have a look at the units in other grades. This page is view only, so nothing here can be opened or changed.</p></div>
-    ${others.map(g => { const gd = gradeData(g), Y = yearKey(gd.myp);
-      return `<section class="card stack view-only" data-read aria-label="${esc(gLabel(g))} (view only)" style="gap:12px">
-        <div class="eyebrow">${esc(gLabel(g))} · MYP ${esc(gd.subject||"Design")} Year ${gd.myp}</div>
-        <h2>${esc(gd.unit)}</h2>
-        <p style="margin:0"><b>What they create:</b> ${esc(gd.product)}.</p>
-        <p class="muted" style="margin:0;font-size:13px">${esc(gd.sdg)}</p>
-        <div class="crit-grid">${["A","B","C","D"].map(c => { const cd = COURSE.criteria[c];
-          return `<div class="crit locked" aria-disabled="true"><span class="L">${c}</span><h3>${esc(cd.name)}</h3><ol style="margin:0;padding-left:18px;font-size:12.5px">${cd.strands[Y].map(st=>`<li>${esc(st)}</li>`).join("")}</ol></div>`; }).join("")}</div>
-      </section>`; }).join("")}
+    <div data-read><div class="eyebrow">Explore</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.4vw,32px)">What other grades are learning</h1>
+      <p class="muted" style="margin:.4em 0 0;max-width:62ch">These are the topics other grades are studying this term.</p></div>
+    <div class="crit-grid view-only">${others.map(g => `<div class="crit locked" aria-disabled="true" style="min-height:0"><div class="eyebrow">${esc(gLabel(g))}</div><h3>${esc(gradeData(g).unit)}</h3></div>`).join("")}</div>
   </div>`;
   $("#exBack").onclick = () => go({ name:"home" });
 }
@@ -2432,13 +2443,15 @@ function advance(ctx, key){ if (key) ctx.p.seen[key] = true; save(); view.step =
 
 /* ---------- 1. VIDEO ---------- */
 let vid = null;
-function stopVideo(){ if (vid){ clearTimeout(vid.timer); vid.playing = false; vid = null; } }
+function stopVideo(){ if (vid){ clearTimeout(vid.timer); vid.playing = false; if (vid.stopAudio) vid.stopAudio(); vid = null; } }
+const SCENE_HEAD = { A:"Find out before you design", B:"Turn research into ideas", C:"Make your design real", D:"Find out how good it is" };
 function buildScenes(ctx){
-  const { c, g, gd, cd, sc } = ctx, Y = yearKey(gd.myp), strands = cd.strands[Y], top = stripTags(COURSE.rubrics[c][Y][3][1]);
+  const { c, g, gd, cd, sc } = ctx, Y = yearKey(gd.myp), strands = cd.strands[Y], top = stripTags(COURSE.rubrics[c][Y][3][1]), subj = gd.subject || "Design";
   const sc_ = [
-    { k:"Criterion " + c, h: cd.name, p:`MYP Design Year ${gd.myp} · ${gd.unit}`, say:`Welcome to MYP Design, year ${gd.myp}. This is Criterion ${c}: ${cd.name}. Our unit is ${gd.unit}.`, art: cycleSVG(c, cd.name.split(" ")[0]) },
-    { k:"What this criterion is about", h: c==="A" ? "Find out before you design" : "Turn research into ideas", p: cd.intro, say: cd.intro, art: badgeSVG(c, cd.name.split(" ")[0]) },
-    { k:"Your design challenge", h: sc.title, p:`${sc.client} needs help: ${sc.problem}. ${sc.brief}`, say:`Your design challenge is called ${sc.title}. ${sc.client} needs help, because ${sc.problem}. ${sc.brief}`, art: badgeSVG("!", "your challenge") }
+    { k:"Criterion " + c, h: cd.name, p:`MYP ${subj} Year ${gd.myp} · ${gd.unit}`, say:`Welcome to MYP ${subj}, year ${gd.myp}. This is Criterion ${c}: ${cd.name}. Our unit is ${gd.unit}.`, art: cycleSVG(c, cd.name.split(" ")[0]) },
+    { k:"What this criterion is about", h: SCENE_HEAD[c], p: cd.intro, say: cd.intro, art: badgeSVG(c, cd.name.split(" ")[0]) },
+    sc ? { k:"Your design challenge", h: sc.title, p:`${sc.client} needs help: ${sc.problem}. ${sc.brief}`, say:`Your design challenge is ${sc.title}. ${sc.client} needs help, because ${sc.problem}. ${sc.brief}`, art: badgeSVG("!", "your challenge") }
+       : { k:"Your design challenge", h:"Your challenge", p:"", say:"Your own design challenge is on the screen now. Read it carefully, because this is the problem you will be solving.", art: badgeSVG("!", "your challenge") }
   ];
   strands.forEach((s,i) => sc_.push({ k:`Strand ${ROMAN[i]}`, h: s, p: cd.strandTips[i], say:`Strand ${ROMAN[i]}. ${s}. ${cd.strandTips[i]}`, art: badgeSVG(ROMAN[i], "strand") }));
   sc_.push({ k:"How you're assessed", h:"Aim for 7–8", p: top, say:`You will be marked out of 8. To reach the top band, 7 to 8: ${top}`, art: badgeSVG("7–8", "top band") });
@@ -2452,10 +2465,25 @@ function paneVideo(pane, ctx){
       <div class="controls"><button id="vPrev" aria-label="Previous scene">◀</button><button id="vPlay">▶ Play</button><button id="vNext" aria-label="Next scene">▶▶</button>
         <div class="prog"><i id="vBar"></i></div><span class="tc" id="vTc"></span></div></div>
     <div class="row" style="justify-content:space-between">
-      <p class="muted" style="margin:0;font-size:13px">The narrator reads each scene aloud. Turn your sound on, or read the captions.${link?` Your teacher also recorded a video: <a href="${esc(link)}" target="_blank" rel="noopener">open the teacher video</a>.`:""}</p>
+      <p class="muted" style="margin:0;font-size:13px"><span id="voiceNote">The narrator reads each scene aloud.</span> Turn your sound on, or read the captions.${link?` Your teacher also recorded a video: <a href="${esc(link)}" target="_blank" rel="noopener">open the teacher video</a>.`:""}</p>
       <button class="btn" id="nextStep" ${ctx.p.watched?"":"disabled"}>Continue to the worked example →</button>
     </div></div>`;
   vid = { i:0, playing:false, timer:null, scenes };
+  // the teacher's own recording, if one has been uploaded to the voice folder
+  const tScript = buildScenes(Object.assign({}, ctx, { sc:null })).map(x => x.say);
+  const tw = tScript.map(t => words(t)), tTot = tw.reduce((a,b)=>a+b,0);
+  const tStart = tw.map((_,i) => tw.slice(0,i).reduce((a,b)=>a+b,0) / tTot);
+  let tAudio = null;
+  if (lang() === "en"){
+    const a = new Audio(); a.preload = "metadata";
+    const base = `voice/${ctx.g}-${ctx.c}`, exts = ["webm","m4a","mp4","mp3"]; let k = 0;
+    const tryNext = () => { if (k >= exts.length){ return; } a.src = `${base}.${exts[k++]}`; a.load(); };
+    a.onerror = tryNext;
+    a.onloadedmetadata = () => { if (isFinite(a.duration) && a.duration > 3){ tAudio = a; const note = $("#voiceNote"); if (note) note.textContent = "Narrated by your teacher."; } };
+    a.ontimeupdate = () => { if (!vid || !vid.playing || tAudio !== a) return; const f = a.currentTime / a.duration; let i = 0; tStart.forEach((st,j) => { if (f >= st) i = j; }); if (i !== vid.i){ vid.i = i; show(); } };
+    a.onended = () => { if (!vid) return; vid.i = scenes.length-1; show(); vid.playing = false; vid.ended = true; $("#vPlay").textContent = "↺ Replay"; };
+    tryNext();
+  }
   const show = () => {
     const s = scenes[vid.i];
     $("#stage").innerHTML = `<div class="scene-in">${s.art}</div><div class="txt scene-in"><div class="kick">${esc(s.k)}</div><h2>${esc(s.h)}</h2><p>${esc(s.p)}</p></div>`;
@@ -2466,6 +2494,7 @@ function paneVideo(pane, ctx){
   const playScene = () => {
     if (!vid || !vid.playing) return;
     show();
+    if (tAudio){ tAudio.currentTime = tStart[vid.i] * tAudio.duration; tAudio.play().catch(()=>{}); return; }
     const s = scenes[vid.i], done = () => { if (!vid || !vid.playing) return; if (vid.i < scenes.length-1){ vid.i++; playScene(); } else { vid.playing = false; vid.ended = true; $("#vPlay").textContent = "↺ Replay"; } };
     const ms = Math.max(4000, words(s.say) / 2.6 * 1000);
     if (lang() !== "en"){ const me = vid; vid.timer = setTimeout(() => { if (vid !== me || !vid.playing) return; const st = $("#stage .txt"); speakLong(st ? st.innerText : s.say, { onend: () => { if (vid === me) vid.timer = setTimeout(done, 700); } }); }, 1600); return; }
@@ -2474,13 +2503,14 @@ function paneVideo(pane, ctx){
     else vid.timer = setTimeout(done, ms);
   };
   $("#vPlay").onclick = () => {
-    if (vid.playing){ vid.playing = false; clearTimeout(vid.timer); stopReading(); $("#vPlay").textContent = "▶ Play"; return; }
+    if (vid.playing){ vid.playing = false; clearTimeout(vid.timer); stopReading(); if (tAudio) tAudio.pause(); $("#vPlay").textContent = "▶ Play"; return; }
     if (vid.ended){ vid.i = 0; vid.ended = false; }
     vid.playing = true; $("#vPlay").textContent = "❚❚ Pause"; playScene();
   };
-  $("#vPrev").onclick = () => { clearTimeout(vid.timer); stopReading(); vid.i = Math.max(0, vid.i-1); vid.playing ? playScene() : show(); };
-  $("#vNext").onclick = () => { clearTimeout(vid.timer); stopReading(); vid.i = Math.min(scenes.length-1, vid.i+1); vid.playing ? playScene() : show(); };
-  $("#nextStep").onclick = () => { stopVideo(); try{speechSynthesis.cancel()}catch(e){} logEvent(ctx.c, "Watched introduction", ""); advance(ctx); };
+  $("#vPrev").onclick = () => { clearTimeout(vid.timer); stopReading(); if (tAudio) tAudio.pause(); vid.i = Math.max(0, vid.i-1); vid.playing ? playScene() : show(); };
+  $("#vNext").onclick = () => { clearTimeout(vid.timer); stopReading(); if (tAudio) tAudio.pause(); vid.i = Math.min(scenes.length-1, vid.i+1); vid.playing ? playScene() : show(); };
+  $("#nextStep").onclick = () => { if (tAudio) tAudio.pause(); stopVideo(); try{speechSynthesis.cancel()}catch(e){} logEvent(ctx.c, "Watched introduction", ""); advance(ctx); };
+  vid.stopAudio = () => { if (tAudio) tAudio.pause(); };
   show();
 }
 
@@ -2821,7 +2851,7 @@ function staffPanel(tab, who="admin"){
   const s = settings(), st = JSON.parse(JSON.stringify(courseState())), U = st.unlocks;
   const pend = pendingRequests();
   const tabs = who === "admin"
-    ? [["switches","Criteria switches"],["teachers",`Teacher approvals${pend.length?` (${pend.length})`:""}`],["answers","Answer key"],["lookup","Students"],["setup","Connect & settings"]]
+    ? [["switches","Criteria switches"],["voice","My voice"],["teachers",`Teacher approvals${pend.length?` (${pend.length})`:""}`],["answers","Answer key"],["lookup","Students"],["setup","Connect & settings"]]
     : [["answers","Answer key"],["lookup","Students"]];
   if (!tabs.some(t => t[0] === tab)) tab = tabs[0][0];
   const liveNote = s.controlForm && s.controlCsv ? `<b>Live updates are connected</b> — changes reach every device within about 5 minutes.` : `<b>Live updates are not connected yet</b>, so changes apply on this device only. Connect them once in <i>Connect &amp; settings</i>.`;
@@ -2842,6 +2872,14 @@ function staffPanel(tab, who="admin"){
   } else if (tab === "answers"){
     body = Object.keys(COURSE.grades).map(g => { const gd = COURSE.grades[g]; return ["A","B","C","D"].map(c => { const qs = COURSE.exercises[c].filter(q=>q.y<=gd.myp).concat(COURSE.gradeExercises[g][c]);
       return `<details><summary><b>${esc(gLabel(g))} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
+  } else if (tab === "voice"){
+    body = `<p class="muted" style="margin:0">Record your own voice for the introduction videos. Students then hear you instead of the computer voice (in English; other languages still use the computer voice). Record one file per course and criterion.</p>
+      <div class="grid2"><label class="f">Course<select id="vcG">${Object.keys(COURSE.grades).map(g=>`<option value="${g}">${esc(gLabel(g))}</option>`).join("")}</select></label>
+        <label class="f">Criterion<select id="vcC">${["A","B","C","D"].map(c=>`<option>${c}</option>`).join("")}</select></label></div>
+      <div class="card stack" id="vcScript" style="max-height:260px;overflow:auto;font-size:15px;line-height:1.7"></div>
+      <div class="row"><button class="btn" id="vcRec">● Start recording</button><span class="counter" id="vcTime"></span></div>
+      <div id="vcOut"></div>
+      <ol class="guide" style="font-size:13.5px"><li>Read the script above at a calm, steady pace. Leave a short pause between paragraphs.</li><li>Click <b>Download recording</b>. Keep the file name exactly as it is (for example <code>6-A.webm</code>).</li><li>On GitHub, open your repository, click the <b>voice</b> folder, then <b>Add file → Upload files</b>, drag the recording in and click <b>Commit changes</b>. Students hear it within a few minutes.</li></ol>`;
   } else if (tab === "lookup"){
     const studs = Object.entries(DB.users).filter(([e,u]) => u.role !== "teacher" && e !== PREVIEW);
     body = `<p class="muted" style="margin:0">Grade 6 students choose a building and Grade 7 students choose a cause. Grade 8 and Grade 10 students are given one of four challenges, chosen from their email, so neighbours rarely have the same task.</p>
@@ -2881,6 +2919,30 @@ function staffPanel(tab, who="admin"){
   if (tab === "lookup"){
     document.querySelectorAll("[data-rs]").forEach(b => b.onclick = async () => { const temp = "Design" + Math.floor(1000 + Math.random()*9000); const u = DB.users[b.dataset.rs]; Object.assign(u, await hashPw(temp)); save();
       $("#rsMsg").innerHTML = `<div class="notice ok">New password for <b>${esc(u.name)}</b>: <code style="font-size:15px">${temp}</code> — give it to the student. Their work is kept.</div>`; });
+  }
+  if (tab === "voice"){
+    let rec = null, chunksR = [], t0 = 0, tick = null, lastBlob = null, lastExt = "webm";
+    const drawScript = () => { const g = $("#vcG").value, c = $("#vcC").value, gd = gradeData(g);
+      const sc = buildScenes({ c, g, gd, cd: COURSE.criteria[c], sc: null });
+      $("#vcScript").innerHTML = sc.map((x,i) => `<p style="margin:0 0 .6em"><span class="counter">${i+1}</span> ${esc(x.say)}</p>`).join(""); $("#vcOut").innerHTML = ""; };
+    $("#vcG").onchange = drawScript; $("#vcC").onchange = drawScript; drawScript();
+    $("#vcRec").onclick = async () => {
+      if (rec){ rec.stop(); return; }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:true, noiseSuppression:true } });
+        const types = [["audio/webm;codecs=opus","webm"],["audio/webm","webm"],["audio/mp4","m4a"]];
+        const pick = types.find(x => window.MediaRecorder && MediaRecorder.isTypeSupported(x[0])) || ["", "webm"];
+        lastExt = pick[1]; chunksR = [];
+        rec = new MediaRecorder(stream, pick[0] ? { mimeType: pick[0], audioBitsPerSecond: 64000 } : undefined);
+        rec.ondataavailable = e => { if (e.data.size) chunksR.push(e.data); };
+        rec.onstop = () => { stream.getTracks().forEach(t => t.stop()); clearInterval(tick); rec = null; $("#vcRec").textContent = "● Record again";
+          lastBlob = new Blob(chunksR, { type: chunksR[0]?.type || "audio/webm" }); const url = URL.createObjectURL(lastBlob), name = `${$("#vcG").value}-${$("#vcC").value}.${lastExt}`;
+          $("#vcOut").innerHTML = `<div class="stack"><audio controls src="${url}" style="width:100%"></audio><div class="row"><button class="btn ok" id="vcDl">${ICON.dl} Download recording (${name})</button></div></div>`;
+          $("#vcDl").onclick = () => saveFile(name, lastBlob, () => { const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }); };
+        rec.start(); t0 = Date.now(); $("#vcRec").textContent = "■ Stop recording";
+        tick = setInterval(() => { const s2 = Math.round((Date.now()-t0)/1000); $("#vcTime").textContent = `Recording… ${Math.floor(s2/60)}:${String(s2%60).padStart(2,"0")}`; }, 500);
+      } catch(err){ $("#vcOut").innerHTML = `<div class="notice bad">The microphone could not be opened. Allow microphone access for this site in your browser, then try again.</div>`; }
+    };
   }
   if (tab === "setup"){
     const collect = async () => { const vl = {}; document.querySelectorAll("[data-vl]").forEach(i => { if (i.value.trim()) vl[i.dataset.vl] = i.value.trim(); });
