@@ -253,7 +253,9 @@ const CONFIG = {
   "logForm": "https://docs.google.com/forms/d/e/1FAIpQLSc5c-MMXDKqUNNQI8tBjBDku_QxwPJpqdRJDmib20bLoJvdQg/viewform?usp=pp_url&entry.1244898846=x&entry.651020261=x&entry.102496121=x&entry.1166092306=x&entry.810913604=x&entry.1370749476=x&entry.134346683=x&entry.869363460=x",
   "controlForm": "https://docs.google.com/forms/d/e/1FAIpQLSeNJCgUXw7lCX1gPayZYtyZbmSyXnkDMGJzCpjtIYui_FnhTQ/viewform?usp=pp_url&entry.1255814967=x",
   "controlCsv": "https://docs.google.com/spreadsheets/d/e/2PACX-1vRDyFCmLL1Z2lWea0WLF5surkagyB_Ad6-Cij4lCBhpvCeybt_pQB15xClmQoIRg8LMUWeFwuCUYy0f/pub?gid=480761896&single=true&output=csv",
-  "videoLinks": {}
+  "videoLinks": {},
+  "studioUrl": "https://claude.ai/artifact/GwxfxmzBWyxbjy18kkdY7Z",
+  "roster": null
 };
 /*CONFIG-END*/
 </script>
@@ -2060,6 +2062,7 @@ async function flushQueue(){
     const ok = await postForm(link, DB.queue[0]);
     if (!ok) break;
     DB.queue.shift(); save();
+    if (DB.queue.length) await new Promise(r => setTimeout(r, 350));
   }
   flushing = false;
 }
@@ -2242,6 +2245,8 @@ function renderLogin(app){
       }
       const grade = $("#lGrade").value, teacher = $("#lTeacher").value;
       if (!grade) return msg("Choose your grade."); if (!teacher) return msg("Choose your teacher.");
+      const rc = await rosterCheck(email, name);
+      if (!rc.ok) return msg("This email and name are not on the SISD student list. Type your full name exactly as the school has it, with your SISD email. If it still doesn't work, ask your teacher.");
       DB.users[email] = { role:"student", name, grade, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
       session.email = email; DB.session = email; save();
       logEvent("-", "Signed up", gradeData(grade).choose ? "Choosing their focus" : `Design challenge: ${scenarioFor(email, grade).title}`);
@@ -2348,6 +2353,66 @@ function fieldsFor(c, gd){
     { t:"text", id:"c2n", label: old.label, min: old.min }
   ];
   return [base[0], s2, base[2], base[3]];
+}
+
+/* ================= SEND WORK TO THE TEACHER'S PRIVATE SHEET ================= */
+const CHUNK = 40000; // Google Sheets holds up to 50,000 characters per cell
+function ctxFor(c){
+  const u = user(); if (!u || u.role === "teacher") return null;
+  const g = u.grade, gd = gradeData(g), sc = scenarioFor(session.email, g); if (!sc) return null;
+  return { u, c, g, gd, cd: COURSE.criteria[c], p: prog(u, c), sc };
+}
+function workPayload(ctx, kind){
+  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
+  return { v: 1, kind, at: new Date().toISOString(), g, c, myp: gd.myp, unit: gd.unit,
+    scenario: { title: sc.title, client: sc.client, user: sc.user, problem: sc.problem, brief: sc.brief },
+    practice: { correct: p.ex.correct, points: p.ex.points, hints: p.ex.hints },
+    strands: F.map((fs, i) => ({ n: ROMAN[i], strand: cd.strands[Y][i], done: !!p.done[i], self: p.bands[i] || "",
+      fields: fs.map(f => { const v = p.fields[f.id];
+        return { id: f.id, t: f.t, label: fill(f.label, g, sc), cols: f.cols, rowLabels: f.rowLabels, min: f.min,
+          value: f.t === "sketch" ? (v ? "IMAGE" : "") : (v ?? "") }; }) })) };
+}
+function queueChunks(ctx, tag, id, text, extra){
+  const u = ctx.u, n = Math.max(1, Math.ceil(text.length / CHUNK));
+  for (let k = 0; k < n; k++){
+    const head = ["DS1", tag, ctx.c, extra || "-", `${k+1}/${n}`, id].join("|");
+    DB.queue.push([session.email, u.name, gLabel(ctx.g), u.teacher, "Criterion " + ctx.c, tag === "W" ? "Work data" : "Work image", "Student", head + "|" + text.slice(k*CHUNK, (k+1)*CHUNK), new Date().toISOString()]);
+  }
+}
+function shrinkData(dataUrl, max){
+  return new Promise(res => { const im = new Image(); im.onload = () => { const s = Math.min(1, max / Math.max(im.width, im.height)), cv = document.createElement("canvas");
+    cv.width = Math.round(im.width * s); cv.height = Math.round(im.height * s); const x = cv.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0,0,cv.width,cv.height); x.drawImage(im, 0, 0, cv.width, cv.height);
+    res(cv.toDataURL("image/jpeg", .6)); }; im.onerror = () => res(null); im.src = dataUrl; });
+}
+const lastSent = {};
+async function sendWork(c, kind){
+  if (session.preview || !settings().logForm) return;
+  const ctx = ctxFor(c); if (!ctx) return;
+  const payload = JSON.stringify(workPayload(ctx, kind));
+  const key = c + kind; if (kind === "snapshot" && lastSent[key] === payload) return; lastSent[key] = payload;
+  const id = Date.now().toString(36);
+  queueChunks(ctx, "W", id, payload);
+  if (kind === "submission"){
+    for (const fs of fieldsFor(c, ctx.gd)) for (const f of fs){
+      const v = ctx.p.fields[f.id]; if (f.t !== "sketch" || !v) continue;
+      const small = await shrinkData(v, 800); if (!small) continue;
+      queueChunks(ctx, "I", id, small.split(",")[1], f.id);
+    }
+  }
+  save(); flushQueue();
+}
+let snapTimer = null;
+function scheduleSnapshot(c){ clearTimeout(snapTimer); snapTimer = setTimeout(() => sendWork(c, "snapshot"), 90000); }
+
+/* ================= SCHOOL STUDENT LIST (stored scrambled) ================= */
+function normName(n){ return String(n||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z\s'-]/g," ").replace(/\s+/g," ").trim(); }
+function nameVariants(n){ const w = normName(n).split(" ").filter(Boolean); const out = new Set([w.join(" ")]); if (w.length > 2) out.add(w[0] + " " + w[w.length-1]); return [...out]; }
+async function sha(text){ const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)); return [...new Uint8Array(b)].slice(0,12).map(x=>x.toString(16).padStart(2,"0")).join(""); }
+function roster(){ const r = (DB.teacherSettings && DB.teacherSettings.roster) || CONFIG.roster; return r && r.h && r.h.length ? r : null; }
+async function rosterCheck(email, name){
+  const r = roster(); if (!r) return { ok:true };
+  for (const v of nameVariants(name)){ const h = await sha(r.salt + "|" + email.toLowerCase() + "|" + v); const i = r.h.indexOf(h); if (i >= 0) return { ok:true, grade: r.g ? r.g[i] : "" }; }
+  return { ok:false };
 }
 
 /* ================= HOME ================= */
@@ -2669,6 +2734,7 @@ function paneTask(pane, ctx){
     if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak(P().nearly); return; }
     const was = p.done[si]; p.done[si] = true; if (was && p.finished){ p.finished = false; p.edited = true; } save();
     if (!was) logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`);
+    sendWork(c, "snapshot");
     if (p.done.every(Boolean)){ speak(P().allDone); view.step = 6; render(); return; }
     speak(pickOne(P().right));
     const next = p.done.findIndex(d=>!d); view.strand = next; render(); window.scrollTo({top:0, behavior:"smooth"});
@@ -2682,7 +2748,7 @@ function buildField(f, ctx){
     el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><textarea id="f_${f.id}" class="notranslate" spellcheck="true">${esc(v)}</textarea><span class="counter" id="c_${f.id}"></span>`;
     const ta = el.querySelector("textarea"), cn = el.querySelector(".counter");
     const upd = () => { const w = words(ta.value); cn.textContent = `${w} / ${f.min} words minimum`; cn.classList.toggle("ok", w >= f.min); };
-    ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(save, 400); };
+    ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
     upd();
   } else if (f.t === "table"){
     const v = p.fields[f.id] || Array.from({length:f.rows},()=>f.cols.map(()=>""));
@@ -2691,18 +2757,18 @@ function buildField(f, ctx){
     el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=> (f.rowLabels && ci===0) ? `<th scope="row" style="text-transform:none;letter-spacing:0;font-size:13px">${esc(f.rowLabels[ri])}</th>` : `<td class="notranslate"><input type="text" id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" value="${esc(r[ci]||"")}" aria-label="${esc(f.cols[ci] || "")} ${esc(f.rowLabels ? f.rowLabels[ri] : "row " + (ri+1))}"></td>`).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
     const cn = el.querySelector(".counter");
     const upd = () => { const done = v.filter(r => rowDone(f, r)).length, need = tableRowsNeeded(f.rows, f); cn.textContent = f.rowLabels ? `${done} of ${f.rows} rows complete` : `${done} of ${f.rows} rows complete (at least ${need} needed)`; cn.classList.toggle("ok", done >= need); };
-    el.querySelectorAll("input").forEach(inp => inp.oninput = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(save, 400); });
+    el.querySelectorAll("input").forEach(inp => inp.oninput = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); });
     upd();
   } else if (f.t === "sketch"){
     el.appendChild(sketchBox(f, label, p));
   } else if (f.t === "choice"){
     el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><select id="f_${f.id}"><option value="">Choose…</option>${f.options.map(o=>`<option ${p.fields[f.id]===o?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
-    el.querySelector("select").onchange = e => { p.fields[f.id] = e.target.value; save(); };
+    el.querySelector("select").onchange = e => { p.fields[f.id] = e.target.value; save(); scheduleSnapshot(ctx.c); };
   } else if (f.t === "checklist"){
     const v = p.fields[f.id] = p.fields[f.id] || [];
     el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="checks">${f.options.map((o,i)=>`<label class="chk"><input type="checkbox" id="k_${f.id}_${i}" ${v.includes(o)?"checked":""} data-o="${esc(o)}"> <span>${esc(o)}</span></label>`).join("")}</div><span class="counter"></span>`;
     const cn = el.querySelector(".counter"), upd = () => { cn.textContent = `${v.length} ticked (at least ${f.min} needed)`; cn.classList.toggle("ok", v.length >= f.min); };
-    el.querySelectorAll("input").forEach(cb => cb.onchange = () => { const o = cb.dataset.o, k = v.indexOf(o); if (cb.checked && k < 0) v.push(o); if (!cb.checked && k >= 0) v.splice(k,1); upd(); save(); });
+    el.querySelectorAll("input").forEach(cb => cb.onchange = () => { const o = cb.dataset.o, k = v.indexOf(o); if (cb.checked && k < 0) v.push(o); if (!cb.checked && k >= 0) v.splice(k,1); upd(); save(); scheduleSnapshot(ctx.c); });
     upd();
   }
   return el;
@@ -2765,7 +2831,8 @@ function paneSubmit(pane, ctx){
     <div id="subMsg">${p.finished?`<div class="notice ok">Copy saved for your teacher on ${new Date(p.savedAt).toLocaleString()}.</div>`:""}</div>
     ${!s.logForm?`<p class="muted" style="font-size:12px;margin:0">Teacher copy: this course has not been connected to a teacher log yet, so the copy stays on this device.</p>`:""}</div>`;
   const saveCopy = () => {
-    logEvent(c, "Criterion submitted", answersText(ctx));
+    logEvent(c, "Criterion submitted", answersText(ctx).slice(0, 45000));
+    sendWork(c, "submission");
     p.finished = true; p.savedAt = new Date().toISOString(); save();
     $("#subMsg").innerHTML = `<div class="notice ok">Copy saved for your teacher. Well done!</div>`;
   };
@@ -2851,7 +2918,7 @@ function staffPanel(tab, who="admin"){
   const s = settings(), st = JSON.parse(JSON.stringify(courseState())), U = st.unlocks;
   const pend = pendingRequests();
   const tabs = who === "admin"
-    ? [["switches","Criteria switches"],["voice","My voice"],["teachers",`Teacher approvals${pend.length?` (${pend.length})`:""}`],["answers","Answer key"],["lookup","Students"],["setup","Connect & settings"]]
+    ? [["switches","Criteria switches"],["work","Student work & feedback"],["roster","Student list"],["voice","My voice"],["teachers",`Teacher approvals${pend.length?` (${pend.length})`:""}`],["answers","Answer key"],["lookup","Students"],["setup","Connect & settings"]]
     : [["answers","Answer key"],["lookup","Students"]];
   if (!tabs.some(t => t[0] === tab)) tab = tabs[0][0];
   const liveNote = s.controlForm && s.controlCsv ? `<b>Live updates are connected</b> — changes reach every device within about 5 minutes.` : `<b>Live updates are not connected yet</b>, so changes apply on this device only. Connect them once in <i>Connect &amp; settings</i>.`;
@@ -2872,6 +2939,18 @@ function staffPanel(tab, who="admin"){
   } else if (tab === "answers"){
     body = Object.keys(COURSE.grades).map(g => { const gd = COURSE.grades[g]; return ["A","B","C","D"].map(c => { const qs = COURSE.exercises[c].filter(q=>q.y<=gd.myp).concat(COURSE.gradeExercises[g][c]);
       return `<details><summary><b>${esc(gLabel(g))} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
+  } else if (tab === "work"){
+    body = `<p style="margin:0">Students' work reaches your private Google Sheet as they work: their answers are sent a minute or two after they type, every time they complete a strand, and in full (with sketches and screenshots) when they press <b>Save a copy for my teacher</b>.</p>
+      <ol class="guide"><li>Open your <b>Design Studio Log</b> response sheet in Google Sheets and choose <b>File → Download → Comma-separated values (.csv)</b>.</li>
+      <li>Open <b>Feedback Studio</b> (your private page in Claude) and drop the file in. You'll see every student's live work, a feedback button beside each task, and a full criterion report with a suggested MYP level for submitted work.</li></ol>
+      <div class="row"><a class="btn" href="${esc(s.studioUrl || CONFIG.studioUrl || "#")}" target="_blank" rel="noopener">Open Feedback Studio →</a></div>
+      <p class="muted" style="margin:0;font-size:13px">Feedback Studio is private to your Claude account and uses your Claude usage to write feedback. Student work is never published.</p>`;
+  } else if (tab === "roster"){
+    const rr = roster();
+    body = `<p style="margin:0">${rr ? `<b>The student list is on: ${rr.h.length} name variants for ${rr.count || "your"} students.</b> Only students on the list can create an account.` : `<b>No student list yet</b>, so any @sisd.ae email can register. Upload your list to switch the check on.`}</p>
+      <p class="muted" style="margin:0;font-size:13px">Upload an Excel (.xlsx) or CSV file with a column for the student's <b>email</b> and their <b>name</b> (one "Name" column, or "First name" and "Last name" columns). A "Grade" column is optional. Names and emails are scrambled on this device before anything is saved, so the list is never readable in the course file.</p>
+      <label class="btn sec" style="cursor:pointer;align-self:flex-start">Choose the student list file<input type="file" id="rsFile" accept=".xlsx,.xls,.csv" hidden></label>
+      <div id="rsOut"></div>`;
   } else if (tab === "voice"){
     body = `<p class="muted" style="margin:0">Record your own voice for the introduction videos. Students then hear you instead of the computer voice (in English; other languages still use the computer voice). Record one file per course and criterion.</p>
       <div class="grid2"><label class="f">Course<select id="vcG">${Object.keys(COURSE.grades).map(g=>`<option value="${g}">${esc(gLabel(g))}</option>`).join("")}</select></label>
@@ -2920,6 +2999,32 @@ function staffPanel(tab, who="admin"){
     document.querySelectorAll("[data-rs]").forEach(b => b.onclick = async () => { const temp = "Design" + Math.floor(1000 + Math.random()*9000); const u = DB.users[b.dataset.rs]; Object.assign(u, await hashPw(temp)); save();
       $("#rsMsg").innerHTML = `<div class="notice ok">New password for <b>${esc(u.name)}</b>: <code style="font-size:15px">${temp}</code> — give it to the student. Their work is kept.</div>`; });
   }
+  if (tab === "roster"){
+    $("#rsFile").onchange = async ev => {
+      const file = ev.target.files[0]; if (!file) return; const out = $("#rsOut"); out.innerHTML = `<div class="notice warn">Reading the file…</div>`;
+      try {
+        let rows;
+        if (/\.csv$/i.test(file.name)) rows = parseCSV(await file.text());
+        else { if (!window.XLSX) await new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload = res; sc.onerror = rej; document.body.appendChild(sc); });
+          const wb = XLSX.read(await file.arrayBuffer()); rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, defval:"" }); }
+        const hi = rows.findIndex(r => r.some(x => /e-?mail/i.test(String(x)))); if (hi < 0) throw new Error("No column called Email was found.");
+        const H = rows[hi].map(x => String(x).toLowerCase().trim()), col = re => H.findIndex(h => re.test(h));
+        const ce = col(/e-?mail/), cn = col(/^(full\s*)?name$|student\s*name|^name/), cf = col(/first|given|forename/), cl = col(/last|surname|family/), cg = col(/grade|year|class/);
+        if (cn < 0 && (cf < 0 || cl < 0)) throw new Error("No Name column (or First name and Last name columns) was found.");
+        const salt = b64e(crypto.getRandomValues(new Uint8Array(9))), h = [], g = []; let count = 0, skipped = 0;
+        for (const r of rows.slice(hi+1)){
+          const em = String(r[ce]||"").trim().toLowerCase(); const nm = cn >= 0 ? String(r[cn]||"") : `${r[cf]||""} ${r[cl]||""}`;
+          if (!SCHOOL.test(em) || normName(nm).split(" ").length < 2){ if (em || nm.trim()) skipped++; continue; }
+          count++; const gr = cg >= 0 ? String(r[cg]||"").replace(/[^0-9a-z]/gi,"") : "";
+          for (const v of nameVariants(nm)){ h.push(await sha(salt + "|" + em + "|" + v)); g.push(gr); }
+        }
+        if (!count) throw new Error("No rows with an @sisd.ae email and a full name were found.");
+        DB.teacherSettings = Object.assign({}, DB.teacherSettings || {}, { roster: { salt, h, g, count } }); save();
+        out.innerHTML = `<div class="notice ok">${count} students loaded${skipped?` (${skipped} rows skipped because the email or name was missing)`:""}. The check is on for this device. Click <b>Download course file</b> and upload it to GitHub to switch it on for everyone.</div><div class="row" style="margin-top:8px"><button class="btn" id="rsDl">${ICON.dl} Download course file</button></div>`;
+        $("#rsDl").onclick = () => downloadCourse(courseState());
+      } catch(err){ out.innerHTML = `<div class="notice bad">${esc(err.message || "The file could not be read.")}</div>`; }
+    };
+  }
   if (tab === "voice"){
     let rec = null, chunksR = [], t0 = 0, tick = null, lastBlob = null, lastExt = "webm";
     const drawScript = () => { const g = $("#vcG").value, c = $("#vcC").value, gd = gradeData(g);
@@ -2946,7 +3051,7 @@ function staffPanel(tab, who="admin"){
   }
   if (tab === "setup"){
     const collect = async () => { const vl = {}; document.querySelectorAll("[data-vl]").forEach(i => { if (i.value.trim()) vl[i.dataset.vl] = i.value.trim(); });
-      const v = { logForm: $("#setLog").value.trim(), controlForm: $("#setCtl").value.trim(), controlCsv: $("#setCsv").value.trim(), videoLinks: vl, adminHash: settings().adminHash };
+      const v = Object.assign({}, DB.teacherSettings || {}, { logForm: $("#setLog").value.trim(), controlForm: $("#setCtl").value.trim(), controlCsv: $("#setCsv").value.trim(), videoLinks: vl, adminHash: settings().adminHash });
       const np = $("#setPw").value; if (np){ if (np.length < 8) throw new Error("The admin password must be at least 8 characters."); v.adminHash = await hashPw(np); }
       return v; };
     const check = v => { const errs = []; if (v.logForm && !parseFormLink(v.logForm)) errs.push("The student log link is not a Google Forms pre-filled link (it should contain entry.)."); if (v.controlForm && !parseFormLink(v.controlForm)) errs.push("The switches form link is not a pre-filled link."); if (v.controlCsv && !/output=csv/.test(v.controlCsv)) errs.push("The published sheet link should end with output=csv."); if (v.logForm && parseFormLink(v.logForm)?.entries.length < 8) errs.push(`The log form has ${parseFormLink(v.logForm).entries.length} questions; 8 are expected. Extra details will be combined into the last question.`); return errs; };
@@ -2972,7 +3077,8 @@ function previewGradePicker(){
 async function downloadCourse(st){
   const s = DB.teacherSettings || {};
   const cfg = { adminHash: s.adminHash || CONFIG.adminHash, unlocks: st.unlocks, teachers: st.teachers, declined: st.declined,
-    logForm: s.logForm ?? CONFIG.logForm, controlForm: s.controlForm ?? CONFIG.controlForm, controlCsv: s.controlCsv ?? CONFIG.controlCsv, videoLinks: s.videoLinks || CONFIG.videoLinks || {} };
+    logForm: s.logForm ?? CONFIG.logForm, controlForm: s.controlForm ?? CONFIG.controlForm, controlCsv: s.controlCsv ?? CONFIG.controlCsv, videoLinks: s.videoLinks || CONFIG.videoLinks || {},
+    roster: s.roster || CONFIG.roster || null, studioUrl: CONFIG.studioUrl || "" };
   try {
     const r = await fetch(location.href.split("#")[0], { cache:"no-store" }); if (!r.ok) throw 0;
     const src = await r.text();
