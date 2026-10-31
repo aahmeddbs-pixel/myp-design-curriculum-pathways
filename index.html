@@ -2261,6 +2261,18 @@ COURSE.examples = {
   };
 })();
 
+/* ---------- ACCESS FM guide (shown in Criterion B, strand i) ---------- */
+COURSE.ACCESSFM = [
+  ["A", "Aesthetics", "How it looks and feels: colours, fonts, shapes, style, layout.", "Uses no more than 3 main colours from the brand."],
+  ["C", "Cost", "How much it costs to make or run, or the budget available.", "Built only with free software and costs nothing to publish."],
+  ["C", "Client / Customer", "Who it is for and what they need.", "Text is readable for users aged 11–14 (at least 16 pt)."],
+  ["E", "Environment", "Where it will be used, and its effect on the environment.", "Uses solar power, or is digital so nothing is printed."],
+  ["S", "Size", "How big it is, or how much content it has (pages, scenes, dimensions).", "3 pages, or a 30-second video, or 6 m × 2.5 m."],
+  ["S", "Safety", "How users and their data are kept safe.", "Every image is copyright-free; the form asks for no personal data."],
+  ["F", "Function", "What it must do and how it will work.", "A Book button on every page sends a request to the owner."],
+  ["M", "Materials", "What it will be made with: software, tools, materials, assets.", "Built in Wix using the client's own photos."]
+];
+
 </script>
 <script>
 (function(){
@@ -3151,6 +3163,9 @@ function paneTask(pane, ctx){
     <div class="card stack" id="strandCard" data-read>
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3></div>
       <p class="muted" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
+      ${c === "B" && si === 0 && COURSE.ACCESSFM ? `<div class="card stack" style="gap:8px;background:var(--soft)"><div class="eyebrow">ACCESS FM — use it to write your specification</div>
+        <p style="margin:0;font-size:14px">ACCESS FM is a checklist of eight areas every design must consider. Write at least one specific, measurable requirement for each area in the table below.</p>
+        <div class="scroll"><table class="tbl"><tr><th>Letter</th><th>Stands for</th><th>What it means</th><th>Example requirement</th></tr>${COURSE.ACCESSFM.map(r => `<tr><td style="font-family:var(--f-display);color:var(--accent);font-size:18px;text-align:center">${r[0]}</td><td><b>${esc(r[1])}</b></td><td>${esc(r[2])}</td><td class="muted">${esc(r[3])}</td></tr>`).join("")}</table></div></div>` : ""}
       ${c === "C" && si === 1 && gd.lab ? `<details open class="notranslate-none"><summary><b>Build Lab: software, milestones and skills</b></summary><div style="margin-top:10px">${labCard(gd, true)}</div></details>` : ""}
       <div class="stack" id="fields"></div>
       <div class="field"><span class="lbl">Rate yourself against the rubric for this strand</span>
