@@ -1853,7 +1853,9 @@ COURSE.groups = {
    ========================================================== */
 (function(){
 const T  = (id, label, min) => ({ t:"text", id, label, min });
-const TB = (id, label, cols, rows, need) => ({ t:"table", id, label, cols, rows, need });
+const TB = (id, label, cols, rows, need, colTypes) => ({ t:"table", id, label, cols, rows, need, colTypes });
+const OPT = (...o) => ({ opts: o });
+const ACCESS_AREAS = ["Aesthetics", "Cost", "Client / Customer", "Environment", "Size", "Safety", "Function", "Materials"];
 const RL = (id, label, head, rowLabels, cols) => ({ t:"table", id, label, cols:[head].concat(cols), rows: rowLabels.length, rowLabels, need: rowLabels.length });
 const SK = (id, label, evidence) => ({ t:"sketch", id, label, evidence: !!evidence });
 const CH = (id, label, options) => ({ t:"choice", id, label, options });
@@ -2071,18 +2073,18 @@ Object.keys(UNITS).forEach(g => {
 
 /* ---------- the task builder ---------- */
 COURSE.buildTasks = function(c, gd){
-  const Y = Yk(gd.myp), n = NUM[Y], W = x => Math.round(x * n.w), u = gd.u, L = gd.lab || { tools: [], milestones: ["Early stage", "Middle stage", "Final stage"], skills: [] };
+  const Y = Yk(gd.myp), n = NUM[Y], W = x => Math.max(5, Math.round(x * n.w / 2)), u = gd.u, L = gd.lab || { tools: [], milestones: ["Early stage", "Middle stage", "Final stage"], skills: [] };
   if (c === "A") return [
     [ T("a1what", u.q1, W(40)),
       T("a1why", "Why is this a problem? Give at least 2 reasons, each supported by a fact, statistic or example with its source.", W(50)),
       T("a1who", "Who does this problem affect, and how does it affect them?", W(40)),
       T("a1none", "Why has this problem not been solved yet? What do existing products or solutions miss?", W(40)),
       T("a1if", "What will happen if nothing is done?", W(25)),
-      TB("a1src", `Sources you used (at least ${n.src}). Every fact or statistic needs a source.`, ["Source title", "Link", "What it told you"], n.src + 1, n.src) ],
-    [ TB("a2q", `List at least ${n.q} research questions that will help you understand the problem and the need for a solution. Include at least 2 questions about existing products or solutions.`, ["Research question", "Primary or secondary research?"], n.q + 2, n.q) ],
-    [ TB("a3t", "Justify and prioritise each research question", ["Research question", "Why do you need to know this? (justification)", "Where will you find the answer?", "Priority (High / Medium / Low)"], n.q + 2, n.q),
+      TB("a1src", `Sources you used (at least ${n.src}). Every fact or statistic needs a source.`, ["Source title", "Link (https://…)", "What it told you"], n.src + 1, n.src, [null, "url", null]) ],
+    [ TB("a2q", `List at least ${n.q} research questions that will help you understand the problem and the need for a solution. Include at least 2 questions about existing products or solutions.`, ["Research question", "Primary or secondary research?"], n.q + 2, n.q, [null, OPT("Primary", "Secondary")]) ],
+    [ TB("a3t", "Justify and prioritise each research question", ["Research question", "Why do you need to know this? (justification)", "Where will you find the answer?", "Priority"], n.q + 2, n.q, [null, null, null, OPT("High", "Medium", "Low")]),
       T("a3top", "Which question is your top priority, and why?", W(30)) ],
-    [ TB("a4f", `Your research findings: answer your most important questions (at least ${n.f})`, ["Research question", "What I found out", "Source / link"], n.f + 2, n.f),
+    [ TB("a4f", `Your research findings: answer your most important questions (at least ${n.f})`, ["Research question", "What I found out", "Source (link, or who you asked)"], n.f + 2, n.f),
       ...u.decide(),
       T("a4brief", "Design brief: I am going to design… for… because… It will…", W(60)),
       RL("a4acc", "ACCESS FM: describe what your product will be like", "ACCESS FM", ["Aesthetics — how will it look?", "Cost — what will it cost, or what budget is there?", "Client / customer — who is it for?", "Environment — where will it be used, and how will it affect the environment?", "Size — how big is it, or how much content will it have?", "Safety — how will users be kept safe?", "Function — what will it do, and how will it work?", "Materials — what software, tools or materials will you use?"], ["My plan"]),
@@ -2091,7 +2093,7 @@ COURSE.buildTasks = function(c, gd){
   if (c === "B") {
     const D = Array.from({ length: n.d }, (_, i) => i + 1);
     return [
-      [ TB("b1t", `Design specification: turn your design brief into at least ${n.spec} specific, measurable requirements`, ["ACCESS FM area", "Requirement (specific and measurable)", "How it will be tested"], n.spec + 2, n.spec) ],
+      [ TB("b1t", `Design specification: turn your design brief into at least ${n.spec} specific, measurable requirements`, ["ACCESS FM area", "Requirement (specific and measurable)", "How it will be tested"], n.spec + 2, n.spec, [OPT(...ACCESS_AREAS), null, null]) ],
       [ ...D.flatMap(k => [SK(`b2s${k}`, `Design ${k} — ${u.designNoun}. Same product and content as your other designs, in a different look. Label and annotate everything.`),
                            T(`b2n${k}`, `Design ${k}: explain your labels and annotations (layout, colours, fonts, features) and how it meets your specification`, W(40))]) ],
       [ RL("b3t", "Show your designs to your client. Which design principles do they like in each design, and why?", "Design", D.map(k => `Design ${k}`), ["Design principles the client likes (layout, colour, typography, balance, contrast, imagery…)", "The client's reasons"]),
@@ -2104,22 +2106,22 @@ COURSE.buildTasks = function(c, gd){
     ];
   }
   if (c === "C") return [
-    [ TB("c1t", `Logical plan: a step-by-step instruction manual to bring your developed design to life (at least ${n.steps} steps). Every step must be SMART: specific, measurable, achievable, realistic and timely.`, ["Step", "Detailed instruction (exactly what to do)", "Tools / resources", "Time (minutes)"], n.steps + 2, n.steps),
+    [ TB("c1t", `Logical plan: a step-by-step instruction manual to bring your developed design to life (at least ${n.steps} steps). Every step must be SMART: specific, measurable, achievable, realistic and timely.`, ["Step number", "Detailed instruction (exactly what to do)", "Tools / resources", "Time (minutes)"], n.steps + 2, n.steps, ["num", null, null, "num"]),
       T("c1tot", "Total time, and how it fits into your lessons", 6) ],
     [ CH("c2tool", "Which software or tools did you use?", L.tools.map(t => t.name).concat(["Other"])),
       CL("c2k", `Tick the technical skills you used (at least ${n.skills})`, L.skills, Math.min(n.skills, L.skills.length)),
       ...L.milestones.flatMap((m, i) => [SK(`c2m${i}`, `Making evidence ${i + 1}: ${m}`, true), T(`c2q${i}`, `Evidence ${i + 1}: what did you do, which skills did you use, and which plan steps does it match?`, W(20))]),
       SK("c2f1", "Your finished solution — main view", true),
       SK("c2f2", "Your finished solution — second view or close-up", true),
-      ...(gd.noUrls ? [] : [T("c2l", "Link to your solution (or write 'not online')", 1)]) ],
-    [ TB("c3t", "Did you follow your logical plan? Check each step from C.i against your making evidence in C.ii.", ["Plan step", "Followed? (Yes / Partly / No)", "Evidence (which screenshot shows it)"], n.steps + 2, n.steps),
+      ...(gd.noUrls ? [] : [Object.assign(T("c2l", "Link to your solution (a full web address starting with https://, or write: not online)", 1), { fmt: "urlOrNone" })]) ],
+    [ TB("c3t", "Did you follow your logical plan? Check each step from C.i against your making evidence in C.ii.", ["Plan step number", "Followed?", "Evidence (which screenshot shows it)"], n.steps + 2, n.steps, ["num", OPT("Yes", "Partly", "No"), null]),
       T("c3f", "Does your solution work as intended and match your developed design? Explain.", W(40)) ],
     [ TB("c4t", "Changes that were NOT in your design brief, specification or logical plan (if there were none, write 'No changes' in the first row)", ["What changed", "What the original plan or design said", "Why you made the change (justification)", "Effect on the solution"], 4, 1),
       T("c4o", "Overall, did your changes improve the solution? Explain.", W(25)) ]
   ];
   return [
-    [ TB("d1t", `Test plan: at least ${n.tests} tests, one for each specification point from B.i`, ["Test name", "Specification point", "Testing method", "Expected result"], n.tests + 2, n.tests) ],
-    [ TB("d2t", "Testing evidence: carry out every test and record the results", ["Specification", "Expected result", "Actual result", "Outcome", "Pass / Fail", "Qualitative or quantitative"], n.tests + 2, n.tests),
+    [ TB("d1t", `Test plan: at least ${n.tests} tests, one for each specification point from B.i`, ["Test name", "Specification point", "Testing method", "Expected result"], n.tests + 2, n.tests, [null, null, OPT("Survey", "Interview / detailed feedback", "Expert opinion", "Observation", "Experiment / functional test", "Measurement", "Checklist", "Timed task", "Comparison"), null]) ],
+    [ TB("d2t", "Testing evidence: carry out every test and record the results", ["Specification", "Expected result", "Actual result", "Outcome", "Pass / Fail", "Qualitative or quantitative"], n.tests + 2, n.tests, [null, null, null, null, OPT("Pass", "Fail"), OPT("Qualitative", "Quantitative")]),
       SK("d2e", "Evidence of testing (screenshot, photo or survey results)", true) ],
     [ TB("d3t", "Suggested improvements", ["What failed or could be better", "Suggested improvement"], 4, 2) ],
     [ SK("d4s", "Your improved solution, with the improvements applied", true),
@@ -2852,6 +2854,45 @@ async function rosterCheck(email, name){
   return { ok:false };
 }
 
+/* ================= BRITISH ENGLISH SPELLING CHECK ================= */
+const SPELL = (() => {
+  const M = {};
+  const add = (pairs) => pairs.split(",").forEach(p => { const [a, b] = p.split(">").map(x => x.trim()); if (a && b) M[a] = b; });
+  add("color>colour,colors>colours,colored>coloured,coloring>colouring,colorful>colourful,favor>favour,favors>favours,favorite>favourite,favorites>favourites,favorable>favourable,flavor>flavour,flavors>flavours,behavior>behaviour,behaviors>behaviours,behavioral>behavioural,honor>honour,honors>honours,humor>humour,labor>labour,neighbor>neighbour,neighbors>neighbours,neighborhood>neighbourhood,neighborhoods>neighbourhoods,rumor>rumour,harbor>harbour,vapor>vapour,armor>armour,endeavor>endeavour,odor>odour,odors>odours,valor>valour,vigor>vigour,rigor>rigour");
+  add("center>centre,centers>centres,centered>centred,theater>theatre,theaters>theatres,fiber>fibre,fibers>fibres,liter>litre,liters>litres,centimeter>centimetre,centimeters>centimetres,millimeter>millimetre,millimeters>millimetres,kilometer>kilometre,kilometers>kilometres,somber>sombre");
+  add("defense>defence,offense>offence,pretense>pretence,catalog>catalogue,catalogs>catalogues,gray>grey,aluminum>aluminium,mom>mum,plow>plough,airplane>aeroplane,airplanes>aeroplanes,judgment>judgement,aging>ageing,artifact>artefact,artifacts>artefacts,mold>mould,mustache>moustache,pajamas>pyjamas,cozy>cosy,donut>doughnut,math>maths,jewelry>jewellery,enrollment>enrolment,fulfill>fulfil,skillful>skilful,counselor>counsellor,program's>programme's");
+  add("traveled>travelled,traveling>travelling,traveler>traveller,travelers>travellers,canceled>cancelled,canceling>cancelling,labeled>labelled,labeling>labelling,modeled>modelled,modeling>modelling,fueled>fuelled,fueling>fuelling,leveled>levelled,leveling>levelling,signaled>signalled,totaled>totalled,channeled>channelled,marveled>marvelled,jeweler>jeweller");
+  add("recieve>receive,recieved>received,beleive>believe,belive>believe,definately>definitely,definatly>definitely,seperate>separate,seperately>separately,untill>until,wich>which,becuase>because,becasue>because,beacuse>because,accomodate>accommodate,occured>occurred,occurence>occurrence,enviroment>environment,enviromental>environmental,goverment>government,buisness>business,bussiness>business,comming>coming,wierd>weird,thier>their,alot>a lot,tommorow>tomorrow,tomorow>tomorrow,neccessary>necessary,necesary>necessary,sucess>success,succesful>successful,sucessful>successful,begining>beginning,beggining>beginning,existance>existence,independant>independent,adress>address,arguement>argument,calender>calendar,collegue>colleague,completly>completely,concious>conscious,embarass>embarrass,finaly>finally,foward>forward,freind>friend,freinds>friends,grammer>grammar,happend>happened,immediatly>immediately,interupt>interrupt,knowlege>knowledge,libary>library,mispell>misspell,noticable>noticeable,occassion>occasion,persue>pursue,posession>possession,prefered>preferred,publically>publicly,realy>really,recomend>recommend,refered>referred,relevent>relevant,rember>remember,resturant>restaurant,sence>sense,similiar>similar,sincerly>sincerely,strenght>strength,suprise>surprise,techinque>technique,technolgy>technology,tecnology>technology,temprature>temperature,truely>truly,usefull>useful,wether>whether,writting>writing,peice>piece,acheive>achieve,acheivement>achievement,aswell>as well,eachother>each other,infront>in front,alright>all right,goverments>governments,enviroments>environments,problum>problem,soloution>solution,solutoin>solution,desing>design,disign>design,specificaton>specification,improvment>improvement,improvments>improvements,informaton>information,diffrent>different,diffrence>difference,intresting>interesting,importent>important,becomming>becoming,recources>resources,resorces>resources,peopel>people,poeple>people,shoud>should,woud>would,coud>could,thru>through,untill>until,wont>won't,dont>don't,doesnt>doesn't,cant>can't,isnt>isn't,didnt>didn't");
+  const IZE_EXCEPT = /^(size|sizes|sized|sizing|seize|seized|seizes|seizing|prize|prizes|capsize|capsized|resize|resized|resizing|downsize|downsized|oversize|oversized|maize|baize|assize)$/;
+  function fix(word){
+    const lw = word.toLowerCase(); let out = M[lw];
+    if (!out && lw.length > 5 && !IZE_EXCEPT.test(lw)){
+      const m = lw.match(/^(.+?)(ize|izes|ized|izing|ization|izations|izer|izers|yze|yzes|yzed|yzing)$/);
+      if (m && m[1].length >= 3) out = m[1] + m[2].replace(/^iz/, "is").replace(/^yz/, "ys");
+    }
+    if (!out || out === lw) return null;
+    if (word === word.toUpperCase() && word.length > 1) return out.toUpperCase();
+    if (word[0] === word[0].toUpperCase()) return out[0].toUpperCase() + out.slice(1);
+    return out;
+  }
+  function scan(text){ const res = []; String(text || "").replace(/[A-Za-z']+/g, (w, i) => { const f = fix(w.replace(/^'+|'+$/g, "")); if (f) res.push({ word: w, fix: f, i }); return w; }); return res; }
+  return { scan, fix };
+})();
+function spellPanel(box, root){
+  const els = [...root.querySelectorAll('textarea[id^="f_"], .tin input[type=text][data-c]')].filter(x => !x.inputMode || x.inputMode === "text" || x.tagName === "TEXTAREA").filter(x => x.inputMode !== "decimal");
+  const issues = []; els.forEach(el => SPELL.scan(el.value).forEach(s => issues.push(Object.assign(s, { el }))));
+  if (!issues.length){ box.innerHTML = `<div class="notice ok">No spelling problems found. Your spelling matches British English.</div>`; return; }
+  const seen = new Map(); issues.forEach(s => { const k = s.word + ">" + s.fix; seen.set(k, (seen.get(k) || []).concat([s])); });
+  box.innerHTML = `<div class="notice warn stack" style="gap:8px"><b>${issues.length} spelling ${issues.length === 1 ? "suggestion" : "suggestions"} (British English)</b>
+    <div class="stack" style="gap:6px">${[...seen.entries()].map(([k, list], i) => `<div class="row" style="gap:8px"><span><s>${esc(list[0].word)}</s> → <b>${esc(list[0].fix)}</b>${list.length > 1 ? ` <span class="muted">(${list.length} times)</span>` : ""}</span><button class="btn sm sec" data-sp="${i}">Fix</button></div>`).join("")}</div>
+    <div class="row"><button class="btn sm" id="spAll">Fix all</button><button class="btn sm ghost" id="spClose">Close</button></div></div>`;
+  const groups = [...seen.values()];
+  const apply = list => list.forEach(s => { const re = new RegExp(`\\b${s.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`); s.el.value = s.el.value.replace(re, s.fix); s.el.dispatchEvent(new Event("input")); });
+  box.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => { apply(groups[+b.dataset.sp]); spellPanel(box, root); });
+  $("#spAll").onclick = () => { groups.forEach(apply); spellPanel(box, root); speak("Spelling fixed."); };
+  $("#spClose").onclick = () => { box.innerHTML = ""; };
+}
+
 /* ================= HOME ================= */
 function critProgress(p){ if (!p) return 0; let s = 0; if (p.watched) s++; ["ex","me","ru"].forEach(k=>{ if (p.seen?.[k]) s++; }); if (p.ex?.done) s++; s += p.done.filter(Boolean).length; return Math.round(s/9*100); }
 function renderExplore(app){
@@ -3143,10 +3184,23 @@ function panePractice(pane, ctx){
 
 /* ---------- 6. MAIN TASK ---------- */
 function tableRowsNeeded(rows, f){ if (f && f.need != null) return f.need; return Math.max(2, Math.ceil(rows * 2/3)); }
-function rowDone(f, r){ return r && f.cols.every((_,k) => (f.rowLabels && k === 0) || String(r[k]||"").trim()); }
+const URL_RE = /^https?:\/\/[^\s/$.?#][^\s]*\.[^\s]{2,}$/i;
+function colType(f, k){ return f.colTypes && f.colTypes[k]; }
+function cellProblem(f, k, val){
+  const v = String(val || "").trim(), t = colType(f, k);
+  if (!v) return "empty";
+  if (t && t.opts && !t.opts.includes(v)) return `choose an option for "${f.cols[k]}"`;
+  if (t === "url" && !URL_RE.test(v)) return `"${f.cols[k]}" must be a full web address starting with https://`;
+  if (t === "num" && !(/^\d+(\.\d+)?$/.test(v) && +v > 0)) return `"${f.cols[k]}" must be a number`;
+  return "";
+}
+function rowDone(f, r){ return r && f.cols.every((_,k) => (f.rowLabels && k === 0) || !cellProblem(f, k, r[k])); }
+function textProblem(f, val){ if (f.fmt === "urlOrNone"){ const v = String(val || "").trim(); if (!(URL_RE.test(v) || /^not online$/i.test(v))) return "Enter a full web address starting with https://, or write: not online"; } return ""; }
 function fieldValid(f, val){
-  if (f.t === "text") return words(val) >= f.min;
-  if (f.t === "table"){ const rows = (val||[]).filter(r => rowDone(f, r)); return rows.length >= tableRowsNeeded(f.rows, f); }
+  if (f.t === "text") return words(val) >= f.min && !textProblem(f, val);
+  if (f.t === "table"){ const rows = (val||[]).filter(r => rowDone(f, r));
+    const bad = (val||[]).some(r => r && f.cols.some((_,k) => !(f.rowLabels && k === 0) && String(r[k]||"").trim() && cellProblem(f, k, r[k]) && cellProblem(f, k, r[k]) !== "empty"));
+    return rows.length >= tableRowsNeeded(f.rows, f) && !bad; }
   if (f.t === "sketch") return !!val;
   if (f.t === "choice") return !!val;
   if (f.t === "checklist") return (val||[]).length >= f.min;
@@ -3170,9 +3224,11 @@ function paneTask(pane, ctx){
       <div class="stack" id="fields"></div>
       <div class="field"><span class="lbl">Rate yourself against the rubric for this strand</span>
         <div class="bands">${["1–2","3–4","5–6","7–8"].map(b=>`<button data-b="${b}" aria-pressed="${p.bands[si]===b}">${b}</button>`).join("")}</div></div>
+      <div id="spellBox"></div>
       <div id="sMsg"></div>
       <div class="row" style="justify-content:space-between">
-        <button class="btn ghost" id="prevS" ${si===0?"disabled":""}>← Strand ${ROMAN[Math.max(0,si-1)]}</button>
+        <div class="row"><button class="btn ghost" id="prevS" ${si===0?"disabled":""}>← Strand ${ROMAN[Math.max(0,si-1)]}</button>
+        <button class="btn sec" id="spellBtn" type="button">Check spelling (British English)</button></div>
         <button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button>
       </div></div></div>`;
   pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
@@ -3180,6 +3236,7 @@ function paneTask(pane, ctx){
   F[si].forEach(f => box.appendChild(buildField(f, ctx)));
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
+  $("#spellBtn").onclick = () => spellPanel($("#spellBox"), $("#fields"));
   $("#doneS").onclick = () => {
     const missing = F[si].filter(f => !fieldValid(f, p.fields[f.id])).map(f => fill(f.label, g, sc));
     if (!p.bands[si]) missing.push("Your self-rating for this strand");
@@ -3195,9 +3252,16 @@ function paneTask(pane, ctx){
 function buildField(f, ctx){
   const { p, g, sc } = ctx, el = document.createElement("div"); el.className = "field";
   const label = fill(f.label, g, sc);
-  if (f.t === "text"){
+  if (f.t === "text" && f.fmt){
     const v = p.fields[f.id] || "";
-    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><textarea id="f_${f.id}" class="notranslate" spellcheck="true">${esc(v)}</textarea><span class="counter" id="c_${f.id}"></span>`;
+    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><input type="text" id="f_${f.id}" class="notranslate" inputmode="url" placeholder="https://… or not online" value="${esc(v)}"><span class="counter"></span>`;
+    const inp = el.querySelector("input"), cn = el.querySelector(".counter");
+    const upd = () => { const pr = textProblem(f, inp.value); cn.textContent = pr || "Looks right"; cn.classList.toggle("ok", !pr); inp.classList.toggle("bad", !!inp.value.trim() && !!pr); };
+    inp.oninput = () => { p.fields[f.id] = inp.value; upd(); clearTimeout(inp._t); inp._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
+    upd();
+  } else if (f.t === "text"){
+    const v = p.fields[f.id] || "";
+    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><textarea id="f_${f.id}" class="notranslate" spellcheck="true" lang="en-GB">${esc(v)}</textarea><span class="counter" id="c_${f.id}"></span>`;
     const ta = el.querySelector("textarea"), cn = el.querySelector(".counter");
     const upd = () => { const w = words(ta.value); cn.textContent = `${w} / ${f.min} words minimum`; cn.classList.toggle("ok", w >= f.min); };
     ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
@@ -3205,11 +3269,20 @@ function buildField(f, ctx){
   } else if (f.t === "table"){
     const v = p.fields[f.id] || Array.from({length:f.rows},()=>f.cols.map(()=>""));
     if (f.rowLabels) v.forEach((r,ri) => { r[0] = f.rowLabels[ri]; });
+    v.forEach(r => f.cols.forEach((_,k) => { const t = colType(f, k); if (t && t.opts && r[k] && !t.opts.includes(r[k])) r[k] = ""; }));
+    const cell = (ri, ci, val) => { const t = colType(f, ci), base = `id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" aria-label="${esc(f.cols[ci] || "")} ${esc(f.rowLabels ? f.rowLabels[ri] : "row " + (ri+1))}"`;
+      if (t && t.opts) return `<td><select ${base}><option value="">Choose…</option>${t.opts.map(o => `<option value="${esc(o)}" ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></td>`;
+      if (t === "url") return `<td class="notranslate"><input type="url" inputmode="url" placeholder="https://…" ${base} value="${esc(val||"")}"></td>`;
+      if (t === "num") return `<td class="notranslate"><input type="text" inputmode="decimal" placeholder="0" style="min-width:70px" ${base} value="${esc(val||"")}"></td>`;
+      return `<td class="notranslate"><input type="text" spellcheck="true" lang="en-GB" ${base} value="${esc(val||"")}"></td>`; };
     p.fields[f.id] = v;
-    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=> (f.rowLabels && ci===0) ? `<th scope="row" style="text-transform:none;letter-spacing:0;font-size:13px">${esc(f.rowLabels[ri])}</th>` : `<td class="notranslate"><input type="text" id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" value="${esc(r[ci]||"")}" aria-label="${esc(f.cols[ci] || "")} ${esc(f.rowLabels ? f.rowLabels[ri] : "row " + (ri+1))}"></td>`).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
+    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=> (f.rowLabels && ci===0) ? `<th scope="row" style="text-transform:none;letter-spacing:0;font-size:13px">${esc(f.rowLabels[ri])}</th>` : cell(ri, ci, r[ci])).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
     const cn = el.querySelector(".counter");
-    const upd = () => { const done = v.filter(r => rowDone(f, r)).length, need = tableRowsNeeded(f.rows, f); cn.textContent = f.rowLabels ? `${done} of ${f.rows} rows complete` : `${done} of ${f.rows} rows complete (at least ${need} needed)`; cn.classList.toggle("ok", done >= need); };
-    el.querySelectorAll("input").forEach(inp => inp.oninput = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); });
+    const upd = () => { const done = v.filter(r => rowDone(f, r)).length, need = tableRowsNeeded(f.rows, f);
+      let hint = ""; v.forEach((r, ri) => f.cols.forEach((_, k) => { if (hint || (f.rowLabels && k === 0)) return; const val = String(r[k]||"").trim(); if (!val) return; const pr = cellProblem(f, k, val); if (pr) hint = ` · Row ${ri+1}: ${pr}`; }));
+      el.querySelectorAll("input[data-c],select[data-c]").forEach(x => { const val = x.value.trim(); x.classList.toggle("bad", !!val && !!cellProblem(f, +x.dataset.c, val)); });
+      cn.textContent = (f.rowLabels ? `${done} of ${f.rows} rows complete` : `${done} of ${f.rows} rows complete (at least ${need} needed)`) + hint; cn.classList.toggle("ok", done >= need && !hint); };
+    el.querySelectorAll("input[data-c],select[data-c]").forEach(inp => inp.oninput = inp.onchange = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); });
     upd();
   } else if (f.t === "sketch"){
     el.appendChild(sketchBox(f, label, p));
