@@ -255,7 +255,9 @@ const CONFIG = {
   "controlCsv": "https://docs.google.com/spreadsheets/d/e/2PACX-1vRDyFCmLL1Z2lWea0WLF5surkagyB_Ad6-Cij4lCBhpvCeybt_pQB15xClmQoIRg8LMUWeFwuCUYy0f/pub?gid=480761896&single=true&output=csv",
   "videoLinks": {},
   "studioUrl": "https://claude.ai/artifact/GwxfxmzBWyxbjy18kkdY7Z",
-  "roster": null
+  "roster": null,
+  "syncForm": "https://docs.google.com/forms/d/e/1FAIpQLSffJEGT5q3FZXNwIzuiOjoPiJ-OPO4ZeQCDATX7NOSEuWJSWQ/viewform?usp=pp_url&entry.1255814967=x",
+  "syncSheet": "https://docs.google.com/spreadsheets/d/1SqJekhyGDbaCp5HUa5S6myV27u3bshm51DmXVCuN6do/edit?usp=drivesdk"
 };
 /*CONFIG-END*/
 </script>
@@ -2871,7 +2873,7 @@ const SYNC_CHUNK = 30000;
 function syncCfg(){
   const s = settings(), f = parseFormLink(s.syncForm), link = String(s.syncSheet || "");
   const m = link.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/); if (!f || !m || m[1] === "e") return null;
-  return { form: s.syncForm, id: m[1], gid: (link.match(/[#&?]gid=(\d+)/) || [])[1] || "0" };
+  return { form: s.syncForm, id: m[1], gid: (link.match(/[#&?]gid=(\d+)/) || [])[1] || "" };
 }
 const syncId = email => sha("dss|" + String(email).toLowerCase());
 function b64big(u8){ let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
@@ -2961,7 +2963,7 @@ function gviz(cfg, tq){
       if (!r || r.status === "error") return rej(new Error((r && r.errors && r.errors[0] && (r.errors[0].detailed_message || r.errors[0].message)) || "The sync sheet could not be read."));
       res(((r.table && r.table.rows) || []).map(row => ((row.c || [])[0] || {}).v || "")); };
     sc.onerror = () => { done(); rej(new Error("The sync sheet could not be reached.")); };
-    sc.src = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?gid=${cfg.gid}&headers=1&tqx=out:json;responseHandler:${cb}&tq=${encodeURIComponent(tq)}&_=${Date.now()}`;
+    sc.src = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?${cfg.gid ? "gid=" + cfg.gid + "&" : ""}headers=1&tqx=out:json;responseHandler:${cb}&tq=${encodeURIComponent(tq)}&_=${Date.now()}`;
     document.head.appendChild(sc);
   });
 }
