@@ -1,3 +1,6 @@
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -257,7 +260,35 @@ const CONFIG = {
   "studioUrl": "https://claude.ai/artifact/GwxfxmzBWyxbjy18kkdY7Z",
   "roster": null,
   "syncForm": "https://docs.google.com/forms/d/e/1FAIpQLScdyzD_IdGF7TkLSAh1yGxXuryf5Fz76DjpjawDLuby7-hBKw/viewform?usp=pp_url&entry.1268649456=x",
-  "syncSheet": "https://docs.google.com/spreadsheets/d/1SqJekhyGDbaCp5HUa5S6myV27u3bshm51DmXVCuN6do/edit?usp=drivesdk"
+  "syncSheet": "https://docs.google.com/spreadsheets/d/1SqJekhyGDbaCp5HUa5S6myV27u3bshm51DmXVCuN6do/edit?usp=drivesdk",
+  "adminKeys": {
+    "sigPub": {
+      "key_ops": [
+        "verify"
+      ],
+      "ext": true,
+      "kty": "EC",
+      "x": "g6JG87cYBkusgs-I5KvQKNdcS2VGwCu4FP9lJYIvu58",
+      "y": "Tc06F7jM1RaDT6RsO7UTPumlWm7d3MNQNtqky5ygZAE",
+      "crv": "P-256"
+    },
+    "encPub": {
+      "key_ops": [
+        "encrypt"
+      ],
+      "ext": true,
+      "alg": "RSA-OAEP-256",
+      "kty": "RSA",
+      "n": "hUBe-z8awlsSaMLLMbN09uiYjHBozpS3OATae6KaYRtd0VSGOHAe-sqxDpd3tt7lEvcEy9Q3oMgCR6bWsN8JY5zsN6GcHzdn_a5D9kgHT4YmxRVv31MvMb0yQhE7dbXSfurBMx0za1jPJgzkaRc-taIGBtdZserbU7U76yaVK2bf3wDzzd9beXDpen5E9xachauybxxXLBLmfhnoyhS95hd1WwzpsNFbhqPOUcrGagw6j5RLxti4hYE_NBi_gqxSed3j8EB4ChoEiRHJfN5pWb9d8bfXqYz8Rwm-niJWi_8gBfgrkPm_WnCo6LHl0Tz-OL1CjR3UpPUbIAOaeRhsaQ",
+      "e": "AQAB"
+    },
+    "wrap": {
+      "iter": 600000,
+      "salt": "MVkn8WJRApLor1E8Nn+0fw==",
+      "iv": "sH/H8GF0OfhpDWaF",
+      "ct": "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"
+    }
+  }
 };
 /*CONFIG-END*/
 </script>
@@ -2474,7 +2505,14 @@ async function hashPw(pw, saltB64){
   return { salt: b64e(salt), hash: b64e(new Uint8Array(bits)) };
 }
 async function checkPw(pw, rec){ if (!rec || !rec.salt) return false; return (await hashPw(pw, rec.salt)).hash === rec.hash; }
-function pwProblem(pw){ if (pw.length < 8) return "Your password must be at least 8 characters."; if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return "Your password must include at least one letter and one number."; return ""; }
+const COMMON_PW = ["password","passw0rd","12345678","123456789","1234567890","qwertyuiop","iloveyou","sisd2026","sisd2025","design2026","welcome123","abcd1234","letmein123","football123","admin12345"];
+function pwProblem(pw, email){ if (pw.length < 10) return "Your password must be at least 10 characters. A short sentence you can remember works well."; if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return "Your password must include at least one letter and one number.";
+  const low = pw.toLowerCase(), local = String(email||"").split("@")[0].toLowerCase();
+  if (COMMON_PW.some(c => low.includes(c)) || /^(.)\1+$/.test(pw)) return "That password is too easy to guess. Choose something different."; if (local.length > 3 && low.includes(local.replace(/[^a-z]/g,""))) return "Your password must not contain your name or email."; return ""; }
+function lockState(email){ DB.fails = DB.fails || {}; return DB.fails[email] || { n:0, until:0 }; }
+function lockLeft(email){ const f = lockState(email); return f.until > Date.now() ? Math.ceil((f.until - Date.now()) / 60000) : 0; }
+function noteFail(email){ const f = lockState(email); f.n++; if (f.n >= 5) f.until = Date.now() + Math.min(15, Math.pow(2, f.n - 5)) * 60000; DB.fails[email] = f; save(true); }
+function clearFails(email){ if (DB.fails && DB.fails[email]){ delete DB.fails[email]; save(true); } }
 const SCHOOL = /^[^\s@]+@sisd\.ae$/i;
 
 /* ================= GOOGLE FORM (private copy) ================= */
@@ -2537,7 +2575,9 @@ async function loadLive(){
     const rows = parseCSV(await r.text()); let state = null; const reqs = [];
     for (let i=1;i<rows.length;i++){
       const cell = rows[i].slice(1).find(v => v && v.trim().startsWith("{")); if (!cell) continue;
-      try { const d = JSON.parse(cell); if (d.unlocks) state = d; else if (d.request) reqs.push(d.request); } catch(e){}
+      try { const d = JSON.parse(cell);
+        if (d.unlocks){ if (await verifyState(d) && (!state || String(d.t) > String(state.t))) state = d; }   // only admin-signed switch settings are trusted
+        else if (d.request && d.request.email && SCHOOL.test(String(d.request.email))) reqs.push({ email:String(d.request.email), name:String(d.request.name||"").slice(0,80), salt:String(d.request.salt||""), hash:String(d.request.hash||""), t:String(d.request.t||"") }); } catch(e){}
     }
     REQUESTS = reqs;
     if (state){ const next = { unlocks: state.unlocks, teachers: state.teachers || [], declined: state.declined || [] };
@@ -2547,7 +2587,8 @@ async function loadLive(){
 async function publishState(next){
   const s = settings(); DB.localState = next; save(); if (s.controlCsv) LIVE = next;
   if (!s.controlForm) return "local";
-  return (await postForm(s.controlForm, [JSON.stringify(Object.assign({}, next, { t:new Date().toISOString() }))])) ? "sent" : "failed";
+  if (!ADMIN_KEYS) return "failed";
+  return (await postForm(s.controlForm, [JSON.stringify(await signState(next))])) ? "sent" : "failed";
 }
 
 /* ================= ICONS ================= */
@@ -2603,7 +2644,9 @@ function render(){
   $("#previewBanner").hidden = !session.preview;
   const app = $("#app"), u = user();
   if (!u) return renderLogin(app);
-  if (u.role === "teacher" && !session.preview) return renderTeacherHome(app);
+  if (u.role === "teacher" && !session.preview){
+    if (!approvedTeacher(session.email)){ session = { email:null, preview:false, back:null }; DB.session = null; save(true); return renderLogin(app); }
+    return renderTeacherHome(app); }
   if (view.name === "crit"){ renderCrit(app); return rememberSpot(user()); }
   if (view.name === "explore") return renderExplore(app);
   return renderHome(app);
@@ -2662,6 +2705,7 @@ function renderLogin(app){
     try {
       if (mode === "in"){
         if (!pw) return msg("Enter your password.");
+        { const lk = lockLeft(email); if (lk) return msg(`Too many wrong passwords. Wait ${lk} minute${lk > 1 ? "s" : ""} and try again, or ask your teacher.`); }
         let u = DB.users[email];
         if (!u){
           const t = approvedTeacher(email);
@@ -2670,8 +2714,8 @@ function renderLogin(app){
           else if (syncCfg()){
             msg("Finding your saved work…", "ok");
             let r = null; try { r = await restoreAccount(email, pw); } catch(err){ return msg("Your saved work could not be reached. Check the internet connection and try again."); }
-            if (!r) return msg("No account found for that email. Choose <b>Sign up</b> if this is your first time here.");
-            if (r.wrong) return msg("That password is not right. If you have forgotten it, ask your teacher.");
+            if (!r){ noteFail(email); return msg("We could not find an account with that email and password. Check both, or choose <b>Sign up</b> if this is your first time. If you forgot your password, ask your teacher to reset it."); }
+            clearFails(email);
             DB.users[email] = u = r.u; session.email = email; DB.session = email; save(true); flushQueue();
             toast("Welcome back — your work has been loaded on this device.", 4000);
             speak(P().welcome(u.name.split(" ")[0]));
@@ -2679,7 +2723,12 @@ function renderLogin(app){
           }
           else return msg("No account on this device for that email. Choose <b>Sign up</b> if this is your first time here.");
         } else {
-          if (!(await checkPw(pw, u))) return msg("That password is not right. If you have forgotten it, ask your teacher to reset it on this device.");
+          if (!(await checkPw(pw, u))){
+            let ok = false;   // the password may have been reset by the admin: the synced copy knows the new one
+            if (u.role !== "teacher" && syncCfg()){ msg("Checking…", "ok"); try { const A = await deriveAcct(email, pw), dk = await openWrap(syncCfg(), A); if (dk){ Object.assign(u, await hashPw(pw)); u.dk = dk; u.wrapFor = A.lookup; save(true); ok = true; } } catch(err){} }
+            if (!ok){ noteFail(email); return msg("That password is not right. If you have forgotten it, ask your teacher to reset it."); }
+          }
+          clearFails(email);
           if (u.role === "teacher"){
             const t = approvedTeacher(email);
             if (!t){ if (courseState().declined.includes(email)) return msg("Your teacher access request was not approved. Contact the course admin."); return msg("Your teacher account is waiting for admin approval. Try again once you have been approved.", "warn"); }
@@ -2698,7 +2747,7 @@ function renderLogin(app){
       const name = $("#lName").value.trim();
       if (DB.users[email] || approvedTeacher(email)) return msg("This email already has an account. Choose <b>Sign in</b>.");
       if (name.split(/\s+/).length < 2) return msg("Enter your first and last name.");
-      const prob = pwProblem(pw); if (prob) return msg(prob);
+      const prob = pwProblem(pw, email); if (prob) return msg(prob);
       if (pw !== $("#lPw2").value) return msg("The two passwords do not match.");
       const rec = await hashPw(pw);
       if (role === "teacher"){
@@ -2714,11 +2763,12 @@ function renderLogin(app){
       if (!grade) return msg("Choose your grade."); if (!teacher) return msg("Choose your teacher.");
       const clsList = COURSE.groups[grade].classes || [], cls = clsList.length > 1 ? $("#lClass").value : (clsList[0] ? clsList[0].id : "");
       if (clsList.length > 1 && !cls) return msg("Choose your class.");
-      if (syncCfg()){ let ex = null; try { ex = await pullRemote(email); } catch(err){} if (ex) return msg("This email already has an account. Choose <b>Sign in</b> — your work will load on this device."); }
+      if (syncCfg()){ let ex = null; try { const id = await emailId(email); ex = (await pullRows(syncCfg(), "E", id + "|", 1))["E|" + id]; } catch(err){} if (ex) return msg("This email already has an account. Choose <b>Sign in</b>. If you forgot your password, ask your teacher to reset it — your work is kept."); }
       const rc = await rosterCheck(email, name);
       if (!rc.ok) return msg("This email and name are not on the SISD student list. Type your full name exactly as the school has it, with your SISD email. If it still doesn't work, ask your teacher.");
       DB.users[email] = { role:"student", name, group: grade, cls, grade: COURSE.groups[grade].units[0], teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
-      const nu = DB.users[email]; nu.syncSalt = b64e(crypto.getRandomValues(new Uint8Array(16))); nu.syncKey = await deriveSyncKey(pw, nu.syncSalt);
+      const nu = DB.users[email];
+      if (syncCfg()){ nu.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); try { await publishWrap(nu, email, await deriveAcct(email, pw)); } catch(err){ console.warn(err); } }
       session.email = email; DB.session = email; save();
       logEvent("-", "Signed up", COURSE.groups[grade].label); syncNow(true);
       speak(P().welcome(name.split(" ")[0]));
@@ -2863,29 +2913,35 @@ async function sendWork(c, kind){
 let snapTimer = null;
 function scheduleSnapshot(c){ clearTimeout(snapTimer); pendingSnap = c; snapTimer = setTimeout(() => { pendingSnap = null; sendWork(c, "snapshot"); }, 90000); }
 
-/* ================= SYNC ACROSS DEVICES =================
-   Each student's work is encrypted with a key made from their own password, then sent to a
-   "Design Studio Sync" Google Form. At sign-in on any device the course reads the student's
-   own rows back from the linked sheet (shared as "anyone with the link can view"), decrypts
-   them with the password and carries on from where the student stopped. Only scrambled IDs
-   and encrypted text are ever in that sheet. */
-const SYNC_CHUNK = 30000;
+/* ================= SECURITY CORE + SYNC ACROSS DEVICES =================
+   Each student's work is locked (AES-256) with a random data key. That key is itself locked with a key
+   made from the student's email + password (400,000 rounds), and a second copy is locked so that only the
+   admin can open it (for password recovery). Everything is sent to a "Design Studio Sync" Google Form and
+   read back from its sheet. The sheet holds only random IDs and locked text. */
+const SYNC_CHUNK = 30000, SYNC_EVERY = 5000, KDF_ROUNDS = 400000;
+const TE = new TextEncoder();
 function syncCfg(){
   const s = settings(), f = parseFormLink(s.syncForm), link = String(s.syncSheet || "");
   const m = link.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/); if (!f || !m || m[1] === "e") return null;
   return { form: s.syncForm, id: m[1], gid: (link.match(/[#&?]gid=(\d+)/) || [])[1] || "" };
 }
-const syncId = email => sha("dss|" + String(email).toLowerCase());
-function b64big(u8){ let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
-async function deriveSyncKey(pw, saltB64){
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name:"PBKDF2", salt: b64d(saltB64), iterations:150000, hash:"SHA-256" }, key, 256);
-  return b64e(new Uint8Array(bits));
+const hexOf = u8 => [...u8].map(v => v.toString(16).padStart(2, "0")).join("");
+async function sha256(bytes){ return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)); }
+async function hmacOf(keyBytes, msg){ const k = await crypto.subtle.importKey("raw", keyBytes, { name:"HMAC", hash:"SHA-256" }, false, ["sign"]); return new Uint8Array(await crypto.subtle.sign("HMAC", k, TE.encode(msg))); }
+const emailId = async email => hexOf(await sha256(TE.encode("dss-e|" + String(email).toLowerCase()))).slice(0, 32);
+const dataId = async dk => hexOf(await sha256(TE.encode("dss-d|" + dk))).slice(0, 32);
+async function deriveAcct(email, pw){
+  if (!(window.crypto && crypto.subtle)) throw new Error("Open the course from its https:// link to sign in.");
+  const salt = await sha256(TE.encode("dss-v2|" + String(email).toLowerCase()));
+  const base = await crypto.subtle.importKey("raw", TE.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const master = new Uint8Array(await crypto.subtle.deriveBits({ name:"PBKDF2", salt, iterations: KDF_ROUNDS, hash:"SHA-256" }, base, 256));
+  return { lookup: hexOf(await hmacOf(master, "lookup")).slice(0, 32), kek: b64e(await hmacOf(master, "kek")) };
 }
+function b64big(u8){ let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 const aesKey = raw => crypto.subtle.importKey("raw", b64d(raw), "AES-GCM", false, ["encrypt","decrypt"]);
 async function pipeBytes(bytes, stream){ const out = new Response(new Blob([bytes]).stream().pipeThrough(stream)); return new Uint8Array(await out.arrayBuffer()); }
 async function sealText(raw, text){
-  let bytes = new TextEncoder().encode(text), z = "p";
+  let bytes = TE.encode(text), z = "p";
   if (window.CompressionStream){ try { bytes = await pipeBytes(bytes, new CompressionStream("gzip")); z = "z"; } catch(e){} }
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = new Uint8Array(await crypto.subtle.encrypt({ name:"AES-GCM", iv }, await aesKey(raw), bytes));
@@ -2896,6 +2952,74 @@ async function openText(raw, sealed){
   let bytes = new Uint8Array(await crypto.subtle.decrypt({ name:"AES-GCM", iv: b64d(iv) }, await aesKey(raw), b64d(ct)));
   if (z === "z") bytes = await pipeBytes(bytes, new DecompressionStream("gzip"));
   return new TextDecoder().decode(bytes);
+}
+/* admin keys: signing (switches, approvals) and recovery (password resets) */
+let ADMIN_KEYS = null;
+const adminPub = () => CONFIG.adminKeys || null;
+async function unlockAdmin(pw){
+  const w = (settings().adminKeys || CONFIG.adminKeys || {}).wrap; if (!w) return false;
+  const base = await crypto.subtle.importKey("raw", TE.encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({ name:"PBKDF2", salt: b64d(w.salt), iterations: w.iter, hash:"SHA-256" }, base, { name:"AES-GCM", length: 256 }, false, ["decrypt"]);
+  const priv = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name:"AES-GCM", iv: b64d(w.iv) }, key, b64d(w.ct))));
+  ADMIN_KEYS = { sig: await crypto.subtle.importKey("jwk", priv.sig, { name:"ECDSA", namedCurve:"P-256" }, false, ["sign"]), enc: await crypto.subtle.importKey("jwk", priv.enc, { name:"RSA-OAEP", hash:"SHA-256" }, false, ["decrypt"]), raw: priv };
+  return true;
+}
+async function rewrapAdmin(newPw){
+  if (!ADMIN_KEYS) throw new Error("Sign in as admin again before changing the admin password.");
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), ITER = 600000;
+  const base = await crypto.subtle.importKey("raw", TE.encode(newPw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({ name:"PBKDF2", salt, iterations: ITER, hash:"SHA-256" }, base, { name:"AES-GCM", length: 256 }, false, ["encrypt"]);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name:"AES-GCM", iv }, key, TE.encode(JSON.stringify(ADMIN_KEYS.raw))));
+  const k = CONFIG.adminKeys; return { sigPub: k.sigPub, encPub: k.encPub, wrap: { iter: ITER, salt: b64e(salt), iv: b64e(iv), ct: b64big(ct) } };
+}
+function canon(v){ return Array.isArray(v) ? "[" + v.map(canon).join(",") + "]" : v && typeof v === "object" ? "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}" : JSON.stringify(v); }
+async function signState(next){
+  const body = { unlocks: next.unlocks, teachers: next.teachers || [], declined: next.declined || [], t: new Date().toISOString() };
+  const sig = new Uint8Array(await crypto.subtle.sign({ name:"ECDSA", hash:"SHA-256" }, ADMIN_KEYS.sig, TE.encode(canon(body))));
+  return Object.assign(body, { sig: b64e(sig) });
+}
+async function verifyState(d){
+  try { const k = adminPub(); if (!k || !d || !d.sig || !d.t) return false;
+    const pub = await crypto.subtle.importKey("jwk", k.sigPub, { name:"ECDSA", namedCurve:"P-256" }, false, ["verify"]);
+    const body = { unlocks: d.unlocks, teachers: d.teachers || [], declined: d.declined || [], t: d.t };
+    return await crypto.subtle.verify({ name:"ECDSA", hash:"SHA-256" }, pub, b64d(d.sig), TE.encode(canon(body)));
+  } catch(e){ return false; }
+}
+async function escrowSeal(dk){
+  const k = adminPub(); if (!k) return "";
+  const pub = await crypto.subtle.importKey("jwk", k.encPub, { name:"RSA-OAEP", hash:"SHA-256" }, false, ["encrypt"]);
+  return b64big(new Uint8Array(await crypto.subtle.encrypt({ name:"RSA-OAEP" }, pub, b64d(dk))));
+}
+
+/* rows are "DSS2|kind|id|version|part|parts|text" */
+function queueRow(kind, id, ver, text){
+  const key = kind + "|" + id; DB.syncQ = (DB.syncQ || []).filter(x => x.key !== key);
+  const n = Math.max(1, Math.ceil(text.length / SYNC_CHUNK));
+  for (let k = 0; k < n; k++) DB.syncQ.push({ key, cell: ["DSS2", kind, id, ver, k, n, text.slice(k * SYNC_CHUNK, (k + 1) * SYNC_CHUNK)].join("|") });
+}
+function allVersions(cells){
+  const g = {};
+  cells.forEach(c => { const p = String(c).split("|"); if (p[0] !== "DSS2" || p.length < 7) return;
+    const [, kind, id, ver, k, n] = p, text = p.slice(6).join("|"), gid = kind + "|" + id + "|" + ver;
+    const e = g[gid] = g[gid] || { key: kind + "|" + id, ver: +ver, n: +n, parts: {} }; e.parts[+k] = text; });
+  const out = {};
+  Object.values(g).forEach(e => { if (Object.keys(e.parts).length !== e.n) return; (out[e.key] = out[e.key] || []).push({ ver: e.ver, text: Array.from({ length: e.n }, (_, i) => e.parts[i]).join("") }); });
+  Object.values(out).forEach(a => a.sort((x, y) => y.ver - x.ver)); return out;
+}
+async function pullRows(cfg, kind, idStart, limit){
+  const cells = await gviz(cfg, `select B where B starts with 'DSS2|${kind}|${idStart}' order by A desc${limit ? " limit " + limit : ""}`);
+  return allVersions(cells);
+}
+async function openWrap(cfg, A){
+  const list = (await pullRows(cfg, "W", A.lookup + "|", 60))["W|" + A.lookup] || [];
+  for (const v of list){ try { const o = JSON.parse(await openText(A.kek, v.text)); if (o && o.dk) return o.dk; } catch(e){} }
+  return null;
+}
+async function publishWrap(u, email, A){
+  const ver = String(Date.now());
+  queueRow("W", A.lookup, ver, await sealText(A.kek, JSON.stringify({ dk: u.dk })));
+  const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
+  u.wrapFor = A.lookup;
 }
 const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","progress","progressBy","choice","choiceBy","last"];
 function syncPayload(u){
@@ -2910,34 +3034,27 @@ function syncPayload(u){
   const body = JSON.stringify(data);
   return { data, imgs, sig: hash(body).toString(36) + "." + body.length };
 }
-function syncable(){ const u = session.email && DB.users[session.email]; return u && u.role === "student" && !session.preview && session.email !== PREVIEW && u.syncKey && syncCfg() ? u : null; }
-let syncTimer = null, syncBusy = false;
-function afterSave(){
-  if (syncBusy) return; const u = syncable(); if (!u) return;
-  u.touchedAt = Date.now(); clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 15000);
-}
-function queueSync(key, ver, text){
-  DB.syncQ = (DB.syncQ || []).filter(x => x.key !== key);
-  const n = Math.max(1, Math.ceil(text.length / SYNC_CHUNK));
-  for (let k = 0; k < n; k++) DB.syncQ.push({ key, cell: ["DSS1", key, ver, k, n, text.slice(k * SYNC_CHUNK, (k + 1) * SYNC_CHUNK)].join("|") });
-}
+function syncable(){ const u = session.email && DB.users[session.email]; return u && u.role === "student" && !session.preview && session.email !== PREVIEW && u.dk && syncCfg() ? u : null; }
+let syncTimer = null, syncBusy = false, syncDirty = false;
+function afterSave(){ if (syncBusy || !syncable()) return; syncable().touchedAt = Date.now(); syncDirty = true; }
+setInterval(() => { if (syncDirty && !syncBusy) syncNow(); }, SYNC_EVERY);
 async function syncNow(force){
-  clearTimeout(syncTimer);
   const u = syncable(), email = session.email; if (!u) return;
-  syncBusy = true;
+  syncBusy = true; syncDirty = false;
   try {
     const { data, imgs, sig } = syncPayload(u);
     if (u.syncSig !== sig){ u.syncSig = sig; u.savedAt = Math.max(u.touchedAt || Date.now(), (u.savedAt || 0) + 1); }
-    if (!force && u.syncedAt === u.savedAt){ flushSync(); return; }
-    const id = await syncId(email), ver = String(u.savedAt || Date.now());
-    u.syncSent = u.syncSent || {};
-    for (const [h, url] of Object.entries(imgs)) if (!u.syncSent[h]){
-      const small = (url.length > 160000 ? await shrinkData(url, 1100) : null) || url;
-      queueSync(`${id}#i#${h}`, ver, await sealText(u.syncKey, small)); u.syncSent[h] = 1;
+    if (force || u.syncedAt !== u.savedAt){
+      const did = await dataId(u.dk), ver = String(u.savedAt || Date.now());
+      u.syncSent = u.syncSent || {};
+      for (const [h, url] of Object.entries(imgs)) if (!u.syncSent[h]){
+        const small = (url.length > 160000 ? await shrinkData(url, 1100) : null) || url;
+        queueRow("I", did + "." + h, ver, await sealText(u.dk, small)); u.syncSent[h] = 1;
+      }
+      queueRow("D", did, ver, await sealText(u.dk, JSON.stringify({ v: 2, savedAt: u.savedAt, data })));
+      u.syncedAt = u.savedAt; save(true);
     }
-    queueSync(`${id}#s`, ver, u.syncSalt + "~" + await sealText(u.syncKey, JSON.stringify({ v: 1, savedAt: u.savedAt, data })));
-    u.syncedAt = u.savedAt; save(true);
-  } catch(e){ console.warn("sync", e); }
+  } catch(e){ console.warn("sync", e); syncDirty = true; }
   finally { syncBusy = false; }
   flushSync();
 }
@@ -2950,7 +3067,7 @@ async function flushSync(){
       const item = DB.syncQ[0], ok = await postForm(cfg.form, [item.cell], true);
       if (!ok) break;
       if (DB.syncQ[0] === item) DB.syncQ.shift(); save(true);
-      if (DB.syncQ.length) await new Promise(r => setTimeout(r, 300));
+      if (DB.syncQ.length) await new Promise(r => setTimeout(r, 250));
     }
   } finally { syncFlushing = false; }
 }
@@ -2976,7 +3093,7 @@ async function syncColumn(cfg, strict){
   for (const sheet of tries){
     let r; try { r = await gvizRaw(cfg, "select * limit 30", sheet); } catch(e){ lastErr = e; continue; }
     const cols = (r.table && r.table.cols) || [], rows = (r.table && r.table.rows) || [];
-    const i = cols.findIndex((c, j) => rows.some(row => String(((row.c || [])[j] || {}).v || "").startsWith("DSS1|")));
+    const i = cols.findIndex((c, j) => rows.some(row => /^DSS[12]\|/.test(String(((row.c || [])[j] || {}).v || ""))));
     if (i >= 0) found.push({ col: cols[i].id, time: cols[0].id, sheet });
     const li = cols.findIndex(c => /^\s*data\s*$/i.test(c.label || ""));
     if (li >= 0) byLabel.push({ col: cols[li].id, time: cols[0].id, sheet });
@@ -2997,34 +3114,18 @@ async function gviz(cfg, tq){
   if (!ok && err) throw err;
   return out;
 }
-/* newest complete copy of each key from a list of "DSS1|key|ver|k|n|text" cells */
-function latestByKey(cells){
-  const g = {};
-  cells.forEach(c => { const p = String(c).split("|"); if (p[0] !== "DSS1" || p.length < 6) return;
-    const [, key, ver, k, n] = p, text = p.slice(5).join("|"), id = key + "|" + ver;
-    const e = g[id] = g[id] || { key, ver: +ver, n: +n, parts: {} }; e.parts[+k] = text; });
-  const best = {};
-  Object.values(g).forEach(e => { if (Object.keys(e.parts).length !== e.n) return; if (!best[e.key] || best[e.key].ver < e.ver) best[e.key] = { ver: e.ver, text: Array.from({ length: e.n }, (_, i) => e.parts[i]).join("") }; });
-  return best;
-}
-async function pullRemote(email){
-  const cfg = syncCfg(); if (!cfg) return null;
-  const id = await syncId(email);
-  const cells = await gviz(cfg, `select B where B starts with 'DSS1|${id}#s|' order by A desc limit 120`);
-  const b = latestByKey(cells)[`${id}#s`]; if (!b) return null;
-  const cut = b.text.indexOf("~");
-  return { id, cfg, ver: b.ver, salt: b.text.slice(0, cut), sealed: b.text.slice(cut + 1) };
-}
-async function openRemote(rem, rawKey){
-  const obj = JSON.parse(await openText(rawKey, rem.sealed));
-  const refs = new Set(); JSON.stringify(obj.data).replace(/"IMG:([a-z0-9.]+)"/g, (_, h) => refs.add(h));
-  const imgs = {};
-  if (refs.size){
-    const cells = await gviz(rem.cfg, `select B where B starts with 'DSS1|${rem.id}#i#'`), best = latestByKey(cells);
-    for (const h of refs){ const b = best[`${rem.id}#i#${h}`]; if (b) try { imgs[h] = await openText(rawKey, b.text); } catch(e){} }
+async function openData(cfg, dk){
+  const did = await dataId(dk), list = (await pullRows(cfg, "D", did + "|", 80))["D|" + did] || [];
+  for (const v of list){
+    let obj; try { obj = JSON.parse(await openText(dk, v.text)); } catch(e){ continue; }
+    const refs = new Set(); JSON.stringify(obj.data).replace(/"IMG:([a-z0-9.]+)"/g, (_, h) => refs.add(h));
+    const imgs = {};
+    if (refs.size){ const all = await pullRows(cfg, "I", did + ".", 0);
+      for (const h of refs){ const a = all[`I|${did}.${h}`] || []; for (const x of a){ try { imgs[h] = await openText(dk, x.text); break; } catch(e){} } } }
+    const walk = x => typeof x === "string" && x.startsWith("IMG:") ? (imgs[x.slice(4)] || "") : Array.isArray(x) ? x.map(walk) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).map(([k, y]) => [k, walk(y)])) : x;
+    return { savedAt: obj.savedAt, data: walk(obj.data), sent: Object.fromEntries([...refs].filter(h => imgs[h]).map(h => [h, 1])) };
   }
-  const walk = v => typeof v === "string" && v.startsWith("IMG:") ? (imgs[v.slice(4)] || "") : Array.isArray(v) ? v.map(walk) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)])) : v;
-  return { savedAt: obj.savedAt, data: walk(obj.data), sent: Object.fromEntries([...refs].filter(h => imgs[h]).map(h => [h, 1])) };
+  return null;
 }
 function applyRemote(u, got){
   SYNC_KEYS.forEach(k => { if (got.data[k] !== undefined) u[k] = got.data[k]; else delete u[k]; });
@@ -3033,32 +3134,44 @@ function applyRemote(u, got){
 }
 /* bring this device up to date; returns "restored" when newer work was loaded */
 async function syncIn(u, email, pw){
-  if (!syncCfg() || u.role === "teacher") return "";
-  if (pw){
-    if (!u.syncSalt) u.syncSalt = b64e(crypto.getRandomValues(new Uint8Array(16)));
-    const key = await deriveSyncKey(pw, u.syncSalt);
-    if (key !== u.syncKey){ u.syncKey = key; u.syncSent = {}; u.syncedAt = 0; }
-  }
-  if (!u.syncKey) return "";
+  const cfg = syncCfg(); if (!cfg || u.role === "teacher") return "";
   let out = "";
   try {
-    const rem = await pullRemote(email);
-    if (rem){
-      let key = u.syncKey; if (rem.salt !== u.syncSalt && pw) key = await deriveSyncKey(pw, rem.salt);
-      let got = null; try { got = await openRemote(rem, key); } catch(e){ got = null; }
-      const localTime = u.syncSig !== syncPayload(u).sig ? Math.max(u.touchedAt || Date.now(), (u.savedAt || 0) + 1) : (u.savedAt || 0);
-      if (got && got.savedAt > localTime){ if (key !== u.syncKey){ u.syncSalt = rem.salt; u.syncKey = key; } applyRemote(u, got); out = "restored"; }
+    if (pw){
+      const A = await deriveAcct(email, pw);
+      if (!u.dk || u.wrapFor !== A.lookup){
+        const dk = await openWrap(cfg, A);
+        if (dk) u.dk = dk; else if (!u.dk){ u.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); u.syncSent = {}; u.syncedAt = 0; }
+        if (!dk) await publishWrap(u, email, A); else u.wrapFor = A.lookup;
+        if (!dk) { syncDirty = true; }
+      }
     }
+    if (!u.dk) return "";
+    const got = await openData(cfg, u.dk);
+    const localTime = u.syncSig !== syncPayload(u).sig ? Math.max(u.touchedAt || Date.now(), (u.savedAt || 0) + 1) : (u.savedAt || 0);
+    if (got && got.savedAt > localTime){ applyRemote(u, got); out = "restored"; }
   } catch(e){ console.warn("sync in", e); out = "offline"; }
   return out;
 }
-/* new device: rebuild the account from the synced copy */
+/* new device (or changed password): rebuild the account from the synced copy */
 async function restoreAccount(email, pw){
-  const rem = await pullRemote(email); if (!rem) return null;
-  const key = await deriveSyncKey(pw, rem.salt);
-  let got; try { got = await openRemote(rem, key); } catch(e){ return { wrong: true }; }
-  const rec = await hashPw(pw), u = { role: "student", salt: rec.salt, hash: rec.hash, syncSalt: rem.salt, syncKey: key, progress: {} };
+  const cfg = syncCfg(); if (!cfg) return null;
+  const A = await deriveAcct(email, pw), dk = await openWrap(cfg, A); if (!dk) return null;
+  const got = await openData(cfg, dk); if (!got) return null;
+  const rec = await hashPw(pw), u = { role: "student", salt: rec.salt, hash: rec.hash, dk, wrapFor: A.lookup, progress: {} };
   applyRemote(u, got); return { u };
+}
+/* admin recovery: give a student a new password that works on every device */
+async function adminReset(email, newPw){
+  const cfg = syncCfg(); if (!cfg || !ADMIN_KEYS) throw new Error("Sign in as admin first.");
+  const rows = (await pullRows(cfg, "E", (await emailId(email)) + "|", 100))["E|" + await emailId(email)] || [];
+  for (const v of rows){
+    let dk; try { dk = b64e(new Uint8Array(await crypto.subtle.decrypt({ name:"RSA-OAEP" }, ADMIN_KEYS.enc, b64d(v.text)))); } catch(e){ continue; }
+    if (b64d(dk).length !== 32) continue;
+    if (!(await openData(cfg, dk))) continue;
+    const A = await deriveAcct(email, newPw), u = { dk }; await publishWrap(u, email, A); save(true); await flushSync(); return true;
+  }
+  return false;
 }
 function rememberSpot(u){
   if (!u || u.role !== "student" || session.preview || view.name !== "crit") return;
@@ -3246,7 +3359,7 @@ function buildScenes(ctx){
   return sc_;
 }
 function paneVideo(pane, ctx){
-  const scenes = buildScenes(ctx), link = settings().videoLinks?.[ctx.g + ctx.c];
+  const scenes = buildScenes(ctx), link = (l => /^https:\/\//i.test(l || "") ? l : "")(settings().videoLinks?.[ctx.g + ctx.c]);
   pane.innerHTML = `<div class="stack">
     <div class="player" id="player"><div class="stage" id="stage"></div>
       <div class="controls"><button id="vPrev" aria-label="Previous scene">◀</button><button id="vPlay">▶ Play</button><button id="vNext" aria-label="Next scene">▶▶</button>
@@ -3664,7 +3777,7 @@ function openStaff(){
   modal(`<div class="stack"><h2>Admin sign in</h2><p class="muted" style="margin:0;font-size:13px">Teachers: sign in on the main page with your school email instead.</p><form id="sf" class="stack"><label class="f">Admin password<input type="password" id="sPw" autocomplete="current-password"></label><div id="sMsg2"></div><div class="row"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" data-close>Cancel</button></div></form></div>`);
   $("#sPw").focus();
   $("#sf").onsubmit = async e => { e.preventDefault();
-    try { if (await checkPw($("#sPw").value, settings().adminHash)){ staffIn = true; closeModal(); openStaff(); } else $("#sMsg2").innerHTML = `<div class="notice bad">Incorrect password.</div>`; }
+    try { if (await checkPw($("#sPw").value, settings().adminHash)){ try { await unlockAdmin($("#sPw").value); } catch(e){ ADMIN_KEYS = null; } staffIn = true; closeModal(); openStaff(); } else $("#sMsg2").innerHTML = `<div class="notice bad">Incorrect password.</div>`; }
     catch(err){ $("#sMsg2").innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; } };
 }
 function pendingRequests(){
@@ -3723,7 +3836,8 @@ function staffPanel(tab, who="admin"){
     const studs = Object.entries(DB.users).filter(([e,u]) => u.role !== "teacher" && e !== PREVIEW);
     body = `<p class="muted" style="margin:0">Grade 6 students choose a building and Grade 7 students choose a cause. Grade 8 and Grade 10 students are given one of four challenges, chosen from their email, so neighbours rarely have the same task.</p>
       <h3 style="margin-top:8px">Students on this device</h3>
-      <p class="muted" style="margin:0;font-size:13px">Passwords are stored scrambled, so nobody can read them. If a student forgets theirs, reset it here and give them the temporary password.</p>
+      <p class="muted" style="margin:0;font-size:13px">Passwords are stored scrambled, so nobody can read them. If a student forgets theirs, reset it here (sign in as admin first) and give them the temporary password. It works on every device and their work is kept.</p>
+      <div class="row" style="align-items:flex-end"><label class="f" style="flex:1;min-width:220px">Reset a student's password on every device<input type="text" id="rsEmail" placeholder="firstname.lastname@sisd.ae"></label><button class="btn sec" id="rsAny">Reset password</button></div>
       <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Course</th><th>Challenge</th><th>A</th><th>B</th><th>C</th><th>D</th><th></th></tr>${studs.map(([e,u])=>{ const sc = COURSE.grades[u.grade] ? scenarioFor(e, u.grade) : null; return `<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(classLabel(u) || uLabel(u.grade))}</td><td>${sc?esc(sc.title):"<span class='muted'>not chosen yet</span>"}</td>${["A","B","C","D"].map(c=>`<td>${critProgress(u.progress?.[c])}%</td>`).join("")}<td><button class="btn sm sec" data-rs="${esc(e)}">Reset password</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="muted">No student accounts on this device.</td></tr>`}</table></div><div id="rsMsg"></div>`;
   } else {
     body = `<ol class="guide">
@@ -3759,8 +3873,15 @@ function staffPanel(tab, who="admin"){
     document.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { st.teachers = st.teachers.filter(t => t.email !== b.dataset.rm); st.declined.push(b.dataset.rm); after(); });
   }
   if (tab === "lookup"){
-    document.querySelectorAll("[data-rs]").forEach(b => b.onclick = async () => { const temp = "Design" + Math.floor(1000 + Math.random()*9000); const u = DB.users[b.dataset.rs]; Object.assign(u, await hashPw(temp)); save();
-      $("#rsMsg").innerHTML = `<div class="notice ok">New password for <b>${esc(u.name)}</b>: <code style="font-size:15px">${temp}</code> — give it to the student. Their work is kept.</div>`; });
+    const tempPw = () => { const w = ["Maple","River","Cloud","Tiger","Coral","Piano","Amber","Comet","Lemon","Cedar","Orbit","Pixel"]; const r = n => w[crypto.getRandomValues(new Uint32Array(1))[0] % w.length]; return r() + r() + (10 + crypto.getRandomValues(new Uint32Array(1))[0] % 90) + r(); };
+    const doReset = async (email, name) => { const temp = tempPw(), m = $("#rsMsg"); m.innerHTML = `<div class="notice">Resetting…</div>`;
+      try { const u = DB.users[email]; if (u) Object.assign(u, await hashPw(temp));
+        let cloud = false; if (syncCfg()){ if (!ADMIN_KEYS) throw new Error("Sign in as admin to reset passwords on every device."); cloud = await adminReset(email, temp); if (u && !cloud){ const A = await deriveAcct(email, temp); u.dk = u.dk || b64e(crypto.getRandomValues(new Uint8Array(32))); await publishWrap(u, email, A); cloud = true; } }
+        save(true);
+        m.innerHTML = cloud || u ? `<div class="notice ok">New password for <b>${esc(name || email)}</b>: <code style="font-size:15px">${esc(temp)}</code> — give it to the student. ${cloud ? "It works on every device and their work is kept." : "It works on this device only (no synced copy was found)."}</div>` : `<div class="notice bad">No account or saved work was found for ${esc(email)}.</div>`;
+      } catch(err){ m.innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; } };
+    document.querySelectorAll("[data-rs]").forEach(b => b.onclick = () => doReset(b.dataset.rs, (DB.users[b.dataset.rs] || {}).name));
+    const rb = $("#rsAny"); if (rb) rb.onclick = () => { const e = $("#rsEmail").value.trim().toLowerCase(); if (!SCHOOL.test(e)) return $("#rsMsg").innerHTML = `<div class="notice bad">Type the student's full SISD email.</div>`; doReset(e, e); };
   }
   if (tab === "roster"){
     $("#rsFile").onchange = async ev => {
@@ -3815,7 +3936,7 @@ function staffPanel(tab, who="admin"){
   if (tab === "setup"){
     const collect = async () => { const vl = {}; document.querySelectorAll("[data-vl]").forEach(i => { if (i.value.trim()) vl[i.dataset.vl] = i.value.trim(); });
       const v = Object.assign({}, DB.teacherSettings || {}, { logForm: $("#setLog").value.trim(), controlForm: $("#setCtl").value.trim(), controlCsv: $("#setCsv").value.trim(), syncForm: $("#setSyncF").value.trim(), syncSheet: $("#setSyncS").value.trim(), videoLinks: vl, adminHash: settings().adminHash });
-      const np = $("#setPw").value; if (np){ if (np.length < 8) throw new Error("The admin password must be at least 8 characters."); v.adminHash = await hashPw(np); }
+      const np = $("#setPw").value; if (np){ if (np.length < 12) throw new Error("The admin password must be at least 12 characters. A long phrase of several words is best."); v.adminKeys = await rewrapAdmin(np); v.adminHash = await hashPw(np); }
       return v; };
     const check = v => { const errs = []; if (v.logForm && !parseFormLink(v.logForm)) errs.push("The student log link is not a Google Forms pre-filled link (it should contain entry.)."); if (v.controlForm && !parseFormLink(v.controlForm)) errs.push("The switches form link is not a pre-filled link."); if (v.controlCsv && !/output=csv/.test(v.controlCsv)) errs.push("The published sheet link should end with output=csv."); if (v.syncForm && !parseFormLink(v.syncForm)) errs.push("The sync form link is not a pre-filled link (it should contain entry.)."); if (v.syncSheet && !/\/spreadsheets\/d\/(?!e\/)[a-zA-Z0-9_-]{20,}/.test(v.syncSheet)) errs.push("The sync sheet link should be the sheet's own address (docs.google.com/spreadsheets/d/…), copied from the Share button."); if (v.logForm && parseFormLink(v.logForm)?.entries.length < 8) errs.push(`The log form has ${parseFormLink(v.logForm).entries.length} questions; 8 are expected. Extra details will be combined into the last question.`); return errs; };
     const fail = err => $("#setMsg").innerHTML = `<div class="notice bad">${esc(err.message)}</div>`;
@@ -3856,7 +3977,7 @@ async function downloadCourse(st){
   const s = DB.teacherSettings || {};
   const cfg = { adminHash: s.adminHash || CONFIG.adminHash, unlocks: st.unlocks, teachers: st.teachers, declined: st.declined,
     logForm: s.logForm ?? CONFIG.logForm, controlForm: s.controlForm ?? CONFIG.controlForm, controlCsv: s.controlCsv ?? CONFIG.controlCsv, videoLinks: s.videoLinks || CONFIG.videoLinks || {},
-    roster: s.roster || CONFIG.roster || null, studioUrl: CONFIG.studioUrl || "", syncForm: s.syncForm ?? CONFIG.syncForm ?? "", syncSheet: s.syncSheet ?? CONFIG.syncSheet ?? "" };
+    roster: s.roster || CONFIG.roster || null, adminKeys: s.adminKeys || CONFIG.adminKeys || null, studioUrl: CONFIG.studioUrl || "", syncForm: s.syncForm ?? CONFIG.syncForm ?? "", syncSheet: s.syncSheet ?? CONFIG.syncSheet ?? "" };
   try {
     const r = await fetch(location.href.split("#")[0], { cache:"no-store" }); if (!r.ok) throw 0;
     const src = await r.text();
