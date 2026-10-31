@@ -3012,14 +3012,17 @@ async function pullRows(cfg, kind, idStart, limit){
 }
 async function openWrap(cfg, A){
   const list = (await pullRows(cfg, "W", A.lookup + "|", 60))["W|" + A.lookup] || [];
-  for (const v of list){ try { const o = JSON.parse(await openText(A.kek, v.text)); if (o && o.dk) return o.dk; } catch(e){} }
+  for (const v of list){ try { const o = JSON.parse(await openText(A.kek, v.text)); if (o && o.dk){
+    // an old password stops working once the admin has set a new one (a "revoked" row keyed by the secret data key)
+    const did = await dataId(o.dk), rv = (await pullRows(cfg, "R", did + "|", 5))["R|" + did] || [];
+    if (rv.length && rv[0].ver > v.ver) continue; return o.dk; } } catch(e){ if (/timeout|reached|read/i.test(String(e && e.message))) throw e; } }
   return null;
 }
 async function publishWrap(u, email, A){
   const ver = String(Date.now());
   queueRow("W", A.lookup, ver, await sealText(A.kek, JSON.stringify({ dk: u.dk })));
   const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
-  u.wrapFor = A.lookup;
+  u.wrapFor = A.lookup; return ver;
 }
 const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","progress","progressBy","choice","choiceBy","last"];
 function syncPayload(u){
@@ -3169,7 +3172,7 @@ async function adminReset(email, newPw){
     let dk; try { dk = b64e(new Uint8Array(await crypto.subtle.decrypt({ name:"RSA-OAEP" }, ADMIN_KEYS.enc, b64d(v.text)))); } catch(e){ continue; }
     if (b64d(dk).length !== 32) continue;
     if (!(await openData(cfg, dk))) continue;
-    const A = await deriveAcct(email, newPw), u = { dk }; await publishWrap(u, email, A); save(true); await flushSync(); return true;
+    const A = await deriveAcct(email, newPw), u = { dk }, ver = await publishWrap(u, email, A); queueRow("R", await dataId(dk), ver, "x"); save(true); await flushSync(); return true;
   }
   return false;
 }
