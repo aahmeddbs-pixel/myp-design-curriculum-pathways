@@ -2292,7 +2292,7 @@ const stripTags = s => String(s).replace(/<[^>]+>/g, "");
 function load(){ try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch(e){ return {}; } }
 let DB = load();
 DB.users = DB.users || {}; DB.queue = DB.queue || []; if (DB.voice === undefined) DB.voice = true;
-function save(){ try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch(e){ toast("Storage is full or blocked on this device — download your PDF to keep a copy."); } }
+function save(quiet){ try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch(e){ toast("Storage is full or blocked on this device — download your PDF to keep a copy."); } if (!quiet) try { afterSave(); } catch(e){} }
 
 function toast(msg, ms=3200){ const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(()=>t.remove(), ms); }
 
@@ -2484,7 +2484,7 @@ function parseFormLink(link){
   const entries = []; const re = /entry\.(\d+)=/g; let x; while ((x = re.exec(link))) entries.push("entry."+x[1]);
   return entries.length ? { action, entries } : null;
 }
-async function postForm(link, values){
+async function postForm(link, values, keep){
   const f = parseFormLink(link); if (!f) return false;
   const p = new URLSearchParams();
   f.entries.forEach((e,i) => {
@@ -2492,7 +2492,7 @@ async function postForm(link, values){
     if (i === f.entries.length-1 && values.length > f.entries.length) v = values.slice(i).join(" | ");
     p.append(e, v);
   });
-  try { await fetch(f.action, { method:"POST", mode:"no-cors", body:p }); return true; } catch(e){ return false; }
+  try { await fetch(f.action, { method:"POST", mode:"no-cors", body:p, keepalive: !!keep && p.toString().length < 60000 }); return true; } catch(e){ return false; }
 }
 function logEvent(crit, event, details){
   const u = user(); if (!u || session.preview) return;
@@ -2590,7 +2590,7 @@ function renderMast(){
     $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
   }
   bindLang();
-  const so = $("#signOut"); if (so) so.onclick = () => { if (pendingSnap){ clearTimeout(snapTimer); const pc = pendingSnap; pendingSnap = null; sendWork(pc, "snapshot"); } session = { email:null, preview:false, back:null }; staffIn = false; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} render(); };
+  const so = $("#signOut"); if (so) so.onclick = () => { if (pendingSnap){ clearTimeout(snapTimer); const pc = pendingSnap; pendingSnap = null; sendWork(pc, "snapshot"); } if (syncable()) syncNow(); session = { email:null, preview:false, back:null }; staffIn = false; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} render(); };
 }
 
 /* ================= ROUTER ================= */
@@ -2602,7 +2602,7 @@ function render(){
   const app = $("#app"), u = user();
   if (!u) return renderLogin(app);
   if (u.role === "teacher" && !session.preview) return renderTeacherHome(app);
-  if (view.name === "crit") return renderCrit(app);
+  if (view.name === "crit"){ renderCrit(app); return rememberSpot(user()); }
   if (view.name === "explore") return renderExplore(app);
   return renderHome(app);
 }
@@ -2665,6 +2665,16 @@ function renderLogin(app){
           const t = approvedTeacher(email);
           if (t && await checkPw(pw, t)){ DB.users[email] = { role:"teacher", name:t.name, salt:t.salt, hash:t.hash, created:new Date().toISOString() }; u = DB.users[email]; }
           else if ((DB.pending||[]).some(p => p.email === email)) return msg("Your teacher account is waiting for admin approval.", "warn");
+          else if (syncCfg()){
+            msg("Finding your saved work…", "ok");
+            let r = null; try { r = await restoreAccount(email, pw); } catch(err){ return msg("Your saved work could not be reached. Check the internet connection and try again."); }
+            if (!r) return msg("No account found for that email. Choose <b>Sign up</b> if this is your first time here.");
+            if (r.wrong) return msg("That password is not right. If you have forgotten it, ask your teacher.");
+            DB.users[email] = u = r.u; session.email = email; DB.session = email; save(true); flushQueue();
+            toast("Welcome back — your work has been loaded on this device.", 4000);
+            speak(P().welcome(u.name.split(" ")[0]));
+            return resumeSpot(u);
+          }
           else return msg("No account on this device for that email. Choose <b>Sign up</b> if this is your first time here.");
         } else {
           if (!(await checkPw(pw, u))) return msg("That password is not right. If you have forgotten it, ask your teacher to reset it on this device.");
@@ -2673,8 +2683,14 @@ function renderLogin(app){
             if (!t){ if (courseState().declined.includes(email)) return msg("Your teacher access request was not approved. Contact the course admin."); return msg("Your teacher account is waiting for admin approval. Try again once you have been approved.", "warn"); }
           }
         }
-        session.email = email; DB.session = email; save(); flushQueue();
-        if (u.role !== "teacher") speak(P().welcome(u.name.split(" ")[0]));
+        let synced = "";
+        if (u.role !== "teacher" && syncCfg()){ msg("Loading your latest work…", "ok"); synced = await syncIn(u, email, pw); }
+        session.email = email; DB.session = email; save(true); flushQueue();
+        if (u.role !== "teacher"){
+          if (synced === "restored") toast("Your latest work from another device has been loaded.", 4000);
+          if (synced !== "restored") syncNow(); else flushSync();
+          speak(P().welcome(u.name.split(" ")[0])); return resumeSpot(u);
+        }
         return go({ name:"home" });
       }
       const name = $("#lName").value.trim();
@@ -2696,11 +2712,13 @@ function renderLogin(app){
       if (!grade) return msg("Choose your grade."); if (!teacher) return msg("Choose your teacher.");
       const clsList = COURSE.groups[grade].classes || [], cls = clsList.length > 1 ? $("#lClass").value : (clsList[0] ? clsList[0].id : "");
       if (clsList.length > 1 && !cls) return msg("Choose your class.");
+      if (syncCfg()){ let ex = null; try { ex = await pullRemote(email); } catch(err){} if (ex) return msg("This email already has an account. Choose <b>Sign in</b> — your work will load on this device."); }
       const rc = await rosterCheck(email, name);
       if (!rc.ok) return msg("This email and name are not on the SISD student list. Type your full name exactly as the school has it, with your SISD email. If it still doesn't work, ask your teacher.");
       DB.users[email] = { role:"student", name, group: grade, cls, grade: COURSE.groups[grade].units[0], teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
+      const nu = DB.users[email]; nu.syncSalt = b64e(crypto.getRandomValues(new Uint8Array(16))); nu.syncKey = await deriveSyncKey(pw, nu.syncSalt);
       session.email = email; DB.session = email; save();
-      logEvent("-", "Signed up", COURSE.groups[grade].label);
+      logEvent("-", "Signed up", COURSE.groups[grade].label); syncNow(true);
       speak(P().welcome(name.split(" ")[0]));
       go({ name:"home" });
     } catch(err){ msg(esc(err.message)); }
@@ -2842,6 +2860,191 @@ async function sendWork(c, kind){
 }
 let snapTimer = null;
 function scheduleSnapshot(c){ clearTimeout(snapTimer); pendingSnap = c; snapTimer = setTimeout(() => { pendingSnap = null; sendWork(c, "snapshot"); }, 90000); }
+
+/* ================= SYNC ACROSS DEVICES =================
+   Each student's work is encrypted with a key made from their own password, then sent to a
+   "Design Studio Sync" Google Form. At sign-in on any device the course reads the student's
+   own rows back from the linked sheet (shared as "anyone with the link can view"), decrypts
+   them with the password and carries on from where the student stopped. Only scrambled IDs
+   and encrypted text are ever in that sheet. */
+const SYNC_CHUNK = 30000;
+function syncCfg(){
+  const s = settings(), f = parseFormLink(s.syncForm), link = String(s.syncSheet || "");
+  const m = link.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/); if (!f || !m || m[1] === "e") return null;
+  return { form: s.syncForm, id: m[1], gid: (link.match(/[#&?]gid=(\d+)/) || [])[1] || "0" };
+}
+const syncId = email => sha("dss|" + String(email).toLowerCase());
+function b64big(u8){ let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+async function deriveSyncKey(pw, saltB64){
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name:"PBKDF2", salt: b64d(saltB64), iterations:150000, hash:"SHA-256" }, key, 256);
+  return b64e(new Uint8Array(bits));
+}
+const aesKey = raw => crypto.subtle.importKey("raw", b64d(raw), "AES-GCM", false, ["encrypt","decrypt"]);
+async function pipeBytes(bytes, stream){ const out = new Response(new Blob([bytes]).stream().pipeThrough(stream)); return new Uint8Array(await out.arrayBuffer()); }
+async function sealText(raw, text){
+  let bytes = new TextEncoder().encode(text), z = "p";
+  if (window.CompressionStream){ try { bytes = await pipeBytes(bytes, new CompressionStream("gzip")); z = "z"; } catch(e){} }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name:"AES-GCM", iv }, await aesKey(raw), bytes));
+  return z + ":" + b64e(iv) + ":" + b64big(ct);
+}
+async function openText(raw, sealed){
+  const [z, iv, ct] = String(sealed).split(":");
+  let bytes = new Uint8Array(await crypto.subtle.decrypt({ name:"AES-GCM", iv: b64d(iv) }, await aesKey(raw), b64d(ct)));
+  if (z === "z") bytes = await pipeBytes(bytes, new DecompressionStream("gzip"));
+  return new TextDecoder().decode(bytes);
+}
+const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","progress","progressBy","choice","choiceBy","last"];
+function syncPayload(u){
+  const imgs = {};
+  const walk = v => {
+    if (typeof v === "string" && v.startsWith("data:image")){ const h = hash(v).toString(36) + v.length.toString(36); imgs[h] = v; return "IMG:" + h; }
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === "object"){ const o = {}; for (const k in v) o[k] = walk(v[k]); return o; }
+    return v;
+  };
+  const data = {}; SYNC_KEYS.forEach(k => { if (u[k] !== undefined) data[k] = walk(u[k]); });
+  const body = JSON.stringify(data);
+  return { data, imgs, sig: hash(body).toString(36) + "." + body.length };
+}
+function syncable(){ const u = session.email && DB.users[session.email]; return u && u.role === "student" && !session.preview && session.email !== PREVIEW && u.syncKey && syncCfg() ? u : null; }
+let syncTimer = null, syncBusy = false;
+function afterSave(){
+  if (syncBusy) return; const u = syncable(); if (!u) return;
+  u.touchedAt = Date.now(); clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 15000);
+}
+function queueSync(key, ver, text){
+  DB.syncQ = (DB.syncQ || []).filter(x => x.key !== key);
+  const n = Math.max(1, Math.ceil(text.length / SYNC_CHUNK));
+  for (let k = 0; k < n; k++) DB.syncQ.push({ key, cell: ["DSS1", key, ver, k, n, text.slice(k * SYNC_CHUNK, (k + 1) * SYNC_CHUNK)].join("|") });
+}
+async function syncNow(force){
+  clearTimeout(syncTimer);
+  const u = syncable(), email = session.email; if (!u) return;
+  syncBusy = true;
+  try {
+    const { data, imgs, sig } = syncPayload(u);
+    if (u.syncSig !== sig){ u.syncSig = sig; u.savedAt = Math.max(u.touchedAt || Date.now(), (u.savedAt || 0) + 1); }
+    if (!force && u.syncedAt === u.savedAt){ flushSync(); return; }
+    const id = await syncId(email), ver = String(u.savedAt || Date.now());
+    u.syncSent = u.syncSent || {};
+    for (const [h, url] of Object.entries(imgs)) if (!u.syncSent[h]){
+      const small = (url.length > 160000 ? await shrinkData(url, 1100) : null) || url;
+      queueSync(`${id}#i#${h}`, ver, await sealText(u.syncKey, small)); u.syncSent[h] = 1;
+    }
+    queueSync(`${id}#s`, ver, u.syncSalt + "~" + await sealText(u.syncKey, JSON.stringify({ v: 1, savedAt: u.savedAt, data })));
+    u.syncedAt = u.savedAt; save(true);
+  } catch(e){ console.warn("sync", e); }
+  finally { syncBusy = false; }
+  flushSync();
+}
+let syncFlushing = false;
+async function flushSync(){
+  const cfg = syncCfg(); if (!cfg || syncFlushing || !(DB.syncQ || []).length) return;
+  syncFlushing = true;
+  try {
+    while (DB.syncQ.length){
+      const item = DB.syncQ[0], ok = await postForm(cfg.form, [item.cell], true);
+      if (!ok) break;
+      if (DB.syncQ[0] === item) DB.syncQ.shift(); save(true);
+      if (DB.syncQ.length) await new Promise(r => setTimeout(r, 300));
+    }
+  } finally { syncFlushing = false; }
+}
+function gviz(cfg, tq){
+  return new Promise((res, rej) => {
+    const cb = "__dss" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), sc = document.createElement("script");
+    const done = () => { clearTimeout(t); try { delete window[cb]; } catch(e){ window[cb] = undefined; } sc.remove(); };
+    const t = setTimeout(() => { done(); rej(new Error("timeout")); }, 20000);
+    window[cb] = r => { done();
+      if (!r || r.status === "error") return rej(new Error((r && r.errors && r.errors[0] && (r.errors[0].detailed_message || r.errors[0].message)) || "The sync sheet could not be read."));
+      res(((r.table && r.table.rows) || []).map(row => ((row.c || [])[0] || {}).v || "")); };
+    sc.onerror = () => { done(); rej(new Error("The sync sheet could not be reached.")); };
+    sc.src = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?gid=${cfg.gid}&headers=1&tqx=out:json;responseHandler:${cb}&tq=${encodeURIComponent(tq)}&_=${Date.now()}`;
+    document.head.appendChild(sc);
+  });
+}
+/* newest complete copy of each key from a list of "DSS1|key|ver|k|n|text" cells */
+function latestByKey(cells){
+  const g = {};
+  cells.forEach(c => { const p = String(c).split("|"); if (p[0] !== "DSS1" || p.length < 6) return;
+    const [, key, ver, k, n] = p, text = p.slice(5).join("|"), id = key + "|" + ver;
+    const e = g[id] = g[id] || { key, ver: +ver, n: +n, parts: {} }; e.parts[+k] = text; });
+  const best = {};
+  Object.values(g).forEach(e => { if (Object.keys(e.parts).length !== e.n) return; if (!best[e.key] || best[e.key].ver < e.ver) best[e.key] = { ver: e.ver, text: Array.from({ length: e.n }, (_, i) => e.parts[i]).join("") }; });
+  return best;
+}
+async function pullRemote(email){
+  const cfg = syncCfg(); if (!cfg) return null;
+  const id = await syncId(email);
+  const cells = await gviz(cfg, `select B where B starts with 'DSS1|${id}#s|' order by A desc limit 120`);
+  const b = latestByKey(cells)[`${id}#s`]; if (!b) return null;
+  const cut = b.text.indexOf("~");
+  return { id, cfg, ver: b.ver, salt: b.text.slice(0, cut), sealed: b.text.slice(cut + 1) };
+}
+async function openRemote(rem, rawKey){
+  const obj = JSON.parse(await openText(rawKey, rem.sealed));
+  const refs = new Set(); JSON.stringify(obj.data).replace(/"IMG:([a-z0-9.]+)"/g, (_, h) => refs.add(h));
+  const imgs = {};
+  if (refs.size){
+    const cells = await gviz(rem.cfg, `select B where B starts with 'DSS1|${rem.id}#i#'`), best = latestByKey(cells);
+    for (const h of refs){ const b = best[`${rem.id}#i#${h}`]; if (b) try { imgs[h] = await openText(rawKey, b.text); } catch(e){} }
+  }
+  const walk = v => typeof v === "string" && v.startsWith("IMG:") ? (imgs[v.slice(4)] || "") : Array.isArray(v) ? v.map(walk) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)])) : v;
+  return { savedAt: obj.savedAt, data: walk(obj.data), sent: Object.fromEntries([...refs].filter(h => imgs[h]).map(h => [h, 1])) };
+}
+function applyRemote(u, got){
+  SYNC_KEYS.forEach(k => { if (got.data[k] !== undefined) u[k] = got.data[k]; else delete u[k]; });
+  u.role = "student"; u.savedAt = u.syncedAt = u.touchedAt = got.savedAt;
+  u.syncSent = Object.assign({}, u.syncSent || {}, got.sent); u.syncSig = syncPayload(u).sig;
+}
+/* bring this device up to date; returns "restored" when newer work was loaded */
+async function syncIn(u, email, pw){
+  if (!syncCfg() || u.role === "teacher") return "";
+  if (pw){
+    if (!u.syncSalt) u.syncSalt = b64e(crypto.getRandomValues(new Uint8Array(16)));
+    const key = await deriveSyncKey(pw, u.syncSalt);
+    if (key !== u.syncKey){ u.syncKey = key; u.syncSent = {}; u.syncedAt = 0; }
+  }
+  if (!u.syncKey) return "";
+  let out = "";
+  try {
+    const rem = await pullRemote(email);
+    if (rem){
+      let key = u.syncKey; if (rem.salt !== u.syncSalt && pw) key = await deriveSyncKey(pw, rem.salt);
+      let got = null; try { got = await openRemote(rem, key); } catch(e){ got = null; }
+      const localTime = u.syncSig !== syncPayload(u).sig ? Math.max(u.touchedAt || Date.now(), (u.savedAt || 0) + 1) : (u.savedAt || 0);
+      if (got && got.savedAt > localTime){ if (key !== u.syncKey){ u.syncSalt = rem.salt; u.syncKey = key; } applyRemote(u, got); out = "restored"; }
+    }
+  } catch(e){ console.warn("sync in", e); out = "offline"; }
+  return out;
+}
+/* new device: rebuild the account from the synced copy */
+async function restoreAccount(email, pw){
+  const rem = await pullRemote(email); if (!rem) return null;
+  const key = await deriveSyncKey(pw, rem.salt);
+  let got; try { got = await openRemote(rem, key); } catch(e){ return { wrong: true }; }
+  const rec = await hashPw(pw), u = { role: "student", salt: rec.salt, hash: rec.hash, syncSalt: rem.salt, syncKey: key, progress: {} };
+  applyRemote(u, got); return { u };
+}
+function rememberSpot(u){
+  if (!u || u.role !== "student" || session.preview || view.name !== "crit") return;
+  const L = { grade: u.grade, crit: view.crit, step: view.step, strand: view.strand }, o = u.last || {};
+  if (o.grade !== L.grade || o.crit !== L.crit || o.step !== L.step || o.strand !== L.strand){ u.last = L; save(); }
+}
+function resumeSpot(u){
+  const L = u && u.last;
+  if (L && L.crit && COURSE.criteria[L.crit]){
+    const grp = COURSE.groups[u.group || groupOf(u.grade)];
+    if (L.grade && L.grade !== u.grade && grp && grp.units.includes(L.grade)) setUnit(u, L.grade);
+    if (L.grade === u.grade && isOpen(u.grade, L.crit)) return go({ name:"crit", crit: L.crit, step: L.step || 0, strand: L.strand || 0 });
+  }
+  go({ name:"home" });
+}
+window.addEventListener("pagehide", () => { if (syncable()) syncNow(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && syncable()) syncNow(); });
+window.addEventListener("online", () => flushSync());
 
 /* ================= SCHOOL STUDENT LIST (stored scrambled) ================= */
 function normName(n){ return String(n||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z\s'-]/g," ").replace(/\s+/g," ").trim(); }
@@ -3494,15 +3697,18 @@ function staffPanel(tab, who="admin"){
     body = `<ol class="guide">
       <li><b>Student copies (one-time).</b> In Google Forms create a form called <i>Design Studio Log</i> with 8 <b>Short answer</b> questions in this order: Email, Name, Grade, Teacher, Criterion, Event, Role, Details (make Details a <b>Paragraph</b>). Turn off "Collect email addresses" and sign-in. Open ⋮ → <b>Get pre-filled link</b>, type <code>x</code> in every box, click <b>Get link</b> → <b>Copy link</b>, and paste it below. In the Responses tab, click <b>Link to Sheets</b>, and turn on email notifications if you want them sent to your Gmail.</li>
       <li><b>Live switches and teacher approvals (one-time).</b> Create a second form called <i>Design Studio Switches</i> with one <b>Paragraph</b> question called Settings. Paste its pre-filled link below. Link it to a new sheet, then in that sheet choose File → Share → <b>Publish to web</b> → pick the response sheet → <b>Comma-separated values (.csv)</b> → Publish, and paste that link below. This sheet holds only switch settings and teacher sign-up requests, never student work.</li>
+      <li><b>Work follows students to any device (one-time).</b> Create a third form called <i>Design Studio Sync</i> with one <b>Paragraph</b> question called Data, sign-in turned off. Paste its pre-filled link below. In Responses click <b>Link to Sheets</b> → new sheet. In that sheet click <b>Share</b> → General access → <b>Anyone with the link</b> → <b>Viewer</b> → <b>Copy link</b>, and paste it below. The sheet only ever holds scrambled IDs and work locked with each student's own password, so nobody can read it.</li>
       <li>Click <b>Save settings</b>, then <b>Download course file</b>, and upload it to your GitHub repository in place of index.html. After this, switches and approvals are live, with no more uploads.</li></ol>
       <div class="stack">
         <label class="f">Student log form — pre-filled link<input type="text" id="setLog" value="${esc(s.logForm)}" placeholder="https://docs.google.com/forms/d/e/…/viewform?usp=pp_url&entry.…"></label>
         <label class="f">Switches form — pre-filled link<input type="text" id="setCtl" value="${esc(s.controlForm)}"></label>
         <label class="f">Switches sheet — published CSV link<input type="text" id="setCsv" value="${esc(s.controlCsv)}" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"></label>
+        <label class="f">Sync form — pre-filled link<input type="text" id="setSyncF" value="${esc(s.syncForm || "")}" placeholder="https://docs.google.com/forms/d/e/…/viewform?usp=pp_url&entry.…"></label>
+        <label class="f">Sync sheet — share link (anyone with the link can view)<input type="text" id="setSyncS" value="${esc(s.syncSheet || "")}" placeholder="https://docs.google.com/spreadsheets/d/…/edit?usp=sharing"></label>
         <label class="f">New admin password (leave blank to keep the current one)<input type="password" id="setPw" autocomplete="new-password"></label>
         <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B","C","D"].map(c=>`<label class="f">${esc(uLabel(g))} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
         <div id="setMsg"></div>
-        <div class="row"><button class="btn" id="saveSet">Save settings</button><button class="btn sec" id="dlFile2">${ICON.dl} Download course file</button><button class="btn ghost" id="testLog">Send a test entry</button></div></div>`;
+        <div class="row"><button class="btn" id="saveSet">Save settings</button><button class="btn sec" id="dlFile2">${ICON.dl} Download course file</button><button class="btn ghost" id="testLog">Send a test entry</button><button class="btn ghost" id="testSync">Test sync</button></div></div>`;
   }
   modal(`<div class="stack"><div class="row" style="justify-content:space-between"><h2>${who==="admin"?"Admin panel":"Teacher tools"}</h2><button class="btn ghost sm" data-close>Close</button></div>
     <div class="tabs" role="tablist" style="flex-wrap:wrap">${tabs.map(([k,l])=>`<button role="tab" data-t="${k}" aria-selected="${k===tab}">${l}</button>`).join("")}</div>${body}</div>`);
@@ -3576,13 +3782,26 @@ function staffPanel(tab, who="admin"){
   }
   if (tab === "setup"){
     const collect = async () => { const vl = {}; document.querySelectorAll("[data-vl]").forEach(i => { if (i.value.trim()) vl[i.dataset.vl] = i.value.trim(); });
-      const v = Object.assign({}, DB.teacherSettings || {}, { logForm: $("#setLog").value.trim(), controlForm: $("#setCtl").value.trim(), controlCsv: $("#setCsv").value.trim(), videoLinks: vl, adminHash: settings().adminHash });
+      const v = Object.assign({}, DB.teacherSettings || {}, { logForm: $("#setLog").value.trim(), controlForm: $("#setCtl").value.trim(), controlCsv: $("#setCsv").value.trim(), syncForm: $("#setSyncF").value.trim(), syncSheet: $("#setSyncS").value.trim(), videoLinks: vl, adminHash: settings().adminHash });
       const np = $("#setPw").value; if (np){ if (np.length < 8) throw new Error("The admin password must be at least 8 characters."); v.adminHash = await hashPw(np); }
       return v; };
-    const check = v => { const errs = []; if (v.logForm && !parseFormLink(v.logForm)) errs.push("The student log link is not a Google Forms pre-filled link (it should contain entry.)."); if (v.controlForm && !parseFormLink(v.controlForm)) errs.push("The switches form link is not a pre-filled link."); if (v.controlCsv && !/output=csv/.test(v.controlCsv)) errs.push("The published sheet link should end with output=csv."); if (v.logForm && parseFormLink(v.logForm)?.entries.length < 8) errs.push(`The log form has ${parseFormLink(v.logForm).entries.length} questions; 8 are expected. Extra details will be combined into the last question.`); return errs; };
+    const check = v => { const errs = []; if (v.logForm && !parseFormLink(v.logForm)) errs.push("The student log link is not a Google Forms pre-filled link (it should contain entry.)."); if (v.controlForm && !parseFormLink(v.controlForm)) errs.push("The switches form link is not a pre-filled link."); if (v.controlCsv && !/output=csv/.test(v.controlCsv)) errs.push("The published sheet link should end with output=csv."); if (v.syncForm && !parseFormLink(v.syncForm)) errs.push("The sync form link is not a pre-filled link (it should contain entry.)."); if (v.syncSheet && !/\/spreadsheets\/d\/(?!e\/)[a-zA-Z0-9_-]{20,}/.test(v.syncSheet)) errs.push("The sync sheet link should be the sheet's own address (docs.google.com/spreadsheets/d/…), copied from the Share button."); if (v.logForm && parseFormLink(v.logForm)?.entries.length < 8) errs.push(`The log form has ${parseFormLink(v.logForm).entries.length} questions; 8 are expected. Extra details will be combined into the last question.`); return errs; };
     const fail = err => $("#setMsg").innerHTML = `<div class="notice bad">${esc(err.message)}</div>`;
     $("#saveSet").onclick = async () => { try { const v = await collect(), errs = check(v); DB.teacherSettings = v; save(); $("#setPw").value = ""; loadLive(); flushQueue(); $("#setMsg").innerHTML = errs.length ? `<div class="notice warn">${errs.map(esc).join("<br>")}</div>` : `<div class="notice ok">Settings saved on this device. Download the course file and upload it to GitHub so every device gets them.</div>`; } catch(err){ fail(err); } };
     $("#dlFile2").onclick = async () => { try { DB.teacherSettings = await collect(); save(); downloadCourse(courseState()); } catch(err){ fail(err); } };
+    $("#testSync").onclick = async () => {
+      const out = t => $("#setMsg").innerHTML = t; let v; try { v = await collect(); } catch(err){ return fail(err); }
+      const keep = DB.teacherSettings; DB.teacherSettings = v; const cfg = syncCfg(); DB.teacherSettings = keep;
+      if (!cfg) return out(`<div class="notice bad">Paste the sync form pre-filled link and the sync sheet share link first.</div>`);
+      const tid = "test" + Date.now().toString(36), tok = Math.random().toString(36).slice(2);
+      out(`<div class="notice">Sending a test row and reading it back… this can take up to a minute.</div>`);
+      if (!(await postForm(cfg.form, [["DSS1", tid + "#t", "1", 0, 1, tok].join("|")]))) return out(`<div class="notice bad">Could not reach Google Forms from here.</div>`);
+      for (let i = 0; i < 12; i++){
+        await new Promise(r => setTimeout(r, 5000));
+        try { const cells = await gviz(cfg, `select B where B starts with 'DSS1|${tid}#t|'`); if (cells.some(c => String(c).endsWith(tok))) return out(`<div class="notice ok">Sync works: the test row was written and read back. Save settings, then download the course file and upload it to GitHub.</div>`); }
+        catch(err){ return out(`<div class="notice bad">The test row was sent, but the sheet could not be read: ${esc(err.message)} Check that the sheet is shared as <b>Anyone with the link → Viewer</b>, and that the link is the sheet linked to the Sync form.</div>`); }
+      }
+      out(`<div class="notice warn">The test row was sent but has not appeared yet. Check that the form is linked to this sheet, then try again.</div>`); };
     $("#testLog").onclick = async () => { const link = $("#setLog").value.trim(); if (!link) return $("#setMsg").innerHTML = `<div class="notice bad">Paste the student log form link first.</div>`;
       const ok = await postForm(link, ["test@sisd.ae","Test Student","Grade 8","Mr. Ahmed","Criterion A","Test entry","Student","If you can read this in your sheet, the connection works.", new Date().toISOString()]);
       $("#setMsg").innerHTML = ok ? `<div class="notice ok">Test sent. Check your Google Sheet for a row from "Test Student".</div>` : `<div class="notice bad">Could not reach Google Forms from here.</div>`; };
@@ -3603,7 +3822,7 @@ async function downloadCourse(st){
   const s = DB.teacherSettings || {};
   const cfg = { adminHash: s.adminHash || CONFIG.adminHash, unlocks: st.unlocks, teachers: st.teachers, declined: st.declined,
     logForm: s.logForm ?? CONFIG.logForm, controlForm: s.controlForm ?? CONFIG.controlForm, controlCsv: s.controlCsv ?? CONFIG.controlCsv, videoLinks: s.videoLinks || CONFIG.videoLinks || {},
-    roster: s.roster || CONFIG.roster || null, studioUrl: CONFIG.studioUrl || "" };
+    roster: s.roster || CONFIG.roster || null, studioUrl: CONFIG.studioUrl || "", syncForm: s.syncForm ?? CONFIG.syncForm ?? "", syncSheet: s.syncSheet ?? CONFIG.syncSheet ?? "" };
   try {
     const r = await fetch(location.href.split("#")[0], { cache:"no-store" }); if (!r.ok) throw 0;
     const src = await r.text();
@@ -3627,9 +3846,12 @@ Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u
 if (DB.session && DB.users[DB.session] && DB.session !== PREVIEW && DB.users[DB.session].hash) session.email = DB.session;
 try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
 new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = requestAnimationFrame(() => addListenButtons(document.getElementById("app"))); }).observe(document.getElementById("app"), { childList:true, subtree:true });
-render(); loadLive(); flushQueue();
+render(); loadLive(); flushQueue(); flushSync();
+(async () => { const u = syncable(); if (!u) return; const em = session.email, r = await syncIn(u, em, null);
+  if (session.email !== em) return; save(true);
+  if (r === "restored"){ toast("Your latest work from another device has been loaded.", 4000); resumeSpot(u); } else syncNow(); })();
 if (lang() !== "en") applyLang(lang(), true);
-setInterval(() => { loadLive(); flushQueue(); }, 60000);
+setInterval(() => { loadLive(); flushQueue(); flushSync(); }, 60000);
 window.addEventListener("online", flushQueue);
 })();
 
