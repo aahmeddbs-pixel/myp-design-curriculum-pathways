@@ -2954,18 +2954,43 @@ async function flushSync(){
     }
   } finally { syncFlushing = false; }
 }
-function gviz(cfg, tq){
+function gvizRaw(cfg, tq, sheet){
   return new Promise((res, rej) => {
     const cb = "__dss" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), sc = document.createElement("script");
     const done = () => { clearTimeout(t); try { delete window[cb]; } catch(e){ window[cb] = undefined; } sc.remove(); };
     const t = setTimeout(() => { done(); rej(new Error("timeout")); }, 20000);
     window[cb] = r => { done();
       if (!r || r.status === "error") return rej(new Error((r && r.errors && r.errors[0] && (r.errors[0].detailed_message || r.errors[0].message)) || "The sync sheet could not be read."));
-      res(((r.table && r.table.rows) || []).map(row => ((row.c || [])[0] || {}).v || "")); };
+      res(r); };
     sc.onerror = () => { done(); rej(new Error("The sync sheet could not be reached.")); };
-    sc.src = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?${cfg.gid ? "gid=" + cfg.gid + "&" : ""}headers=1&tqx=out:json;responseHandler:${cb}&tq=${encodeURIComponent(tq)}&_=${Date.now()}`;
+    const where = sheet ? "sheet=" + encodeURIComponent(sheet) + "&" : cfg.gid ? "gid=" + cfg.gid + "&" : "";
+    sc.src = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?${where}headers=1&tqx=out:json;responseHandler:${cb}&tq=${encodeURIComponent(tq)}&_=${Date.now()}`;
     document.head.appendChild(sc);
   });
+}
+/* find the tab and column that hold the sync data (whatever the question or tab is called) */
+let SYNC_COL = null, SYNC_SEEN = "";
+async function syncColumn(cfg, strict){
+  const k = cfg.id + "|" + cfg.gid; if (SYNC_COL && SYNC_COL.k === k) return SYNC_COL;
+  const tries = cfg.gid ? [""] : ["", "Form responses 1", "Form Responses 1", "Form responses 2", "Form Responses 2"], seen = []; let lastErr = null, label = null;
+  for (const sheet of tries){
+    let r; try { r = await gvizRaw(cfg, "select * limit 30", sheet); } catch(e){ lastErr = e; continue; }
+    const cols = (r.table && r.table.cols) || [], rows = (r.table && r.table.rows) || [];
+    const i = cols.findIndex((c, j) => rows.some(row => String(((row.c || [])[j] || {}).v || "").startsWith("DSS1|")));
+    if (i >= 0){ SYNC_COL = { k, col: cols[i].id, time: cols[0].id, sheet }; return SYNC_COL; }
+    const li = cols.findIndex(c => /^\s*data\s*$/i.test(c.label || ""));
+    if (li >= 0 && !label) label = { k, col: cols[li].id, time: cols[0].id, sheet };
+    seen.push(`${sheet || "first tab"}: ${cols.map(c => c.label || c.id).join(", ") || "empty"} (${rows.length} rows)`);
+  }
+  SYNC_SEEN = seen.join(" · ");
+  if (label) return (SYNC_COL = label);
+  if (strict){ const e = lastErr && !seen.length ? lastErr : new Error("No sync rows found. What the sheet shows — " + (SYNC_SEEN || "nothing")); throw e; }
+  return { k, col: "B", time: "A", sheet: "" };
+}
+async function gviz(cfg, tq){
+  const at = await syncColumn(cfg);
+  const r = await gvizRaw(cfg, tq.replace(/\bselect B where B\b/, `select ${at.col} where ${at.col}`).replace(/order by A\b/, `order by ${at.time}`), at.sheet);
+  return ((r.table && r.table.rows) || []).map(row => ((row.c || [])[0] || {}).v || "");
 }
 /* newest complete copy of each key from a list of "DSS1|key|ver|k|n|text" cells */
 function latestByKey(cells){
@@ -3798,12 +3823,14 @@ function staffPanel(tab, who="admin"){
       const tid = "test" + Date.now().toString(36), tok = Math.random().toString(36).slice(2);
       out(`<div class="notice">Sending a test row and reading it back… this can take up to a minute.</div>`);
       if (!(await postForm(cfg.form, [["DSS1", tid + "#t", "1", 0, 1, tok].join("|")]))) return out(`<div class="notice bad">Could not reach Google Forms from here.</div>`);
+      let lastErr = null;
       for (let i = 0; i < 12; i++){
         await new Promise(r => setTimeout(r, 5000));
-        try { const cells = await gviz(cfg, `select B where B starts with 'DSS1|${tid}#t|'`); if (cells.some(c => String(c).endsWith(tok))) return out(`<div class="notice ok">Sync works: the test row was written and read back. Save settings, then download the course file and upload it to GitHub.</div>`); }
-        catch(err){ return out(`<div class="notice bad">The test row was sent, but the sheet could not be read: ${esc(err.message)} Check that the sheet is shared as <b>Anyone with the link → Viewer</b>, and that the link is the sheet linked to the Sync form.</div>`); }
+        try { SYNC_COL = null; await syncColumn(cfg, true); const cells = await gviz(cfg, `select B where B starts with 'DSS1|${tid}#t|'`); lastErr = null; if (cells.some(c => String(c).endsWith(tok))) return out(`<div class="notice ok">Sync works: the test row was written and read back. Student work will now follow them to any device.</div>`); }
+        catch(err){ lastErr = err; if (/could not be (read|reached)|timeout|denied|access/i.test(err.message) && !SYNC_SEEN) break; }
       }
-      out(`<div class="notice warn">The test row was sent but has not appeared yet. Check that the form is linked to this sheet, then try again.</div>`); };
+      SYNC_COL = null;
+      out(`<div class="notice warn"><b>The test row was sent but could not be found in this sheet.</b><br>${lastErr ? "Details: " + esc(lastErr.message) : ""}<br>Open the <b>Sync form</b> → <b>Responses</b> tab → click the green Sheets icon (or ⋮ → <b>Select response destination</b>) and make sure it is this sheet. Also check the sheet is shared as <b>Anyone with the link → Viewer</b>.</div>`); };
     $("#testLog").onclick = async () => { const link = $("#setLog").value.trim(); if (!link) return $("#setMsg").innerHTML = `<div class="notice bad">Paste the student log form link first.</div>`;
       const ok = await postForm(link, ["test@sisd.ae","Test Student","Grade 8","Mr. Ahmed","Criterion A","Test entry","Student","If you can read this in your sheet, the connection works.", new Date().toISOString()]);
       $("#setMsg").innerHTML = ok ? `<div class="notice ok">Test sent. Check your Google Sheet for a row from "Test Student".</div>` : `<div class="notice bad">Could not reach Google Forms from here.</div>`; };
