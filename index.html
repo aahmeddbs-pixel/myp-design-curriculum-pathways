@@ -1692,6 +1692,10 @@ Object.assign(COURSE.gradeExercises["8"], {
   ]
 });
 
+/* keep the earlier Grade 10 Design unit (Harvest Hub) as a second unit */
+COURSE.grades["10HH"] = Object.assign({}, COURSE.grades["10"], { label: "Grade 10 Design", subject: "Design", short: "Harvest Hub" });
+COURSE.examples["10HH"] = COURSE.examples["10"];
+COURSE.gradeExercises["10HH"] = COURSE.gradeExercises["10"];
 /* ======================= GRADE 10 DESIGN — REVEALING THE UNSEEN (IB ePortfolio Nov 2026) ======================= */
 COURSE.grades["10"] = {
   myp: 5, label: "Grade 10 Design", subject: "Design",
@@ -1828,6 +1832,16 @@ Object.assign(COURSE.grades["10IT"], {
 });
 
 /* ---------- shared: G10 IT D uses the Year 5 defaults; G10 Design uses Year 5 defaults minus links ---------- */
+
+COURSE.grades["10"].short = "ePortfolio";
+COURSE.grades["10IT"].short = "Networks";
+/* year groups: what a student chooses at sign-up, and the units inside each */
+COURSE.groups = {
+  "6":  { label: "Grade 6",  units: ["6"] },
+  "7":  { label: "Grade 7",  units: ["7"] },
+  "8":  { label: "Grade 8",  units: ["8"] },
+  "10": { label: "Grade 10", units: ["10", "10HH", "10IT"] }
+};
 
 </script>
 <script>
@@ -2050,7 +2064,7 @@ async function postForm(link, values){
 }
 function logEvent(crit, event, details){
   const u = user(); if (!u || session.preview) return;
-  const item = [session.email, u.name, u.role === "teacher" ? "Staff" : gLabel(u.grade), u.role === "teacher" ? "-" : u.teacher, crit === "-" ? "-" : "Criterion " + crit, event, u.role === "teacher" ? "Teacher" : "Student", details, new Date().toISOString()];
+  const item = [session.email, u.name, u.role === "teacher" ? "Staff" : uLabel(u.grade), u.role === "teacher" ? "-" : u.teacher, crit === "-" ? "-" : "Criterion " + crit, event, u.role === "teacher" ? "Teacher" : "Student", details, new Date().toISOString()];
   DB.queue.push(item); save(); flushQueue();
 }
 
@@ -2140,7 +2154,7 @@ function renderMast(){
     const pts = Object.values(u.progress||{}).reduce((s,p)=>s+(p.ex?.points||0),0);
     r.innerHTML = `${langSelect()}<span class="chip pts notranslate" title="Practice points">★ ${pts} pts</span>
       <button class="chip" id="voiceBtn" aria-pressed="${DB.voice}">${DB.voice?ICON.voiceOn:ICON.voiceOff} Voice</button>
-      <span class="chip"><span class="notranslate">${esc(u.name)}</span>&nbsp;· ${esc(gLabel(u.grade))}</span>${session.preview?"":signOut}`;
+      <span class="chip"><span class="notranslate">${esc(u.name)}</span>&nbsp;· ${esc(groupLabel(u))}</span>${session.preview?"":signOut}`;
     $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
   }
   bindLang();
@@ -2182,7 +2196,7 @@ function renderLogin(app){
         <div id="upOnly" class="stack" hidden>
           <label class="f">Full name<input type="text" id="lName" autocomplete="name" placeholder="First and last name"></label>
           <div class="grid2" id="studentOnly">
-            <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.grades).map(g=>`<option value="${g}">${esc(gLabel(g))}</option>`).join("")}</select></label>
+            <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.groups).map(g=>`<option value="${g}">${esc(COURSE.groups[g].label)}</option>`).join("")}</select></label>
             <label class="f">Teacher<select id="lTeacher"><option value="">Choose…</option>${teacherNames().map(t=>`<option>${esc(t)}</option>`).join("")}</select></label>
           </div>
         </div>
@@ -2247,9 +2261,9 @@ function renderLogin(app){
       if (!grade) return msg("Choose your grade."); if (!teacher) return msg("Choose your teacher.");
       const rc = await rosterCheck(email, name);
       if (!rc.ok) return msg("This email and name are not on the SISD student list. Type your full name exactly as the school has it, with your SISD email. If it still doesn't work, ask your teacher.");
-      DB.users[email] = { role:"student", name, grade, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
+      DB.users[email] = { role:"student", name, group: grade, grade: COURSE.groups[grade].units[0], teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
       session.email = email; DB.session = email; save();
-      logEvent("-", "Signed up", gradeData(grade).choose ? "Choosing their focus" : `Design challenge: ${scenarioFor(email, grade).title}`);
+      logEvent("-", "Signed up", COURSE.groups[grade].label);
       speak(P().welcome(name.split(" ")[0]));
       go({ name:"home" });
     } catch(err){ msg(esc(err.message)); }
@@ -2268,13 +2282,24 @@ function renderTeacherHome(app){
       <button class="crit open" data-go="preview"><span class="L">▶</span><h3>Preview as a student</h3><p class="muted" style="margin:0;font-size:13px">Open every criterion for any grade without sending data.</p></button>
       <button class="crit open" data-go="answers"><span class="L">✔</span><h3>Answer key</h3><p class="muted" style="margin:0;font-size:13px">All practice questions with answers and hints.</p></button>
       <button class="crit open" data-go="lookup"><span class="L">?</span><h3>Students</h3><p class="muted" style="margin:0;font-size:13px">Design challenges and password resets. ${mine} of your students on this device.</p></button>
-      <div class="crit locked"><span class="L">${Object.keys(COURSE.grades).filter(g=>["A","B","C","D"].some(c=>unlocks()[g]?.[c])).length}</span><h3>Grades with open criteria</h3><p class="muted" style="margin:0;font-size:13px">${Object.keys(COURSE.grades).map(g=>`${gLabel(g)}: ${["A","B","C","D"].filter(c=>unlocks()[g]?.[c]).join(", ")||"none"}`).join(" · ")}</p></div>
+      <div class="crit locked"><span class="L">${Object.keys(COURSE.grades).filter(g=>["A","B","C","D"].some(c=>unlocks()[g]?.[c])).length}</span><h3>Grades with open criteria</h3><p class="muted" style="margin:0;font-size:13px">${Object.keys(COURSE.grades).map(g=>`${uLabel(g)}: ${["A","B","C","D"].filter(c=>unlocks()[g]?.[c]).join(", ")||"none"}`).join(" · ")}</p></div>
     </div></div>`;
   app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => b.dataset.go === "preview" ? previewGradePicker() : staffPanel(b.dataset.go, "teacher"));
 }
 
 /* ================= FOCUS CHOICE (G6 building, G7 cause) ================= */
 function gLabel(g){ return (COURSE.grades[g] && COURSE.grades[g].label) || ("Grade " + g); }
+function uLabel(g){ const gd = COURSE.grades[g]; if (!gd) return gLabel(g); const dup = Object.keys(COURSE.grades).filter(k => gLabel(k) === gLabel(g)).length > 1; return dup && gd.short ? `${gLabel(g)} (${gd.short})` : gLabel(g); }
+function groupOf(g){ for (const [k,v] of Object.entries(COURSE.groups)) if (v.units.includes(g)) return k; return g; }
+function groupLabel(u){ const k = u.group || groupOf(u.grade); return (COURSE.groups[k] && COURSE.groups[k].label) || gLabel(u.grade); }
+let pendingSnap = null;
+function setUnit(u, key){
+  if (!u || u.grade === key) return;
+  if (pendingSnap){ clearTimeout(snapTimer); const c = pendingSnap; pendingSnap = null; sendWork(c, "snapshot"); }
+  u.progressBy = u.progressBy || {}; u.choiceBy = u.choiceBy || {};
+  u.progressBy[u.grade] = u.progress || {}; u.choiceBy[u.grade] = u.choice || null;
+  u.grade = key; u.progress = u.progressBy[key] || {}; u.choice = u.choiceBy[key] || null; save();
+}
 function scenarioFor(email, g){
   const gd = gradeData(g), sc = gd.scenarios;
   if (gd.choose){
@@ -2291,20 +2316,18 @@ function scenarioFor(email, g){
   return sc[hash(email.toLowerCase()+"|"+g) % sc.length];
 }
 function anyStrandDone(u){ return Object.values(u.progress||{}).some(p => p.done && p.done.some(Boolean)); }
-function renderChooser(app){
+function renderChooser(box, done){
   const u = user(), g = u.grade, gd = gradeData(g), cur = u.choice?.id;
-  app.innerHTML = `<div class="stack" style="gap:18px">
-    <div><div class="eyebrow">${esc(gLabel(g))} · MYP ${gd.subject||"Design"} Year ${gd.myp}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.4vw,32px)">${esc(gd.unit)}</h1></div>
-    <div class="card stack" data-read ${gd.choose.ownOnly?"hidden":""}><h2>${esc(gd.choose.title)}</h2><p class="muted" style="margin:0">${esc(gd.choose.note)}</p></div>
-    <div class="crit-grid" ${gd.choose.ownOnly?"hidden":""}>${gd.scenarios.map(s=>`<button class="crit open" data-ch="${s.id}" ${s.id===cur?'style="border-color:var(--accent)"':""}><h3>${esc(s.title)}</h3><p class="muted" style="margin:0;font-size:13px">${esc(s.custom ? "Suggest your own idea and explain the problem it solves." : s.brief)}</p>${s.ideas?`<p style="margin:0;font-size:12.5px">${esc(s.ideas)}</p>`:""}</button>`).join("")}</div>
+  box.innerHTML = `<div class="stack" style="gap:16px">
+    <div class="card stack" data-read><div class="eyebrow">Step 1 — your scenario</div><h2>${esc(gd.choose.title)}</h2><p class="muted" style="margin:0">${esc(gd.choose.note)}</p></div>
+    <div class="crit-grid" ${gd.choose.ownOnly?"hidden":""}>${gd.scenarios.map(s=>`<button class="crit open" data-ch="${s.id}" ${s.id===cur?'style="border-color:var(--accent)"':""}><h3>${esc(s.title)}</h3><p class="muted" style="margin:0;font-size:13px">${esc(s.custom ? (s.ideas ? "Choose this audience, then name your product." : "Suggest your own idea and explain the problem it solves.") : s.brief)}</p>${s.ideas?`<p style="margin:0;font-size:12.5px">${esc(s.ideas)}</p>`:""}</button>`).join("")}</div>
     <form id="ownForm" class="card stack" hidden novalidate>
       <h3 id="owH">Your own idea</h3>
-      <p class="muted" id="owFor" style="margin:0" hidden></p>
       <label class="f">${esc(gd.choose.titleLabel||"Name of your idea")}<input type="text" id="owT" class="notranslate"></label>
       <label class="f" id="owURow">${esc(gd.choose.userLabel||"Who is it for?")}<input type="text" id="owU" class="notranslate" placeholder="the people it will help"></label>
       <label class="f">${esc(gd.choose.problemLabel||"What problem does it solve?")}<textarea id="owP" class="notranslate" style="min-height:80px"></textarea></label>
       <div id="owMsg"></div>
-      <div class="row"><button class="btn" type="submit">Choose my idea</button><button class="btn ghost" type="button" id="owCancel">Cancel</button></div>
+      <div class="row"><button class="btn" type="submit">Use this scenario</button><button class="btn ghost" type="button" id="owCancel">Cancel</button></div>
     </form>
     ${u.choice?`<div class="row"><button class="btn ghost" id="chBack">← Keep ${esc(scenarioFor(session.email,g).title)}</button></div>`:""}
   </div>`;
@@ -2312,8 +2335,8 @@ function renderChooser(app){
   const openForm = s => { base = s; $("#ownForm").hidden = false; $("#owH").textContent = s.id === "other" ? (gd.choose.ownOnly ? gd.choose.title : "Your own idea") : s.title;
     $("#owURow").hidden = !!s.presetUser; const pre = u.choice && u.choice.id === s.id ? u.choice : null;
     if (pre){ $("#owT").value = pre.title || ""; $("#owU").value = pre.user || ""; $("#owP").value = pre.problem || ""; } $("#owT").focus(); };
-  const pickIt = ch => { u.choice = ch; save(); logEvent("-", "Chose focus", ch.title || ch.id); speak(pickOne(P().right)); view.choosing = false; go({ name:"home" }); };
-  app.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => {
+  const pickIt = ch => { u.choice = ch; save(); logEvent("-", "Chose scenario", ch.title || ch.id); speak(pickOne(P().right)); view.choosing = false; done(); };
+  box.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => {
     const s = gd.scenarios.find(x => x.id === b.dataset.ch);
     if (s.custom){ openForm(s); return; }
     pickIt({ id: s.id, title: s.title });
@@ -2325,7 +2348,7 @@ function renderChooser(app){
     pickIt({ id: base ? base.id : "other", title:t, user: base && base.presetUser ? "" : us, problem:pr.replace(/\.$/,"") }); };
   if (gd.choose.ownOnly) openForm(gd.scenarios[0]);
   if (gd.choose.ownOnly) $("#owCancel").hidden = !u.choice;
-  const bk = $("#chBack"); if (bk) bk.onclick = () => { view.choosing = false; go({ name:"home" }); };
+  const bk = $("#chBack"); if (bk) bk.onclick = () => { view.choosing = false; done(); };
 }
 
 /* ================= BUILD LAB (Criterion C) ================= */
@@ -2376,7 +2399,7 @@ function queueChunks(ctx, tag, id, text, extra){
   const u = ctx.u, n = Math.max(1, Math.ceil(text.length / CHUNK));
   for (let k = 0; k < n; k++){
     const head = ["DS1", tag, ctx.c, extra || "-", `${k+1}/${n}`, id].join("|");
-    DB.queue.push([session.email, u.name, gLabel(ctx.g), u.teacher, "Criterion " + ctx.c, tag === "W" ? "Work data" : "Work image", "Student", head + "|" + text.slice(k*CHUNK, (k+1)*CHUNK), new Date().toISOString()]);
+    DB.queue.push([session.email, u.name, uLabel(ctx.g), u.teacher, "Criterion " + ctx.c, tag === "W" ? "Work data" : "Work image", "Student", head + "|" + text.slice(k*CHUNK, (k+1)*CHUNK), new Date().toISOString()]);
   }
 }
 function shrinkData(dataUrl, max){
@@ -2402,7 +2425,7 @@ async function sendWork(c, kind){
   save(); flushQueue();
 }
 let snapTimer = null;
-function scheduleSnapshot(c){ clearTimeout(snapTimer); snapTimer = setTimeout(() => sendWork(c, "snapshot"), 90000); }
+function scheduleSnapshot(c){ clearTimeout(snapTimer); pendingSnap = c; snapTimer = setTimeout(() => { pendingSnap = null; sendWork(c, "snapshot"); }, 90000); }
 
 /* ================= SCHOOL STUDENT LIST (stored scrambled) ================= */
 function normName(n){ return String(n||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z\s'-]/g," ").replace(/\s+/g," ").trim(); }
@@ -2419,7 +2442,8 @@ async function rosterCheck(email, name){
 function critProgress(p){ if (!p) return 0; let s = 0; if (p.watched) s++; ["ex","me","ru"].forEach(k=>{ if (p.seen?.[k]) s++; }); if (p.ex?.done) s++; s += p.done.filter(Boolean).length; return Math.round(s/9*100); }
 function renderExplore(app){
   const u = user();
-  const others = Object.keys(COURSE.grades).filter(g => g !== u.grade);
+  const mine = u.group || groupOf(u.grade);
+  const others = Object.keys(COURSE.groups).filter(k => k !== mine).flatMap(k => COURSE.groups[k].units);
   app.innerHTML = `<div class="stack" style="gap:20px">
     <div class="row" style="justify-content:space-between"><button class="btn ghost sm" id="exBack">← Back to my course</button><span class="counter">View only</span></div>
     <div data-read><div class="eyebrow">Explore</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.4vw,32px)">What other grades are learning</h1>
@@ -2428,38 +2452,39 @@ function renderExplore(app){
   </div>`;
   $("#exBack").onclick = () => go({ name:"home" });
 }
-function renderHome(app){
-  const u = user(), g = u.grade, gd = gradeData(g);
-  if (gd.choose && (!u.choice || view.choosing)) return renderChooser(app);
-  const sc = scenarioFor(session.email, g);
-  app.innerHTML = `<div class="stack" style="gap:22px">
-    <div class="unitbar">
-      <div class="stack" style="gap:6px">
-        <div class="eyebrow">${esc(gLabel(g))} · MYP ${esc(gd.subject||"Design")} Year ${gd.myp} · ${esc(gd.sdg)}</div>
-        <h1>${esc(gd.unit)}</h1>
-        ${(g==="10"||g==="10IT") ? `<div class="row"><button class="btn ghost sm" id="courseSwitch" data-to="${g==="10"?"10IT":"10"}">Switch to ${g==="10"?"Grade 10 IT":"Grade 10 Design"} →</button></div>` : ""}
-        <div class="brief" data-read><div class="eyebrow" style="color:var(--muted)">${gd.choose ? esc(gd.choose.label || "Your design challenge") : "Your design challenge"}</div>
-          <h3 style="margin:4px 0">${esc(sc.title)}</h3>
-          <p style="margin:0">${esc(sc.client)} needs your help: ${esc(sc.problem)}.</p>
-          <p style="margin:.5em 0 0" class="muted">${esc(sc.brief)}</p>${sc.ideas?`<p style="margin:.5em 0 0;font-size:13px"><b>Ideas to explore:</b> ${esc(sc.ideas)}</p>`:""}</div>
-        ${gd.choose ? (anyStrandDone(u) ? "" : `<div class="row"><button class="btn ghost sm" id="chChange">Change</button></div>`) : `<p class="muted" style="font-size:12.5px;margin:4px 0 0">Students in your class have different challenges, so your work will be your own.</p>`}
-      </div>
+function unitBlock(u, g, multi){
+  const gd = gradeData(g), Y = yearKey(gd.myp), prog0 = g === u.grade ? (u.progress || {}) : ((u.progressBy || {})[g] || {});
+  const H = multi ? "h2" : "h1";
+  return `<section class="stack unit-block" style="gap:12px">
+    <div class="stack" style="gap:4px">
+      <div class="eyebrow">${esc(gLabel(g))} · MYP ${esc(gd.subject||"Design")} Year ${gd.myp}</div>
+      <${H} style="font-family:var(--f-display);font-size:${multi?"clamp(19px,2.6vw,24px)":"clamp(24px,3.6vw,34px)"}">${esc(gd.unit)}</${H}>
+      <p class="muted" style="margin:0;max-width:70ch">${esc(gd.sdg)}</p>
     </div>
     <div class="crit-grid">${["A","B","C","D"].map(c => {
-      const cd = COURSE.criteria[c], open = isOpen(g,c), p = u.progress?.[c], pc = critProgress(p);
-      const state = cd.comingSoon ? `${ICON.lock} Coming soon` : open ? (p?.finished ? `${ICON.check} Finished — download any time` : `${ICON.open} Open · ${pc}% done`) : `${ICON.lock} Waiting for your teacher to switch this on`;
-      return `<${open?"button":"div"} class="crit ${open?"open":"locked"}" data-c="${c}" ${open?`aria-label="Open Criterion ${c}"`:""}>
+      const cd = COURSE.criteria[c], open = isOpen(g,c), p = prog0[c], pc = critProgress(p);
+      if (open) return `<button class="crit open" data-g="${g}" data-c="${c}" aria-label="Open Criterion ${c}">
         <div class="row" style="justify-content:space-between"><span class="L">${c}</span><span class="muted">${ICON[cd.icon]}</span></div>
+        <h3>${esc(cd.name)}</h3><div class="bar"><i style="width:${pc}%"></i></div>
+        <ol style="margin:0;padding-left:18px;font-size:12.5px">${cd.strands[Y].map(st => `<li>${esc(st)}</li>`).join("")}</ol>
+        <div class="state" style="color:var(--ok)">${p?.finished ? `${ICON.check} Handed in — open to review or edit` : `${ICON.open} Open now · ${pc}% done`}</div></button>`;
+      return `<div class="crit locked view-only" aria-disabled="true">
+        <div class="row" style="justify-content:space-between"><span class="L">${c}</span><span class="muted">${ICON.lock}</span></div>
         <h3>${esc(cd.name)}</h3>
-        ${open?`<div class="bar"><i style="width:${pc}%"></i></div>`:""}
-        <div class="state" style="color:${open?"var(--ok)":"var(--muted)"}">${state}</div>
-      </${open?"button":"div"}>`; }).join("")}</div>
-    <div class="row" style="justify-content:space-between"><p class="muted" style="margin:0;font-size:13px">You can go back into any open criterion to change your work, then download your PDF again.</p><button class="btn ghost sm" id="exploreBtn">See what other grades are learning →</button></div>
+        <ol style="margin:0;padding-left:18px;font-size:12.5px;color:var(--muted)">${cd.strands[Y].map(st => `<li>${esc(st)}</li>`).join("")}</ol>
+        <div class="state" style="color:var(--muted)">View only — not open yet</div></div>`; }).join("")}</div>
+  </section>`;
+}
+function renderHome(app){
+  const u = user(), gk = u.group || groupOf(u.grade), grp = COURSE.groups[gk] || { label: gLabel(u.grade), units: [u.grade] }, multi = grp.units.length > 1;
+  app.innerHTML = `<div class="stack" style="gap:26px">
+    ${multi ? `<div class="stack" style="gap:4px"><div class="eyebrow">${esc(grp.label)}</div><h1 style="font-family:var(--f-display);font-size:clamp(24px,3.6vw,34px)">Your units</h1>
+      <p class="muted" style="margin:0;max-width:66ch">Each unit has four criteria. You can open a criterion once your teacher switches it on; the others are view only.</p></div>` : ""}
+    ${grp.units.map(g => unitBlock(u, g, multi)).join(multi ? `<hr style="border:0;border-top:1px solid var(--line);margin:0">` : "")}
+    <div class="row" style="justify-content:space-between"><p class="muted" style="margin:0;font-size:13px">You can come back here at any time to see Criteria A to D, and go back into an open criterion to change your work.</p><button class="btn ghost sm" id="exploreBtn">See what other grades are learning →</button></div>
   </div>`;
-  app.querySelectorAll(".crit.open").forEach(b => b.onclick = () => go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }));
-  const chg = $("#chChange"); if (chg) chg.onclick = () => { view.choosing = true; render(); };
+  app.querySelectorAll(".crit.open[data-c]").forEach(b => b.onclick = () => { setUnit(u, b.dataset.g); go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }); });
   const ex = $("#exploreBtn"); if (ex) ex.onclick = () => go({ name:"explore" });
-  const sw = $("#courseSwitch"); if (sw) sw.onclick = () => { const to = sw.dataset.to; u.progressBy = u.progressBy || {}; u.progressBy[u.grade] = u.progress || {}; u.grade = to; u.progress = u.progressBy[to] || {}; save(); logEvent("-", "Switched course", gLabel(to)); go({ name:"home" }); };
 }
 
 /* ================= CRITERION FLOW ================= */
@@ -2481,17 +2506,31 @@ function firstStep(c){ const p = prog(user(), c); for (let i=0;i<STEPS.length;i+
 
 function renderCrit(app){
   const u = user(), c = view.crit, g = u.grade, gd = gradeData(g), cd = COURSE.criteria[c], p = prog(u,c), sc = scenarioFor(session.email, g);
-  if (!isOpen(g,c) || !sc) return go({ name:"home" });
-  if (!stepUnlocked(p, view.step)) view.step = firstStep(c);
-  app.innerHTML = `<div class="stack">
-    <div class="row" style="justify-content:space-between">
-      <button class="btn ghost sm" id="back">← All criteria</button>
-      <div class="muted" style="font-size:13px">${esc(gLabel(g))} · MYP ${gd.myp} · ${esc(sc.title)}</div>
+  if (!isOpen(g,c)) return go({ name:"home" });
+  const head = `<div class="row" style="justify-content:space-between">
+      <button class="btn ghost sm" id="back">← Project overview: Criteria A–D</button>
+      <div class="muted" style="font-size:13px">${esc(gLabel(g))} · ${esc(gd.unit)}</div>
     </div>
-    <div><div class="eyebrow">Criterion ${c}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.2vw,30px)">${esc(cd.name)}</h1></div>
+    <div><div class="eyebrow">Criterion ${c}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.2vw,30px)">${esc(cd.name)}</h1></div>`;
+  if (!sc || view.choosing){
+    app.innerHTML = `<div class="stack">${head}<section id="chooseBox"></section></div>`;
+    $("#back").onclick = () => { view.choosing = false; go({ name:"home" }); };
+    renderChooser($("#chooseBox"), () => render());
+    return;
+  }
+  if (!stepUnlocked(p, view.step)) view.step = firstStep(c);
+  const canChange = gd.choose && !anyStrandDone(u);
+  app.innerHTML = `<div class="stack">
+    ${head}
+    <div class="brief" data-read><div class="eyebrow" style="color:var(--muted)">${esc((gd.choose && gd.choose.label) || "Your scenario")}</div>
+      <h3 style="margin:4px 0">${esc(sc.title)}</h3>
+      ${sc.problem ? `<p style="margin:0">${esc(sc.client)} needs your help: ${esc(sc.problem)}.</p>` : ""}
+      <p style="margin:.4em 0 0" class="muted">${esc(sc.brief)}</p>${sc.ideas?`<p style="margin:.4em 0 0;font-size:13px"><b>Ideas to explore:</b> ${esc(sc.ideas)}</p>`:""}
+      ${canChange ? `<div class="row" style="margin-top:8px"><button class="btn ghost sm" id="chChange">Change my scenario</button></div>` : ""}</div>
     <nav class="steps" aria-label="Steps">${STEPS.map((s,i)=>`<button class="step ${stepDone(p,i)?"done":""}" data-i="${i}" ${stepUnlocked(p,i)?"":"disabled"} aria-current="${view.step===i}"><span class="n">${i+1} / ${STEPS.length}</span><b>${s.t}</b><span class="muted">${s.s}</span></button>`).join("")}</nav>
     <section class="pane" id="pane"></section></div>`;
   $("#back").onclick = () => go({ name:"home" });
+  const chg = $("#chChange"); if (chg) chg.onclick = () => { view.choosing = true; render(); };
   app.querySelectorAll(".step").forEach(b => b.onclick = () => { if (!b.disabled){ view.step = +b.dataset.i; stopVideo(); try{speechSynthesis.cancel()}catch(e){} render(); } });
   const pane = $("#pane");
   setTimeout(() => {
@@ -2707,10 +2746,13 @@ function fieldValid(f, val){
 }
 function strandValid(ctx, i){ const fs = fieldsFor(ctx.c, ctx.gd)[i]; return fs.every(f => fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
 function paneTask(pane, ctx){
-  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd), si = view.strand;
+  const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
+  const reach = i => i === 0 || p.done.slice(0, i).every(Boolean);
+  if (!reach(view.strand)) view.strand = Math.max(0, p.done.findIndex(d => !d));
+  const si = view.strand;
   pane.innerHTML = `<div class="stack">
-    <div class="brief" data-read><b>${esc(sc.title)}</b> — ${esc(sc.client)}: ${esc(sc.problem)}. <span class="muted">${esc(sc.brief)}</span></div>
-    <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}">Strand ${r}</button>`).join("")}</div>
+    <p class="muted" style="margin:0;font-size:13.5px">Work through the strands in order. Each one opens when the one before it is complete, and you can download your work once all four are done.</p>
+    <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3></div>
       <p class="muted" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
@@ -2721,9 +2763,9 @@ function paneTask(pane, ctx){
       <div id="sMsg"></div>
       <div class="row" style="justify-content:space-between">
         <button class="btn ghost" id="prevS" ${si===0?"disabled":""}>← Strand ${ROMAN[Math.max(0,si-1)]}</button>
-        <button class="btn ok" id="doneS">${p.done[si]?"Update strand "+ROMAN[si]:"Mark strand "+ROMAN[si]+" complete"}</button>
+        <button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button>
       </div></div></div>`;
-  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { view.strand = +b.dataset.i; render(); });
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
   F[si].forEach(f => box.appendChild(buildField(f, ctx)));
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
@@ -2850,7 +2892,7 @@ function buildPDF(ctx){
   let y = 0;
   const bar = () => { doc.setFillColor(...NAVY); doc.rect(0,0,W,22,"F"); doc.setFillColor(...RED); doc.rect(0,22,W,1.6,"F");
     doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text(`SISD Design Studio · MYP ${gd.subject||"Design"} Year ${gd.myp}`, M, 10);
-    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.text(`Criterion ${c}: ${cd.name}  ·  ${u.name}  ·  ${gLabel(g)}  ·  ${u.teacher}`, M, 16.5); doc.setTextColor(20); };
+    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.text(`Criterion ${c}: ${cd.name}  ·  ${u.name}  ·  ${uLabel(g)}  ·  ${u.teacher}`, M, 16.5); doc.setTextColor(20); };
   const header = () => { bar(); y = 32; };
   const need = h => { if (y + h > 282){ doc.addPage(); header(); } };
   const clean = t => String(t||"").replace(/[–—]/g,"-").replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,"...").replace(/·/g,"-").replace(/[^\x00-\xFF]/g,"");
@@ -2926,7 +2968,7 @@ function staffPanel(tab, who="admin"){
   if (tab === "switches"){
     body = `<p class="muted" style="margin:0">Switch a criterion on and it appears for every student in that grade. ${liveNote}</p>
       <div class="scroll"><table class="tbl toggle-grid"><tr><th>Grade</th>${["A","B","C","D"].map(c=>`<th>Criterion ${c}${COURSE.criteria[c].comingSoon?"<br><span class='muted' style='font-weight:normal;text-transform:none'>coming soon</span>":""}</th>`).join("")}</tr>
-      ${Object.keys(COURSE.grades).map(g=>`<tr><td><b>${esc(gLabel(g))}</b><br><span class="muted">MYP ${COURSE.grades[g].myp}</span></td>${["A","B","C","D"].map(c=>`<td><button class="sw-t" role="switch" aria-checked="${!!U[g]?.[c]}" data-g="${g}" data-c="${c}" aria-label="Grade ${g} Criterion ${c}" ${COURSE.criteria[c].comingSoon?"disabled":""}></button></td>`).join("")}</tr>`).join("")}</table></div>
+      ${Object.keys(COURSE.grades).map(g=>`<tr><td><b>${esc(uLabel(g))}</b><br><span class="muted">MYP ${COURSE.grades[g].myp}</span></td>${["A","B","C","D"].map(c=>`<td><button class="sw-t" role="switch" aria-checked="${!!U[g]?.[c]}" data-g="${g}" data-c="${c}" aria-label="Grade ${g} Criterion ${c}" ${COURSE.criteria[c].comingSoon?"disabled":""}></button></td>`).join("")}</tr>`).join("")}</table></div>
       <div id="swMsg"></div>
       <div class="row"><button class="btn" id="pubSw">Apply switches</button><button class="btn sec" id="dlFile">${ICON.dl} Download course file</button><button class="btn ghost" id="previewBtn">Preview as a student</button></div>`;
   } else if (tab === "teachers"){
@@ -2938,7 +2980,7 @@ function staffPanel(tab, who="admin"){
       <div id="tMsg"></div>`;
   } else if (tab === "answers"){
     body = Object.keys(COURSE.grades).map(g => { const gd = COURSE.grades[g]; return ["A","B","C","D"].map(c => { const qs = COURSE.exercises[c].filter(q=>q.y<=gd.myp).concat(COURSE.gradeExercises[g][c]);
-      return `<details><summary><b>${esc(gLabel(g))} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
+      return `<details><summary><b>${esc(uLabel(g))} · Criterion ${c}</b> — ${qs.length} practice questions</summary><ol style="font-size:13.5px">${qs.map(q=>`<li><b>${esc(q.q)}</b><br>${q.type==="mcq"?`✔ ${esc(q.o[q.a])}`:q.type==="order"?q.items.map(esc).join(" → "):q.items.map(it=>`${esc(it[0])} → ${esc(q.cats[it[1]])}`).join("; ")}<br><span class="muted">Hint: ${esc(q.h)}</span></li>`).join("")}</ol></details>`; }).join(""); }).join("");
   } else if (tab === "work"){
     body = `<p style="margin:0">Students' work reaches your private Google Sheet as they work: their answers are sent a minute or two after they type, every time they complete a strand, and in full (with sketches and screenshots) when they press <b>Save a copy for my teacher</b>.</p>
       <ol class="guide"><li>Open your <b>Design Studio Log</b> response sheet in Google Sheets and choose <b>File → Download → Comma-separated values (.csv)</b>.</li>
@@ -2953,7 +2995,7 @@ function staffPanel(tab, who="admin"){
       <div id="rsOut"></div>`;
   } else if (tab === "voice"){
     body = `<p class="muted" style="margin:0">Record your own voice for the introduction videos. Students then hear you instead of the computer voice (in English; other languages still use the computer voice). Record one file per course and criterion.</p>
-      <div class="grid2"><label class="f">Course<select id="vcG">${Object.keys(COURSE.grades).map(g=>`<option value="${g}">${esc(gLabel(g))}</option>`).join("")}</select></label>
+      <div class="grid2"><label class="f">Course<select id="vcG">${Object.keys(COURSE.grades).map(g=>`<option value="${g}">${esc(uLabel(g))}</option>`).join("")}</select></label>
         <label class="f">Criterion<select id="vcC">${["A","B","C","D"].map(c=>`<option>${c}</option>`).join("")}</select></label></div>
       <div class="card stack" id="vcScript" style="max-height:260px;overflow:auto;font-size:15px;line-height:1.7"></div>
       <div class="row"><button class="btn" id="vcRec">● Start recording</button><span class="counter" id="vcTime"></span></div>
@@ -2964,7 +3006,7 @@ function staffPanel(tab, who="admin"){
     body = `<p class="muted" style="margin:0">Grade 6 students choose a building and Grade 7 students choose a cause. Grade 8 and Grade 10 students are given one of four challenges, chosen from their email, so neighbours rarely have the same task.</p>
       <h3 style="margin-top:8px">Students on this device</h3>
       <p class="muted" style="margin:0;font-size:13px">Passwords are stored scrambled, so nobody can read them. If a student forgets theirs, reset it here and give them the temporary password.</p>
-      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Course</th><th>Challenge</th><th>A</th><th>B</th><th>C</th><th>D</th><th></th></tr>${studs.map(([e,u])=>{ const sc = COURSE.grades[u.grade] ? scenarioFor(e, u.grade) : null; return `<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(gLabel(u.grade))}</td><td>${sc?esc(sc.title):"<span class='muted'>not chosen yet</span>"}</td>${["A","B","C","D"].map(c=>`<td>${critProgress(u.progress?.[c])}%</td>`).join("")}<td><button class="btn sm sec" data-rs="${esc(e)}">Reset password</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="muted">No student accounts on this device.</td></tr>`}</table></div><div id="rsMsg"></div>`;
+      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Course</th><th>Challenge</th><th>A</th><th>B</th><th>C</th><th>D</th><th></th></tr>${studs.map(([e,u])=>{ const sc = COURSE.grades[u.grade] ? scenarioFor(e, u.grade) : null; return `<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(uLabel(u.grade))}</td><td>${sc?esc(sc.title):"<span class='muted'>not chosen yet</span>"}</td>${["A","B","C","D"].map(c=>`<td>${critProgress(u.progress?.[c])}%</td>`).join("")}<td><button class="btn sm sec" data-rs="${esc(e)}">Reset password</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="muted">No student accounts on this device.</td></tr>`}</table></div><div id="rsMsg"></div>`;
   } else {
     body = `<ol class="guide">
       <li><b>Student copies (one-time).</b> In Google Forms create a form called <i>Design Studio Log</i> with 8 <b>Short answer</b> questions in this order: Email, Name, Grade, Teacher, Criterion, Event, Role, Details (make Details a <b>Paragraph</b>). Turn off "Collect email addresses" and sign-in. Open ⋮ → <b>Get pre-filled link</b>, type <code>x</code> in every box, click <b>Get link</b> → <b>Copy link</b>, and paste it below. In the Responses tab, click <b>Link to Sheets</b>, and turn on email notifications if you want them sent to your Gmail.</li>
@@ -2975,7 +3017,7 @@ function staffPanel(tab, who="admin"){
         <label class="f">Switches form — pre-filled link<input type="text" id="setCtl" value="${esc(s.controlForm)}"></label>
         <label class="f">Switches sheet — published CSV link<input type="text" id="setCsv" value="${esc(s.controlCsv)}" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"></label>
         <label class="f">New admin password (leave blank to keep the current one)<input type="password" id="setPw" autocomplete="new-password"></label>
-        <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B","C","D"].map(c=>`<label class="f">${esc(gLabel(g))} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
+        <details><summary><b>Optional: your own video links</b> (shown under each introduction)</summary><div class="grid2" style="margin-top:8px">${Object.keys(COURSE.grades).map(g=>["A","B","C","D"].map(c=>`<label class="f">${esc(uLabel(g))} · Criterion ${c}<input type="text" data-vl="${g}${c}" value="${esc(s.videoLinks?.[g+c]||"")}" placeholder="https://…"></label>`).join("")).join("")}</div></details>
         <div id="setMsg"></div>
         <div class="row"><button class="btn" id="saveSet">Save settings</button><button class="btn sec" id="dlFile2">${ICON.dl} Download course file</button><button class="btn ghost" id="testLog">Send a test entry</button></div></div>`;
   }
@@ -3065,12 +3107,12 @@ function staffPanel(tab, who="admin"){
 }
 function previewGradePicker(){
   modal(`<div class="stack"><h2>Preview as a student</h2><p class="muted" style="margin:0">Choose a grade. Every criterion opens for this preview only; no data is sent.</p>
-    <div class="row">${Object.keys(COURSE.grades).map(g=>`<button class="btn sec" data-pg="${g}">${esc(gLabel(g))}</button>`).join("")}</div></div>`);
+    <div class="row">${Object.keys(COURSE.groups).map(g=>`<button class="btn sec" data-pg="${g}">${esc(COURSE.groups[g].label)}</button>`).join("")}</div></div>`);
   document.querySelectorAll("[data-pg]").forEach(b => b.onclick = () => {
     if (!session.preview) session.back = session.email;
     session.preview = true; session.email = PREVIEW;
     const pu = DB.users[PREVIEW] = DB.users[PREVIEW] || { role:"student", name:"Teacher Preview", teacher:"Mr. Ahmed", progress:{} };
-    if (pu.grade !== b.dataset.pg){ pu.grade = b.dataset.pg; pu.progress = {}; }
+    if (pu.group !== b.dataset.pg){ pu.group = b.dataset.pg; pu.grade = COURSE.groups[b.dataset.pg].units[0]; pu.progress = {}; pu.progressBy = {}; pu.choice = null; pu.choiceBy = {}; }
     save(); closeModal(); go({ name:"home" });
   });
 }
@@ -3098,6 +3140,7 @@ function closeModal(){ $("#modalRoot").innerHTML = ""; if (user()) render(); }
 $("#staffLink").onclick = openStaff;
 document.addEventListener("keydown", e => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a"){ e.preventDefault(); openStaff(); } if (e.key === "Escape") closeModal(); });
 $("#endPreview").onclick = () => { session.preview = false; session.email = session.back || null; session.back = null; go({ name:"home" }); };
+Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u.group) u.group = groupOf(u.grade); });
 if (DB.session && DB.users[DB.session] && DB.session !== PREVIEW && DB.users[DB.session].hash) session.email = DB.session;
 try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
 new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = requestAnimationFrame(() => addListenButtons(document.getElementById("app"))); }).observe(document.getElementById("app"), { childList:true, subtree:true });
