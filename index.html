@@ -2922,7 +2922,7 @@ const SYNC_CHUNK = 30000, SYNC_EVERY = 5000, KDF_ROUNDS = 400000;
 const TE = new TextEncoder();
 function syncCfg(){
   const s = settings(), f = parseFormLink(s.syncForm), link = String(s.syncSheet || "");
-  const m = link.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/); if (!f || !m || m[1] === "e") return null;
+  const m = link.match(/\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]{20,})/); if (!f || !m || m[1] === "e") return null;
   return { form: s.syncForm, id: m[1], gid: (link.match(/[#&?]gid=(\d+)/) || [])[1] || "" };
 }
 const hexOf = u8 => [...u8].map(v => v.toString(16).padStart(2, "0")).join("");
