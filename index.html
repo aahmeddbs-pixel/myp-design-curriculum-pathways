@@ -2968,29 +2968,34 @@ function gvizRaw(cfg, tq, sheet){
     document.head.appendChild(sc);
   });
 }
-/* find the tab and column that hold the sync data (whatever the question or tab is called) */
+/* find every tab and column that hold sync data (a sheet may be linked to more than one form) */
 let SYNC_COL = null, SYNC_SEEN = "";
 async function syncColumn(cfg, strict){
   const k = cfg.id + "|" + cfg.gid; if (SYNC_COL && SYNC_COL.k === k) return SYNC_COL;
-  const tries = cfg.gid ? [""] : ["", "Form responses 1", "Form Responses 1", "Form responses 2", "Form Responses 2"], seen = []; let lastErr = null, label = null;
+  const tries = cfg.gid ? [""] : ["", ...[1,2,3,4,5,6].map(n => "Form responses " + n), "Form Responses 1", "Form Responses 2", "Form Responses 3"], seen = [], found = [], byLabel = []; let lastErr = null;
   for (const sheet of tries){
     let r; try { r = await gvizRaw(cfg, "select * limit 30", sheet); } catch(e){ lastErr = e; continue; }
     const cols = (r.table && r.table.cols) || [], rows = (r.table && r.table.rows) || [];
     const i = cols.findIndex((c, j) => rows.some(row => String(((row.c || [])[j] || {}).v || "").startsWith("DSS1|")));
-    if (i >= 0){ SYNC_COL = { k, col: cols[i].id, time: cols[0].id, sheet }; return SYNC_COL; }
+    if (i >= 0) found.push({ col: cols[i].id, time: cols[0].id, sheet });
     const li = cols.findIndex(c => /^\s*data\s*$/i.test(c.label || ""));
-    if (li >= 0 && !label) label = { k, col: cols[li].id, time: cols[0].id, sheet };
-    seen.push(`${sheet || "first tab"}: ${cols.map(c => c.label || c.id).join(", ") || "empty"} (${rows.length} rows)`);
+    if (li >= 0) byLabel.push({ col: cols[li].id, time: cols[0].id, sheet });
+    if (cols.length) seen.push(`${sheet || "first tab"}: ${cols.map(c => c.label || c.id).join(", ")} (${rows.length} rows)`);
   }
   SYNC_SEEN = seen.join(" · ");
-  if (label) return (SYNC_COL = label);
-  if (strict){ const e = lastErr && !seen.length ? lastErr : new Error("No sync rows found. What the sheet shows — " + (SYNC_SEEN || "nothing")); throw e; }
-  return { k, col: "B", time: "A", sheet: "" };
+  const locs = found.length ? found : byLabel;
+  if (locs.length) return (SYNC_COL = { k, locs });
+  if (strict){ throw (lastErr && !seen.length) ? lastErr : new Error("No sync rows found. What the sheet shows — " + (SYNC_SEEN || "nothing")); }
+  return { k, locs: [{ col: "B", time: "A", sheet: "" }] };
 }
 async function gviz(cfg, tq){
-  const at = await syncColumn(cfg);
-  const r = await gvizRaw(cfg, tq.replace(/\bselect B where B\b/, `select ${at.col} where ${at.col}`).replace(/order by A\b/, `order by ${at.time}`), at.sheet);
-  return ((r.table && r.table.rows) || []).map(row => ((row.c || [])[0] || {}).v || "");
+  const at = await syncColumn(cfg), out = []; let ok = 0, err = null;
+  for (const l of at.locs){
+    try { const r = await gvizRaw(cfg, tq.replace(/\bselect B where B\b/, `select ${l.col} where ${l.col}`).replace(/order by A\b/, `order by ${l.time}`), l.sheet); ok++;
+      ((r.table && r.table.rows) || []).forEach(row => out.push(((row.c || [])[0] || {}).v || "")); } catch(e){ err = e; }
+  }
+  if (!ok && err) throw err;
+  return out;
 }
 /* newest complete copy of each key from a list of "DSS1|key|ver|k|n|text" cells */
 function latestByKey(cells){
