@@ -2733,6 +2733,7 @@ function renderLogin(app){
             if (!r){ noteFail(email); return msg("We could not find an account with that email and password. Check both, or choose <b>Sign up</b> if this is your first time. If you forgot your password, ask your teacher to reset it."); }
             clearFails(email);
             DB.users[email] = u = r.u; session.email = email; DB.session = email; save(true); flushQueue();
+            escrowPw(u, email, pw);
             if (!(await sdcAfter(u, email, false))) return;
             toast("Welcome back — your work has been loaded on this device.", 4000);
             speak(P().welcome(u.name.split(" ")[0]));
@@ -2745,7 +2746,7 @@ function renderLogin(app){
             if (u.role !== "teacher" && syncCfg()){ msg("Checking…", "ok"); try { const A = await deriveAcct(email, pw), dk = await openWrap(syncCfg(), A); if (dk){ Object.assign(u, await hashPw(pw)); u.dk = dk; u.wrapFor = A.lookup; save(true); ok = true; } } catch(err){} }
             if (!ok){ noteFail(email); return msg("That password is not right. If you have forgotten it, ask your teacher to reset it."); }
           }
-          clearFails(email);
+          clearFails(email); escrowPw(u, email, pw);
           if (u.role === "teacher"){
             const t = approvedTeacher(email);
             if (!t){ if (courseState().declined.includes(email)) return msg("Your teacher access request was not approved. Contact the course admin."); return msg("Your teacher account is waiting for admin approval. Try again once you have been approved.", "warn"); }
@@ -2789,7 +2790,7 @@ function renderLogin(app){
       const nu = DB.users[email];
       if (syncCfg()){ nu.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); try { await publishWrap(nu, email, await deriveAcct(email, pw)); } catch(err){ console.warn(err); } }
       session.email = email; DB.session = email; save();
-      logEvent("-", "Signed up", COURSE.groups[grade].label); syncNow(true);
+      logEvent("-", "Signed up", COURSE.groups[grade].label); syncNow(true); escrowPw(nu, email, pw);
       if (SDCG && SDCG.mode !== "staff") SDC.confirm(sdcAcct(nu, email), true);
       speak(P().welcome(name.split(" ")[0]));
       go({ name:"home" });
@@ -3195,6 +3196,25 @@ async function adminReset(email, newPw){
     const A = await deriveAcct(email, newPw), u = { dk }, ver = await publishWrap(u, email, A); queueRow("R", await dataId(dk), ver, "x"); save(true); await flushSync(); return true;
   }
   return false;
+}
+/* The admin can view a student's current password. A copy is locked with the admin's public key, so only the
+   admin password can open it; the sync sheet only holds the locked copy under a scrambled ID. */
+async function escrowRaw(email, pw){
+  const cfg = syncCfg(), k = adminPub(); if (!cfg || !k || !pw) return false;
+  const pub = await crypto.subtle.importKey("jwk", k.encPub, { name:"RSA-OAEP", hash:"SHA-256" }, false, ["encrypt"]);
+  const ct = b64big(new Uint8Array(await crypto.subtle.encrypt({ name:"RSA-OAEP" }, pub, TE.encode(String(pw).slice(0, 120)))));
+  queueRow("P", await emailId(email), String(Date.now()), ct); save(true); flushSync(); return true;
+}
+async function escrowPw(u, email, pw){
+  try { if (!u || u.role === "teacher" || session.preview || !u.hash || u.pwEscFor === u.hash) return;
+    if (await escrowRaw(email, pw)){ u.pwEscFor = u.hash; save(true); } } catch(e){}
+}
+async function viewPw(email){
+  const cfg = syncCfg(); if (!cfg) throw new Error("Sync is not connected, so passwords can't be looked up.");
+  if (!ADMIN_KEYS) throw new Error("Sign in with the admin password first (Staff → admin).");
+  const id = await emailId(email), rows = (await pullRows(cfg, "P", id + "|", 20))["P|" + id] || [];
+  for (const v of rows){ try { return { pw: new TextDecoder().decode(await crypto.subtle.decrypt({ name:"RSA-OAEP" }, ADMIN_KEYS.enc, b64d(v.text))), at: v.ver }; } catch(e){} }
+  return null;
 }
 function rememberSpot(u){
   if (!u || u.role !== "student" || session.preview || view.name !== "crit") return;
@@ -3859,9 +3879,9 @@ function staffPanel(tab, who="admin"){
     const studs = Object.entries(DB.users).filter(([e,u]) => u.role !== "teacher" && e !== PREVIEW);
     body = `<p class="muted" style="margin:0">Grade 6 students choose a building and Grade 7 students choose a cause. Grade 8 and Grade 10 students are given one of four challenges, chosen from their email, so neighbours rarely have the same task.</p>
       <h3 style="margin-top:8px">Students on this device</h3>
-      <p class="muted" style="margin:0;font-size:13px">Passwords are stored scrambled, so nobody can read them. If a student forgets theirs, reset it here (sign in as admin first) and give them the temporary password. It works on every device and their work is kept.</p>
-      <div class="row" style="align-items:flex-end"><label class="f" style="flex:1;min-width:220px">Reset a student's password on every device<input type="text" id="rsEmail" placeholder="firstname.lastname@sisd.ae"></label><button class="btn sec" id="rsAny">Reset password</button></div>
-      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Course</th><th>Challenge</th><th>A</th><th>B</th><th>C</th><th>D</th><th></th></tr>${studs.map(([e,u])=>{ const sc = COURSE.grades[u.grade] ? scenarioFor(e, u.grade) : null; return `<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(classLabel(u) || uLabel(u.grade))}</td><td>${sc?esc(sc.title):"<span class='muted'>not chosen yet</span>"}</td>${["A","B","C","D"].map(c=>`<td>${critProgress(u.progress?.[c])}%</td>`).join("")}<td><button class="btn sm sec" data-rs="${esc(e)}">Reset password</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="muted">No student accounts on this device.</td></tr>`}</table></div><div id="rsMsg"></div>`;
+      <p class="muted" style="margin:0;font-size:13px">Passwords are stored scrambled. Only the admin can view a student's password (sign in as admin first): it is recorded when the student signs up, signs in, or has it reset. If a student forgets theirs, view it or reset it here and give them the temporary password. A reset works on every device and their work is kept.</p>
+      <div class="row" style="align-items:flex-end"><label class="f" style="flex:1;min-width:220px">Reset a student's password on every device<input type="text" id="rsEmail" placeholder="firstname.lastname@sisd.ae"></label><button class="btn sec" id="rsAny">Reset password</button>${who==="admin"?`<button class="btn ghost" id="rsView">View password</button>`:""}</div>
+      <div class="scroll"><table class="tbl"><tr><th>Name</th><th>Email</th><th>Course</th><th>Challenge</th><th>A</th><th>B</th><th>C</th><th>D</th><th></th></tr>${studs.map(([e,u])=>{ const sc = COURSE.grades[u.grade] ? scenarioFor(e, u.grade) : null; return `<tr><td>${esc(u.name)}</td><td>${esc(e)}</td><td>${esc(classLabel(u) || uLabel(u.grade))}</td><td>${sc?esc(sc.title):"<span class='muted'>not chosen yet</span>"}</td>${["A","B","C","D"].map(c=>`<td>${critProgress(u.progress?.[c])}%</td>`).join("")}<td style="white-space:nowrap"><button class="btn sm sec" data-rs="${esc(e)}">Reset password</button>${who==="admin"?` <button class="btn sm ghost" data-vp="${esc(e)}">View password</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="9" class="muted">No student accounts on this device.</td></tr>`}</table></div><div id="rsMsg"></div>`;
   } else {
     body = `<ol class="guide">
       <li><b>Student copies (one-time).</b> In Google Forms create a form called <i>Design Studio Log</i> with 8 <b>Short answer</b> questions in this order: Email, Name, Grade, Teacher, Criterion, Event, Role, Details (make Details a <b>Paragraph</b>). Turn off "Collect email addresses" and sign-in. Open ⋮ → <b>Get pre-filled link</b>, type <code>x</code> in every box, click <b>Get link</b> → <b>Copy link</b>, and paste it below. In the Responses tab, click <b>Link to Sheets</b>, and turn on email notifications if you want them sent to your Gmail.</li>
@@ -3900,10 +3920,18 @@ function staffPanel(tab, who="admin"){
     const doReset = async (email, name) => { const temp = tempPw(), m = $("#rsMsg"); m.innerHTML = `<div class="notice">Resetting…</div>`;
       try { const u = DB.users[email]; if (u) Object.assign(u, await hashPw(temp));
         let cloud = false; if (syncCfg()){ if (!ADMIN_KEYS) throw new Error("Sign in as admin to reset passwords on every device."); cloud = await adminReset(email, temp); if (u && !cloud){ const A = await deriveAcct(email, temp); u.dk = u.dk || b64e(crypto.getRandomValues(new Uint8Array(32))); await publishWrap(u, email, A); cloud = true; } }
+        if (cloud || u){ try { await escrowRaw(email, temp); if (u) u.pwEscFor = u.hash; } catch(e){} }
         save(true);
         m.innerHTML = cloud || u ? `<div class="notice ok">New password for <b>${esc(name || email)}</b>: <code style="font-size:15px">${esc(temp)}</code> — give it to the student. ${cloud ? "It works on every device and their work is kept." : "It works on this device only (no synced copy was found)."}</div>` : `<div class="notice bad">No account or saved work was found for ${esc(email)}.</div>`;
       } catch(err){ m.innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; } };
     document.querySelectorAll("[data-rs]").forEach(b => b.onclick = () => doReset(b.dataset.rs, (DB.users[b.dataset.rs] || {}).name));
+    const doView = async (email, name) => { const m = $("#rsMsg"); m.innerHTML = `<div class="notice">Looking up…</div>`;
+      try { const r = await viewPw(email);
+        m.innerHTML = r ? `<div class="notice ok">Password for <b>${esc(name || email)}</b>: <code style="font-size:15px">${esc(r.pw)}</code> <span class="muted" style="font-size:12px">(recorded ${esc(new Date(r.at).toLocaleString("en-GB", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }))})</span></div>`
+          : `<div class="notice warn">No password recorded yet for ${esc(name || email)}. It is recorded the next time they sign in, or press <b>Reset password</b> to give them a new one now.</div>`;
+      } catch(err){ m.innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; } };
+    document.querySelectorAll("[data-vp]").forEach(b => b.onclick = () => doView(b.dataset.vp, (DB.users[b.dataset.vp] || {}).name));
+    const vb = $("#rsView"); if (vb) vb.onclick = () => { const e = $("#rsEmail").value.trim().toLowerCase(); if (!SCHOOL.test(e)) return $("#rsMsg").innerHTML = `<div class="notice bad">Type the student's full SISD email.</div>`; doView(e, e); };
     const rb = $("#rsAny"); if (rb) rb.onclick = () => { const e = $("#rsEmail").value.trim().toLowerCase(); if (!SCHOOL.test(e)) return $("#rsMsg").innerHTML = `<div class="notice bad">Type the student's full SISD email.</div>`; doReset(e, e); };
   }
   if (tab === "roster"){
