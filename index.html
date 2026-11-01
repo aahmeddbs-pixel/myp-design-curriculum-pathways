@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261101c"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261101f"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4096,9 +4096,8 @@ if (SDCG){
   window.SDC_onLang = code => { stopReading(); applyLang(code); renderMast(); };   // the language menu in the platform bar drives this page's own translator
   try { SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); else SDC.leave("out"); }, false, "#app"); } catch(e){}
   window.SDC_beforeRead = () => stopReading();
-  // a speaker on every section that doesn't already have one (criterion cards, notices, headings, panels)
-  try { if (SDC.listen) SDC.listen("#app .crit, #app .card, #app .notice, #app .hero, #app div:has(> h1), #app div:has(> h2), #app section:has(> h2), #app li:has(> b)"); } catch(e){}
-  { const st = document.createElement("style"); st.textContent = ".listen{font-size:0!important;width:32px;height:32px;padding:0!important;justify-content:center;border-radius:50%!important}.listen svg{width:16px;height:16px}[data-read]:not(.brief)>*:nth-child(2){padding-right:44px!important}.brief[data-read]{padding-right:52px!important}"; document.head.appendChild(st); }   // same speaker icon as everywhere else
+  try { if (SDC.listen) SDC.listen("#pane, #app > .stack:not(:has(#pane)), #app > .login", "", "bar"); } catch(e){}   // one Read to me button per page
+  { const st = document.createElement("style"); st.textContent = ".listen{display:none!important}[data-read]:not(.brief)>*:nth-child(2){padding-right:0!important}.brief[data-read]{padding-right:22px!important}"; document.head.appendChild(st); }   // the page has one Read to me button instead
   { const st = document.createElement("style"); st.textContent = "#mastRight .chip.lang{display:none!important}"; document.head.appendChild(st); }   // one language menu: the one in the platform bar
   document.title = SDC.course(SDCG.course).name + " · SISD Design and Computing";
   if (!SDCG.entered){ DB.session = null; save(true); SDC.patchGate({ entered:true }); }   // arriving from the portal: always sign in
