@@ -1,6 +1,9 @@
+<meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
+<script src="/sisd-design-and-computing/sdc.js"></script>
+<script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -2538,6 +2541,7 @@ function logEvent(crit, event, details){
   const u = user(); if (!u || session.preview) return;
   const item = [session.email, u.name, u.role === "teacher" ? "Staff" : uLabel(u.grade) + (classLabel(u) ? " · " + classLabel(u) : ""), u.role === "teacher" ? "-" : u.teacher, crit === "-" ? "-" : "Criterion " + crit, event, u.role === "teacher" ? "Teacher" : "Student", details, new Date().toISOString()];
   DB.queue.push(item); save(); flushQueue();
+  if (u.role !== "teacher") sdcTask(u, crit, event);
 }
 
 let flushing = false;
@@ -2633,7 +2637,7 @@ function renderMast(){
     $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
   }
   bindLang();
-  const so = $("#signOut"); if (so) so.onclick = () => { if (pendingSnap){ clearTimeout(snapTimer); const pc = pendingSnap; pendingSnap = null; sendWork(pc, "snapshot"); } if (syncable()) syncNow(); session = { email:null, preview:false, back:null }; staffIn = false; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} render(); };
+  const so = $("#signOut"); if (so) so.onclick = () => { if (pendingSnap){ clearTimeout(snapTimer); const pc = pendingSnap; pendingSnap = null; sendWork(pc, "snapshot"); } if (syncable()) syncNow(); session = { email:null, preview:false, back:null }; staffIn = false; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} if (SDCG) return SDC.leave("out"); render(); };
 }
 
 /* ================= ROUTER ================= */
@@ -2697,6 +2701,18 @@ function renderLogin(app){
   $("#lGrade").onchange = () => { const grp = COURSE.groups[$("#lGrade").value], cl = grp ? (grp.classes || []) : [];
     $("#lClassRow").hidden = cl.length < 2; $("#lClass").innerHTML = (cl.length > 1 ? `<option value="">Choose…</option>` : "") + cl.map(k => `<option value="${k.id}">${esc(k.label)}</option>`).join(""); };
   const msg = (t, kind="bad") => $("#lMsg").innerHTML = `<div class="notice ${kind}">${t}</div>`;
+  if (SDCG && SDCG.mode !== "staff"){
+    const C = SDC.course(SDCG.course), tabs = app.querySelector(".tabs"); if (tabs) tabs.hidden = true;
+    const note = t => $("#lf").insertAdjacentHTML("afterbegin", `<div class="notice" style="font-weight:bold">${t}</div>`);
+    if (SDCG.mode === "signup"){
+      setMode("up"); setRole("student"); $("#roleRow").hidden = true;
+      $("#lGrade").value = SDCG.grade; $("#lGrade").onchange(); $("#lGrade").disabled = true;
+      note(`Signing up for <b>${esc(C.name)}, Grade ${esc(SDCG.grade)}</b>. Only your teacher can change your course or grade later.`);
+    } else {
+      setMode("in");
+      note(`Signing into <b>${esc(C.name)}</b>. Your teacher can see which course you sign into. New here? Use <b>Change course / sign out</b> at the top and choose Sign up.`);
+    }
+  }
   $("#lf").onsubmit = async e => {
     e.preventDefault();
     const email = $("#lEmail").value.trim().toLowerCase(), pw = $("#lPw").value;
@@ -2717,6 +2733,7 @@ function renderLogin(app){
             if (!r){ noteFail(email); return msg("We could not find an account with that email and password. Check both, or choose <b>Sign up</b> if this is your first time. If you forgot your password, ask your teacher to reset it."); }
             clearFails(email);
             DB.users[email] = u = r.u; session.email = email; DB.session = email; save(true); flushQueue();
+            if (!(await sdcAfter(u, email, false))) return;
             toast("Welcome back — your work has been loaded on this device.", 4000);
             speak(P().welcome(u.name.split(" ")[0]));
             return resumeSpot(u);
@@ -2738,6 +2755,7 @@ function renderLogin(app){
         if (u.role !== "teacher" && syncCfg()){ msg("Loading your latest work…", "ok"); synced = await syncIn(u, email, pw); }
         session.email = email; DB.session = email; save(true); flushQueue();
         if (u.role !== "teacher"){
+          if (!(await sdcAfter(u, email, false))) return;
           if (synced === "restored") toast("Your latest work from another device has been loaded.", 4000);
           if (synced !== "restored") syncNow(); else flushSync();
           speak(P().welcome(u.name.split(" ")[0])); return resumeSpot(u);
@@ -2765,12 +2783,14 @@ function renderLogin(app){
       if (clsList.length > 1 && !cls) return msg("Choose your class.");
       if (syncCfg()){ let ex = null; try { const id = await emailId(email); ex = (await pullRows(syncCfg(), "E", id + "|", 1))["E|" + id]; } catch(err){} if (ex) return msg("This email already has an account. Choose <b>Sign in</b>. If you forgot your password, ask your teacher to reset it — your work is kept."); }
       const rc = await rosterCheck(email, name);
+      if (SDCG && SDCG.mode !== "staff"){ msg("Checking…", "ok"); let ck = { ok:true }; try { ck = await SDC.canSignUp(email, name, SDCG.course); } catch(err){} if (!ck.ok) return msg(ck.msg); $("#lMsg").innerHTML = ""; }
       if (!rc.ok) return msg("This email and name are not on the SISD student list. Type your full name exactly as the school has it, with your SISD email. If it still doesn't work, ask your teacher.");
-      DB.users[email] = { role:"student", name, group: grade, cls, grade: COURSE.groups[grade].units[0], teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
+      DB.users[email] = { role:"student", name, group: grade, cls, grade: sdcFirstUnit(grade), course: SDCG && SDCG.mode !== "staff" ? SDCG.course : undefined, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
       const nu = DB.users[email];
       if (syncCfg()){ nu.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); try { await publishWrap(nu, email, await deriveAcct(email, pw)); } catch(err){ console.warn(err); } }
       session.email = email; DB.session = email; save();
       logEvent("-", "Signed up", COURSE.groups[grade].label); syncNow(true);
+      if (SDCG && SDCG.mode !== "staff") SDC.confirm(sdcAcct(nu, email), true);
       speak(P().welcome(name.split(" ")[0]));
       go({ name:"home" });
     } catch(err){ msg(esc(err.message)); }
@@ -3185,7 +3205,7 @@ function resumeSpot(u){
   const L = u && u.last;
   if (L && L.crit && COURSE.criteria[L.crit]){
     const grp = COURSE.groups[u.group || groupOf(u.grade)];
-    if (L.grade && L.grade !== u.grade && grp && grp.units.includes(L.grade)) setUnit(u, L.grade);
+    if (L.grade && L.grade !== u.grade && grp && sdcUnits(u, grp.units).includes(L.grade)) setUnit(u, L.grade);
     if (L.grade === u.grade && isOpen(u.grade, L.crit)) return go({ name:"crit", crit: L.crit, step: L.step || 0, strand: L.strand || 0 });
   }
   go({ name:"home" });
@@ -3282,7 +3302,7 @@ function unitBlock(u, g, multi){
   </section>`;
 }
 function renderHome(app){
-  const u = user(), gk = u.group || groupOf(u.grade), grp = COURSE.groups[gk] || { label: gLabel(u.grade), units: [u.grade] }, multi = grp.units.length > 1;
+  const u = user(), gk = u.group || groupOf(u.grade), grp0 = COURSE.groups[gk] || { label: gLabel(u.grade), units: [u.grade] }, grp = Object.assign({}, grp0, { units: sdcUnits(u, grp0.units) }), multi = grp.units.length > 1;
   app.innerHTML = `<div class="stack" style="gap:26px">
     ${multi ? `<div class="stack" style="gap:4px"><div class="eyebrow">${esc(grp.label)}</div><h1 style="font-family:var(--f-display);font-size:clamp(24px,3.6vw,34px)">Your units</h1>
       <p class="muted" style="margin:0;max-width:66ch">Each unit has four criteria. You can open a criterion once your teacher switches it on; the others are view only.</p></div>` : ""}
@@ -4001,7 +4021,55 @@ $("#staffLink").onclick = openStaff;
 document.addEventListener("keydown", e => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a"){ e.preventDefault(); openStaff(); } if (e.key === "Escape") closeModal(); });
 $("#endPreview").onclick = () => { session.preview = false; session.email = session.back || null; session.back = null; go({ name:"home" }); };
 Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u.group) u.group = groupOf(u.grade); });
+/* ---- SISD Design and Computing: course gate, locked course and grade, House Points activity ---- */
+var SDCG = window.SDC ? SDC.gate() : null;
+function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (u.grade === "10IT" ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "" }; }
+function sdcUnits(u, units){
+  if (!SDCG || !u || u.role === "teacher" || session.preview) return units;
+  const c = u.course || SDCG.course, out = units.filter(x => c === "it" ? x === "10IT" : x !== "10IT");
+  return out.length ? out : units;
+}
+function sdcFirstUnit(g){ const units = COURSE.groups[g].units; return (SDCG && SDCG.course === "it" && units.includes("10IT")) ? "10IT" : units.filter(x => x !== "10IT")[0] || units[0]; }
+const SDC_W = { "Practice passed":1, "Criterion submitted":2 };
+function sdcTask(u, crit, event){
+  if (!SDCG || session.preview) return;
+  const w = /^Strand .* complete$/.test(event) ? 3 : SDC_W[event]; if (!w) return;
+  SDC.task(sdcAcct(u, session.email), uLabel(u.grade) + " · Criterion " + crit + " · " + event, w, /Strand/.test(event) ? "strand" : /Practice/.test(event) ? "practice" : "submission");
+}
+function sdcApply(u, A){
+  if (!A) return;
+  if (A.g && COURSE.groups[A.g] && A.g !== (u.group || groupOf(u.grade))){
+    u.progressBy = u.progressBy || {}; u.choiceBy = u.choiceBy || {}; u.progressBy[u.grade] = u.progress || {}; u.choiceBy[u.grade] = u.choice || null;
+    u.group = A.g; const unit = sdcUnits(u, COURSE.groups[A.g].units)[0]; u.grade = unit; u.progress = u.progressBy[unit] || {}; u.choice = u.choiceBy[unit] || null;
+  }
+  if (A.cls != null && A.cls !== "") u.cls = A.cls;
+  if (A.t) u.teacher = A.t;
+}
+/* after a student signs in or signs up: is this the course they are registered for? */
+async function sdcAfter(u, email, signup){
+  if (!SDCG || SDCG.mode === "staff" || !u || u.role === "teacher") return true;
+  const c = SDCG.course, grp = u.group || groupOf(u.grade);
+  const fail = m => { session = { email:null, preview:false, back:null }; DB.session = null; save(true); SDC.signedOutNotice(m); SDC.leave("blocked"); return false; };
+  let A0 = null; try { A0 = (await SDC.lookup(email, u.name)).assign; } catch(e){}
+  if (A0 && A0.c === c){ u.course = c; sdcApply(u, A0); }   // the admin has moved this student: their setting wins
+  const grp1 = u.group || groupOf(u.grade);
+  if (!A0 && u.course && u.course !== c) { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { registered:u.course }); return fail(`This account is registered for <b>${esc(SDC.course(u.course).name)}</b>, not ${esc(SDC.course(c).name)}. You can only see the course you are registered for. If this is wrong, ask your teacher: only they can change your course.`); }
+  if (c === "it" && grp1 !== "10") { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { reason:"grade" }); return fail(`IT is only for Grade 10, and this account is for ${esc(groupLabel(u))}. Choose Design instead.`); }
+  let ck = { ok:true }; try { ck = await SDC.confirm(sdcAcct(Object.assign({}, u, { course:c }), email), signup); } catch(e){}
+  if (!ck.ok) return fail(ck.msg);
+  u.course = c; sdcApply(u, ck.assign);
+  const allowed = sdcUnits(u, (COURSE.groups[u.group || groupOf(u.grade)] || { units:[u.grade] }).units);
+  if (!allowed.includes(u.grade)) setUnit(u, allowed[0]);
+  save(true); if (syncable()) syncNow();
+  return true;
+}
+if (SDCG){
+  SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); else SDC.leave("out"); });
+  document.title = SDC.course(SDCG.course).name + " · SISD Design and Computing";
+  if (!SDCG.entered){ DB.session = null; save(true); SDC.patchGate({ entered:true }); }   // arriving from the portal: always sign in
+}
 if (DB.session && DB.users[DB.session] && DB.session !== PREVIEW && DB.users[DB.session].hash) session.email = DB.session;
+if (SDCG && SDCG.mode !== "staff" && session.email){ const u0 = DB.users[session.email]; if (u0 && u0.role !== "teacher" && u0.course && u0.course !== SDCG.course){ session.email = null; DB.session = null; save(true); } }
 try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
 new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = requestAnimationFrame(() => addListenButtons(document.getElementById("app"))); }).observe(document.getElementById("app"), { childList:true, subtree:true });
 render(); loadLive(); flushQueue(); flushSync();
