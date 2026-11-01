@@ -2420,7 +2420,7 @@ function speakLong(text, opts={}){
   };
   next(); return true;
 }
-function stopReading(){ readToken++; try { speechSynthesis.cancel(); } catch(e){} document.querySelectorAll(".listen[aria-pressed=true]").forEach(b => { b.setAttribute("aria-pressed","false"); b.lastChild.textContent = " Listen"; }); }
+function stopReading(){ readToken++; try { if (window.SDC && SDC.stopReading) SDC.stopReading(); } catch(e){} try { speechSynthesis.cancel(); } catch(e){} document.querySelectorAll(".listen[aria-pressed=true]").forEach(b => { b.setAttribute("aria-pressed","false"); b.lastChild.textContent = " Listen"; }); }
 function readableText(el){
   const c = el.cloneNode(true);
   c.querySelectorAll(".listen,.btn,input,textarea,select,canvas,img,svg,.counter,.bands,.tools,.sw,.dots,script,style").forEach(n => n.remove());
@@ -4093,7 +4093,11 @@ async function sdcAfter(u, email, signup){
   return true;
 }
 if (SDCG){
-  SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); else SDC.leave("out"); }, true);
+  window.SDC_onLang = code => { stopReading(); applyLang(code); renderMast(); };   // the language menu in the platform bar drives this page's own translator
+  SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); else SDC.leave("out"); }, false, "#app");
+  window.SDC_beforeRead = () => stopReading();
+  SDC.listen(".notice, .card, .hero");   // sections without their own Listen button
+  { const st = document.createElement("style"); st.textContent = "#mastRight .chip.lang{display:none!important}"; document.head.appendChild(st); }   // one language menu: the one in the platform bar
   document.title = SDC.course(SDCG.course).name + " · SISD Design and Computing";
   if (!SDCG.entered){ DB.session = null; save(true); SDC.patchGate({ entered:true }); }   // arriving from the portal: always sign in
 }
