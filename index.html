@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261101h"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261101i"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -53,6 +53,11 @@ main{padding-block:22px 60px}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn.ok{background:var(--ok)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+.ack{display:flex;gap:10px;align-items:flex-start;margin:18px 0 0 auto;max-width:560px;padding:10px 14px;border:2px solid var(--line);border-radius:10px;background:var(--paper);font-weight:bold;font-size:14px;cursor:pointer;line-height:1.4}
+.ack input{width:20px;height:20px;margin-top:1px;accent-color:var(--red);flex:none;cursor:pointer}
+.ack:has(input:checked){border-color:var(--ok);background:var(--okbg)}
+.ack.nudge{border-color:var(--red);animation:ackShake .4s}
+@keyframes ackShake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .btn.sm{padding:6px 11px;font-size:13px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:bold}
 input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 12px;width:100%;font-weight:normal}
@@ -3380,6 +3385,26 @@ function renderCrit(app){
     $("#backStep").onclick = () => { stopVideo(); stopReading(); view.step -= 1; render(); window.scrollTo({top:0, behavior:"smooth"}); };
   }, 0);
   ({ video:paneVideo, ex:paneExample, me:paneMethod, ru:paneRubric, prac:panePractice, task:paneTask, sub:paneSubmit })[STEPS[view.step].k](pane, { u, c, g, gd, cd, p, sc });
+  const sk = STEPS[view.step].k; gateNext(pane, p, sk);
+  new MutationObserver(() => gateNext(pane, p, sk)).observe(pane, { childList:true, subtree:true });   // practice redraws its own buttons
+}
+/* The red "next" button stays locked until the student ticks that they have read or listened to everything above. */
+const ACK_TEXT = "I have read or listened to everything above that explains the task.";
+function gateNext(pane, p, key){
+  ["#nextStep", "#toTask"].forEach(sel => {
+    const btn = pane.querySelector(sel); if (!btn || btn.dataset.gated) return;
+    btn.dataset.gated = "1";
+    p.ack = p.ack || {};
+    const row = btn.closest(".row") || btn.parentElement, id = "ack_" + key + "_" + sel.slice(1);
+    const lab = document.createElement("label"); lab.className = "ack sdcNoRead";
+    lab.innerHTML = `<input type="checkbox" id="${id}" ${p.ack[key] ? "checked" : ""}><span>${esc(ACK_TEXT)}</span>`;
+    row.parentNode.insertBefore(lab, row);
+    const box = lab.querySelector("input"), extra = () => key === "video" ? !!p.watched : true;   // the introduction must also be watched to the end
+    const paint = () => { btn.disabled = !(box.checked && extra()); btn.title = box.checked ? "" : "Tick the box above first"; };
+    box.onchange = () => { p.ack[key] = box.checked; save(); paint(); };
+    btn.addEventListener("click", e => { if (!box.checked){ e.stopImmediatePropagation(); e.preventDefault(); lab.classList.add("nudge"); setTimeout(() => lab.classList.remove("nudge"), 900); } }, true);
+    paint();
+  });
 }
 function nextBtn(label, onClick){ return `<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="nextStep">${label} →</button></div>`; }
 function advance(ctx, key){ if (key) ctx.p.seen[key] = true; save(); view.step = Math.min(view.step+1, STEPS.length-1); render(); window.scrollTo({top:0, behavior:"smooth"}); }
@@ -3432,7 +3457,7 @@ function paneVideo(pane, ctx){
     $("#stage").innerHTML = `<div class="scene-in">${s.art}</div><div class="txt scene-in"><div class="kick">${esc(s.k)}</div><h2>${esc(s.h)}</h2><p>${esc(s.p)}</p></div>`;
     $("#vBar").style.width = ((vid.i+1)/scenes.length*100) + "%";
     $("#vTc").textContent = `Scene ${vid.i+1} of ${scenes.length}`;
-    if (vid.i === scenes.length-1){ ctx.p.watched = true; save(); const n = $("#nextStep"); if (n) n.disabled = false; }
+    if (vid.i === scenes.length-1){ ctx.p.watched = true; save(); const n = $("#nextStep"); if (n) n.disabled = !(ctx.p.ack && ctx.p.ack.video); }
   };
   const playScene = () => {
     if (!vid || !vid.playing) return;
