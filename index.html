@@ -2372,7 +2372,7 @@ const PHRASES = {
         welcome: n => `Bienvenido, ${n}. Vamos a diseñar algo genial.`, unlocked: "¡Fantástico! Has desbloqueado tu tarea principal.", nearly: "Casi terminado. Completa las partes que faltan.",
         allDone: "¡Trabajo increíble! Las cuatro partes están completas. Descarga tu trabajo y entrégalo.", sketch: "Boceto guardado. Buen trabajo.", copy: "Se guardó una copia para tu profesor. ¡Excelente!", pdf: "Tu PDF se está descargando. Entrégalo donde indique tu profesor." }
 };
-function lang(){ return LANGS[DB.lang] ? DB.lang : "en"; }
+function lang(){ let s = null; try { s = localStorage.getItem("sdc_lang"); } catch(e){} if (LANGS[s]) return s; return LANGS[DB.lang] ? DB.lang : "en"; }   // shared with SISD Design and Computing
 function P(){ return PHRASES[lang()]; }
 function pickOne(a){ return a[Math.floor(Math.random()*a.length)]; }
 /* pick the most natural-sounding voice the device offers */
@@ -2456,7 +2456,7 @@ function loadTranslator(){
   document.body.appendChild(s);
 }
 function applyLang(code, first){
-  DB.lang = code; save(); document.documentElement.lang = code;
+  DB.lang = code; save(); document.documentElement.lang = code; try { localStorage.setItem("sdc_lang", code); } catch(e){}
   if (code === "en"){ setCookieLang("en"); if (!first && gtLoaded) location.reload(); return; }
   setCookieLang(code); loadTranslator();
   // if the translator is already on the page, switch it directly
@@ -4051,6 +4051,7 @@ $("#endPreview").onclick = () => { session.preview = false; session.email = sess
 Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u.group) u.group = groupOf(u.grade); });
 /* ---- SISD Design and Computing: course gate, locked course and grade, House Points activity ---- */
 var SDCG = window.SDC ? SDC.gate() : null;
+window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
 function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (u.grade === "10IT" ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "" }; }
 function sdcUnits(u, units){
   if (!SDCG || !u || u.role === "teacher" || session.preview) return units;
@@ -4092,7 +4093,7 @@ async function sdcAfter(u, email, signup){
   return true;
 }
 if (SDCG){
-  SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); else SDC.leave("out"); });
+  SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); else SDC.leave("out"); }, true);
   document.title = SDC.course(SDCG.course).name + " · SISD Design and Computing";
   if (!SDCG.entered){ DB.session = null; save(true); SDC.patchGate({ entered:true }); }   // arriving from the portal: always sign in
 }
