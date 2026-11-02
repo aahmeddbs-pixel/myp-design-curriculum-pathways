@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261102j"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261102k"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3443,7 +3443,7 @@ function paneVideo(pane, ctx){
   const scenes = buildScenes(ctx), link = (l => /^https:\/\//i.test(l || "") ? l : "")(settings().videoLinks?.[ctx.g + ctx.c]);
   pane.innerHTML = `<div class="stack">
     <div class="player" id="player"><div class="stage" id="stage"></div>
-      <div class="controls"><button id="vPrev" aria-label="Previous scene">◀</button><button id="vPlay">▶ Play</button><button id="vNext" aria-label="Next scene">▶▶</button>
+      <div class="controls"><button id="vPrev" aria-label="Previous scene">◀</button><button id="vPlay">▶ Play</button><button id="vNext" aria-label="Next scene">▶▶</button>${window.SDC && SDC.narrator ? `<button id="vVoice" title="Choose the narrator's voice">🎙 ${SDC.narrator() === "female" ? "Female" : "Male"} voice</button>` : ""}
         <div class="prog"><i id="vBar"></i></div><span class="tc" id="vTc"></span></div></div>
     <div class="row" style="justify-content:space-between">
       <p class="muted" style="margin:0;font-size:13px"><span id="voiceNote">The narrator reads each scene aloud.</span> Turn your sound on, or read the captions.${link?` Your teacher also recorded a video: <a href="${esc(link)}" target="_blank" rel="noopener">open the teacher video</a>.`:""}</p>
@@ -3478,11 +3478,16 @@ function paneVideo(pane, ctx){
     if (tAudio){ tAudio.currentTime = tStart[vid.i] * tAudio.duration; tAudio.play().catch(()=>{}); return; }
     const s = scenes[vid.i], done = () => { if (!vid || !vid.playing) return; if (vid.i < scenes.length-1){ vid.i++; playScene(); } else { vid.playing = false; vid.ended = true; $("#vPlay").textContent = "↺ Replay"; } };
     const ms = Math.max(4000, words(s.say) / 2.6 * 1000);
+    if (window.SDC && SDC.narrate){ const me = vid; let fired = false;   // natural voice, sentence by sentence, in the chosen language
+      const fin = () => { if (fired || vid !== me || !vid.playing) return; fired = true; clearTimeout(vid.timer); vid.timer = setTimeout(done, 650); };
+      if (!SDC.narrate(s.say, { onend: fin })) vid.timer = setTimeout(done, ms); else vid.timer = setTimeout(() => { if (!fired){ fired = true; done(); } }, ms * 2 + 15000);
+      return; }
     if (lang() !== "en"){ const me = vid; vid.timer = setTimeout(() => { if (vid !== me || !vid.playing) return; const st = $("#stage .txt"); speakLong(st ? st.innerText : s.say, { onend: () => { if (vid === me) vid.timer = setTimeout(done, 700); } }); }, 1600); return; }
     const u = speak(s.say, { force:true, rate:.98 });
     if (u){ let fired = false; u.onend = () => { if (!fired){ fired = true; clearTimeout(vid?.timer); vid && (vid.timer = setTimeout(done, 700)); } }; vid.timer = setTimeout(()=>{ if(!fired){ fired = true; done(); } }, ms + 6000); }
     else vid.timer = setTimeout(done, ms);
   };
+  { const vv = $("#vVoice"); if (vv) vv.onclick = () => { SDC.setNarrator(SDC.narrator() === "female" ? "male" : "female"); vv.textContent = "🎙 " + (SDC.narrator() === "female" ? "Female" : "Male") + " voice"; if (vid.playing && !tAudio){ clearTimeout(vid.timer); playScene(); } }; }
   $("#vPlay").onclick = () => {
     if (vid.playing){ vid.playing = false; clearTimeout(vid.timer); stopReading(); if (tAudio) tAudio.pause(); $("#vPlay").textContent = "▶ Play"; return; }
     if (vid.ended){ vid.i = 0; vid.ended = false; }
