@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261102h"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261102i"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2787,7 +2787,7 @@ function renderLogin(app){
       if (!grade) return msg("Choose your grade."); if (!teacher) return msg("Choose your teacher.");
       const clsList = COURSE.groups[grade].classes || [], cls = clsList.length > 1 ? $("#lClass").value : (clsList[0] ? clsList[0].id : "");
       if (clsList.length > 1 && !cls) return msg("Choose your class.");
-      if (syncCfg()){ let ex = null; try { const id = await emailId(email); ex = (await pullRows(syncCfg(), "E", id + "|", 1))["E|" + id]; } catch(err){} if (ex) return msg("This email already has an account. Choose <b>Sign in</b>. If you forgot your password, ask your teacher to reset it — your work is kept."); }
+      if (syncCfg()){ let ex = null; try { const id = await emailId(email); ex = (await pullRows(syncCfg(), "E", id + "|", 1))["E|" + id]; } catch(err){} if (ex && SDCG && await SDC.isDeleted(email, name)) ex = null; if (ex) return msg("This email already has an account. Choose <b>Sign in</b>. If you forgot your password, ask your teacher to reset it — your work is kept."); }
       const rc = await rosterCheck(email, name);
       if (SDCG && SDCG.mode !== "staff"){ msg("Checking…", "ok"); let ck = { ok:true }; try { ck = await SDC.canSignUp(email, name, SDCG.course); } catch(err){} if (!ck.ok) return msg(ck.msg); $("#lMsg").innerHTML = ""; }
       if (!rc.ok) return msg("This email and name are not on the SISD student list. Type your full name exactly as the school has it, with your SISD email. If it still doesn't work, ask your teacher.");
@@ -4081,7 +4081,9 @@ Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u
 /* ---- SISD Design and Computing: course gate, locked course and grade, House Points activity ---- */
 var SDCG = window.SDC ? SDC.gate() : null;
 window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
-function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (u.grade === "10IT" ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "" }; }
+function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (u.grade === "10IT" ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "" }; }
+/* the super admin deleted this account (unused for over a month): remove it from this computer */
+window.SDC_forget = a => { const e = String(a.email || "").toLowerCase(); if (e && DB.users[e] && DB.users[e].role !== "teacher"){ delete DB.users[e]; if (DB.session === e) DB.session = null; save(true); } };
 function sdcUnits(u, units){
   if (!SDCG || !u || u.role === "teacher" || session.preview) return units;
   const c = u.course || SDCG.course, out = units.filter(x => c === "it" ? x === "10IT" : x !== "10IT");
