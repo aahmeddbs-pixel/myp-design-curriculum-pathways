@@ -1,8 +1,8 @@
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261102b"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261102c"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2796,7 +2796,10 @@ function renderLogin(app){
       if (syncCfg()){ nu.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); try { await publishWrap(nu, email, await deriveAcct(email, pw)); } catch(err){ console.warn(err); } }
       session.email = email; DB.session = email; save();
       logEvent("-", "Signed up", COURSE.groups[grade].label); syncNow(true); escrowPw(nu, email, pw);
-      if (SDCG && SDCG.mode !== "staff") SDC.confirm(sdcAcct(nu, email), true);
+      if (SDCG && SDCG.mode !== "staff"){
+        msg("Checking…", "ok"); let ck = { ok:true }; try { ck = await SDC.confirm(sdcAcct(nu, email), true); } catch(err){}
+        if (!ck.ok){ session = { email:null, preview:false, back:null }; DB.session = null; save(true); SDC.signedOutNotice(ck.msg, ck.verify ? "warn" : "bad"); SDC.leave("blocked"); return; }   // must verify their SISD email first
+      }
       speak(P().welcome(name.split(" ")[0]));
       go({ name:"home" });
     } catch(err){ msg(esc(err.message)); }
@@ -4104,14 +4107,14 @@ function sdcApply(u, A){
 async function sdcAfter(u, email, signup){
   if (!SDCG || SDCG.mode === "staff" || !u || u.role === "teacher") return true;
   const c = SDCG.course, grp = u.group || groupOf(u.grade);
-  const fail = m => { session = { email:null, preview:false, back:null }; DB.session = null; save(true); SDC.signedOutNotice(m); SDC.leave("blocked"); return false; };
+  const fail = (m, v) => { session = { email:null, preview:false, back:null }; DB.session = null; save(true); SDC.signedOutNotice(m, v ? "warn" : "bad"); SDC.leave("blocked"); return false; };
   let A0 = null; try { A0 = (await SDC.lookup(email, u.name)).assign; } catch(e){}
   if (A0 && A0.c === c){ u.course = c; sdcApply(u, A0); }   // the admin has moved this student: their setting wins
   const grp1 = u.group || groupOf(u.grade);
   if (!A0 && u.course && u.course !== c) { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { registered:u.course }); return fail(`This account is registered for <b>${esc(SDC.course(u.course).name)}</b>, not ${esc(SDC.course(c).name)}. You can only see the course you are registered for. If this is wrong, ask your teacher: only they can change your course.`); }
   if (c === "it" && grp1 !== "10") { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { reason:"grade" }); return fail(`IT is only for Grade 10, and this account is for ${esc(groupLabel(u))}. Choose Design instead.`); }
   let ck = { ok:true }; try { ck = await SDC.confirm(sdcAcct(Object.assign({}, u, { course:c }), email), signup); } catch(e){}
-  if (!ck.ok) return fail(ck.msg);
+  if (!ck.ok) return fail(ck.msg, ck.verify);
   u.course = c; sdcApply(u, ck.assign);
   const allowed = sdcUnits(u, (COURSE.groups[u.group || groupOf(u.grade)] || { units:[u.grade] }).units);
   if (!allowed.includes(u.grade)) setUnit(u, allowed[0]);
