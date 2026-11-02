@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261102k"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261102m"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1734,7 +1734,7 @@ Object.assign(COURSE.gradeExercises["8"], {
 });
 
 /* keep the earlier Grade 10 Design unit (Harvest Hub) as a second unit */
-COURSE.grades["10HH"] = Object.assign({}, COURSE.grades["10"], { label: "Grade 10 Design", subject: "Design", short: "Harvest Hub" });
+COURSE.grades["10HH"] = Object.assign({}, COURSE.grades["10"], { label: "Grade 10 IT", subject: "IT and Game Development", short: "Harvest Hub" });   // part of the G10 IT course
 COURSE.examples["10HH"] = COURSE.examples["10"];
 COURSE.gradeExercises["10HH"] = COURSE.gradeExercises["10"];
 /* ======================= GRADE 10 DESIGN — REVEALING THE UNSEEN (IB ePortfolio Nov 2026) ======================= */
@@ -2295,7 +2295,7 @@ COURSE.examples = {
 /* ---------- short labels and classes ---------- */
 (function(){
   const set = (g, label) => { if (COURSE.grades[g]) COURSE.grades[g].label = label; };
-  set("6", "G6"); set("7", "G7"); set("8", "G8"); set("10", "G10 DES"); set("10HH", "G10 DES"); set("10IT", "G10 IT");
+  set("6", "G6"); set("7", "G7"); set("8", "G8"); set("10", "G10 DES"); set("10HH", "G10 IT"); set("10IT", "G10 IT");
   COURSE.groups = {
     "6":  { label: "G6",  units: ["6"],  classes: [{ id: "6",  label: "DES 6" }] },
     "7":  { label: "G7",  units: ["7"],  classes: [{ id: "7X", label: "7X (DES 1)" }, { id: "7Y", label: "7Y (DES 6)" }] },
@@ -4095,15 +4095,16 @@ Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u
 /* ---- SISD Design and Computing: course gate, locked course and grade, House Points activity ---- */
 var SDCG = window.SDC ? SDC.gate() : null;
 window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
-function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (u.grade === "10IT" ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "" }; }
+const IT_UNITS = ["10IT", "10HH"];   // the G10 IT course: Networks and Harvest Hub
+function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (IT_UNITS.includes(u.grade) ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "" }; }
 /* the super admin deleted this account (unused for over a month): remove it from this computer */
 window.SDC_forget = a => { const e = String(a.email || "").toLowerCase(); if (e && DB.users[e] && DB.users[e].role !== "teacher"){ delete DB.users[e]; if (DB.session === e) DB.session = null; save(true); } };
 function sdcUnits(u, units){
   if (!SDCG || !u || u.role === "teacher" || session.preview) return units;
-  const c = u.course || SDCG.course, out = units.filter(x => c === "it" ? x === "10IT" : x !== "10IT");
+  const c = u.course || SDCG.course, out = units.filter(x => c === "it" ? IT_UNITS.includes(x) : !IT_UNITS.includes(x));
   return out.length ? out : units;
 }
-function sdcFirstUnit(g){ const units = COURSE.groups[g].units; return (SDCG && SDCG.course === "it" && units.includes("10IT")) ? "10IT" : units.filter(x => x !== "10IT")[0] || units[0]; }
+function sdcFirstUnit(g){ const units = COURSE.groups[g].units; return (SDCG && SDCG.course === "it" && units.includes("10IT")) ? "10IT" : units.filter(x => !IT_UNITS.includes(x))[0] || units[0]; }
 const SDC_W = { "Practice passed":1, "Criterion submitted":2 };
 function sdcTask(u, crit, event){
   if (!SDCG || session.preview) return;
