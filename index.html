@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261103l"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261103n"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2659,6 +2659,7 @@ function render(){
   renderMast();
   $("#previewBanner").hidden = !session.preview;
   const app = $("#app"), u = user();
+  if (!u && LINKWAIT) return renderLinkWait(app);
   if (!u) return renderLogin(app);
   if (u.role === "teacher" && !session.preview){
     if (!approvedTeacher(session.email)){ session = { email:null, preview:false, back:null }; DB.session = null; save(true); return renderLogin(app); }
@@ -3070,7 +3071,7 @@ async function publishWrap(u, email, A){
   const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
   u.wrapFor = A.lookup; return ver;
 }
-const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","yearOf","history","progress","progressBy","choice","choiceBy","last"];
+const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last"];
 function syncPayload(u){
   const imgs = {};
   const walk = v => {
@@ -4126,7 +4127,52 @@ Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u
 var SDCG = window.SDC ? SDC.gate() : null;
 window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
 const IT_UNITS = ["10IT", "10HH"];   // the G10 IT course: Networks and Harvest Hub
-function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (IT_UNITS.includes(u.grade) ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "" }; }
+function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (IT_UNITS.includes(u.grade) ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "", viaCS: !!u.viaCS }; }
+/* ---------- Computer Science students joining Design ----------
+   The first time, their teacher approves it (and sets the grade/class); after that they switch straight in. */
+let LINKWAIT = null;   // { state: "asked" | "declined" | "nogo", grade, teacher }
+async function linkIn(){
+  const L = SDCG && SDCG.link, D = L && L.design;
+  if (!D || !D.email || user() || SDCG.course !== "design") return false;
+  const email = D.email, pw = D.pw;
+  let A = null; try { A = (await SDC.lookup(email, D.name)).assign; } catch(e){ LINKWAIT = { state:"offline" }; render(); return true; }
+  if (!A || A.c !== "design"){   // not approved yet: ask their teacher once
+    const declined = A && A.declined === "design";
+    const k = "sdc_dreq_" + email;
+    if (!declined){ let sent = 0; try { sent = +localStorage.getItem(k) || 0; } catch(e){}
+      if (Date.now() - sent > 7 * 86400000){
+        SDC.log("designrequest", { name:D.name, email, grade:D.grade, teacher:D.teacher, course:"design" }, { from:"cs" });
+        try { localStorage.setItem(k, String(Date.now())); } catch(e){} } }
+    LINKWAIT = { state: declined ? "declined" : "asked", grade: D.grade, teacher: D.teacher }; render(); return true;
+  }
+  LINKWAIT = null;
+  let u = DB.users[email];
+  if (u && u.role === "teacher") return false;
+  if (u && !(await checkPw(pw, u))){ if (!u.viaCS) return false; Object.assign(u, await hashPw(pw)); }   // their own Design password account: normal sign-in
+  if (!u && syncCfg()){ try { const r = await restoreAccount(email, pw); if (r){ u = DB.users[email] = r.u; } } catch(e){} }
+  if (!u){
+    const g = COURSE.groups[A.g] ? String(A.g) : "6", rec = await hashPw(pw);
+    u = DB.users[email] = { role:"student", name:D.name, group:g, cls:A.cls || "", grade:sdcFirstUnit(g), course:"design", teacher:A.t || D.teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), yearOf:schoolYear(), progress:{}, viaCS:true };
+    if (syncCfg()){ u.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); try { await publishWrap(u, email, await deriveAcct(email, pw)); } catch(e){} }
+  }
+  u.viaCS = true; u.name = u.name || D.name; u.course = "design";
+  session.email = email; DB.session = email; save(true);
+  if (syncCfg()){ try { await syncIn(u, email, pw); } catch(e){} }
+  if (!(await sdcAfter(u, email, false))) return true;
+  try { SDC.setSignedIn(true); } catch(e){}
+  resumeSpot(u); return true;
+}
+function renderLinkWait(app){
+  const w = LINKWAIT || {};
+  const head = w.state === "declined" ? "Design wasn't approved for you" : w.state === "offline" ? "Can't check right now" : "Waiting for your teacher";
+  const text = w.state === "declined" ? "Your teacher didn't approve Design for your account. If you think this is a mistake, speak to your teacher."
+    : w.state === "offline" ? "We couldn't check whether Design is approved for you. Check the internet connection and try again."
+    : `We've asked ${esc(w.teacher || "your teacher")} to add you to <b>Design${w.grade ? ", Grade " + esc(w.grade) : ""}</b>. You only need to ask once. As soon as they approve it, choose <b>Change course → Switch to Design</b> again and you'll go straight in.`;
+  app.innerHTML = `<div class="card stack" style="max-width:640px;margin:30px auto;gap:10px;border-left:6px solid var(--red,#DC2B3E)"><div class="eyebrow">Design</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.2vw,30px)">${head}</h1><p style="margin:0">${text}</p>
+    <div class="row"><button class="btn" id="lwBack">← Back to Computer Science</button></div></div>`;
+  $("#lwBack").onclick = () => { SDC.setGate({ mode:"link", course:"cs", link: SDCG.link }); location.href = SDC.course("cs").app; };
+  try { SDC.setSignedIn(true); } catch(e){}
+}
 /* the super admin deleted this account (unused for over a month): remove it from this computer */
 window.SDC_forget = a => { const e = String(a.email || "").toLowerCase(); if (e && DB.users[e] && DB.users[e].role !== "teacher"){ delete DB.users[e]; if (DB.session === e) DB.session = null; save(true); } };
 function sdcUnits(u, units){
@@ -4202,7 +4248,7 @@ async function sdcAfter(u, email, signup){
 }
 if (SDCG){
   window.SDC_onLang = code => { stopReading(); applyLang(code); renderMast(); };   // the language menu in the platform bar drives this page's own translator
-  try { SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); }, false, "#app",
+  try { SDC.strip(SDCG.course, switching => { const so = $("#signOut"); if (so && user()) so.click(); else if (LINKWAIT && !switching){ LINKWAIT = null; SDCG.link = null; SDCG.mode = "signin"; render(); } }, false, "#app",
     () => { if (!user()) render(); const t = $("#tIn"); if (t) t.click(); const e = $("#lEmail"); if (e){ e.focus(); e.scrollIntoView({ block:"center" }); } }); } catch(e){}
   { const st = document.createElement("style"); st.textContent = "#mastRight #signOut{display:none!important}"; document.head.appendChild(st); }   // Sign out is in the platform bar
   window.SDC_beforeRead = () => stopReading();
@@ -4217,6 +4263,7 @@ if (SDCG && SDCG.mode !== "staff" && session.email){ const u0 = DB.users[session
 try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
 new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = requestAnimationFrame(() => addListenButtons(document.getElementById("app"))); }).observe(document.getElementById("app"), { childList:true, subtree:true });
 render(); loadLive(); flushQueue(); flushSync();
+if (SDCG && SDCG.link && SDCG.link.design && !user()) linkIn().catch(() => {});   // came from Computer Science
 (async () => { const u = syncable(); if (!u) return; const em = session.email, r = await syncIn(u, em, null);
   if (session.email !== em) return; save(true);
   if (r === "restored"){ toast("Your latest work from another device has been loaded.", 4000); resumeSpot(u); } else syncNow(); })();
