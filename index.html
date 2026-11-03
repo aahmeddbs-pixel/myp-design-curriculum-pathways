@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261103x"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261103y"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -170,6 +170,7 @@ textarea{min-height:110px;resize:vertical;line-height:1.5}
 .field .lbl{font-weight:bold}
 .counter{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .counter.ok{color:var(--ok)}
+.counter.bad{color:var(--bad,#B3261E);font-family:inherit;font-size:13px}
 .tin input{border:0;width:100%;padding:6px 4px;background:transparent;min-width:110px}
 .tin td{padding:0 4px}
 .sk{border:1px solid var(--line);border-radius:9px;background:var(--paper);padding:10px;display:flex;flex-direction:column;gap:8px}
@@ -2326,6 +2327,134 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const ROMAN = ["i","ii","iii","iv"];
 const LS_KEY = "sisdDesignStudio.v1";
 const words = s => (String(s||"").trim().match(/\S+/g) || []).length;
+/* ================= LITERACY: real words, full sentences, spelling and grammar =================
+   The British English word list (about 170,000 words) loads once from the platform. Only real words count towards a
+   word minimum: random letters, numbers, symbols and repeated words don't. Writing must be in full sentences. */
+const LIT = (() => {
+  const URL_W = "../sisd-design-and-computing/words-en.txt?v=1";
+  let LOW = null, CAP = null, loading = null; const waiters = [];
+  const SHORT = new Set("a i am an as at be by do go he if in is it me my no of oh ok on or so to up us we eg ie tv pc ai id 2d 3d".split(" "));
+  const ABBR = /\b(e\.g|i\.e|etc|Mr|Mrs|Ms|Dr|vs|approx|no)\./gi;
+  function load(){
+    if (LOW) return Promise.resolve(true);
+    return loading = loading || fetch(URL_W, { cache:"force-cache" }).then(r => { if (!r.ok) throw new Error("words " + r.status); return r.text(); }).then(t => {
+      const lo = new Set(), ca = new Set(); t.split(/\r?\n/).forEach(w => { if (!w) return; if (w === w.toLowerCase()) lo.add(w); else ca.add(w.toLowerCase()); });
+      LOW = lo; CAP = ca; waiters.splice(0).forEach(f => { try { f(); } catch(e){} }); return true;
+    }).catch(() => { loading = null; return false; });
+  }
+  const ready = () => !!LOW;
+  const onReady = f => { if (LOW) f(); else waiters.push(f); };
+  const looksReal = w => /[aeiouy]/i.test(w) && !/(.)\1\1/i.test(w) && !/[bcdfghjklmnpqrstvwxz]{5,}/i.test(w) && w.length <= 22;
+  /* is this (letters only, maybe with ' or -) a real word? capital = written with a capital letter */
+  function known(w){
+    const lw = w.toLowerCase().replace(/[’‘]/g, "'");
+    if (lw.length <= 2) return SHORT.has(lw) || (w.length === 2 && w === w.toUpperCase() && CAP && CAP.has(lw));
+    if (!LOW) return looksReal(lw);
+    if (LOW.has(lw) || CAP.has(lw)) return true;
+    const b = lw.replace(/'s$|s'$|'$/, ""); if (b !== lw && (LOW.has(b) || CAP.has(b))) return true;
+    if (lw.indexOf("-") > 0) return lw.split("-").every(x => x && known(x));
+    return false;
+  }
+  const NUM = /^[£$€]?\d[\d.,:]*(%|cm|mm|m|km|kg|g|mg|ml|l|s|sec|min|mins|h|hrs|px|gb|mb|kb|st|nd|rd|th|am|pm|x|°c?)?$/i, CODE = /^[A-Za-z]{0,3}\d{1,4}[A-Za-z]{0,2}$/;
+  /* every token in the text, sorted into: real words, things that don't count (numbers, links), and junk */
+  function tokens(text){
+    const out = [];
+    String(text || "").replace(/[’‘]/g, "'").split(/\s+/).filter(Boolean).forEach(raw => {
+      if (/^(https?:\/\/|www\.)|@\w+\./i.test(raw)) return out.push({ raw, k:"skip" });
+      const core = raw.replace(/^[("'\[{<“”*•\-–—]+|[)"'\]}>“”.,;:!?…*\-–—]+$/g, "");
+      if (!core){ return out.push({ raw, k: /^[\-–—&+=•*]$/.test(raw) ? "skip" : "junk" }); }
+      if (NUM.test(core) || CODE.test(core) && /\d/.test(core) || /^(e\.g|i\.e|a\.m|p\.m|etc)$/i.test(core)) return out.push({ raw, k:"skip" });
+      core.split(/\/|(?<=[A-Za-z])[.,;:!?]+(?=[A-Za-z])/).forEach(part => {
+        if (!part) return;
+        if (!/^[A-Za-z][A-Za-z'\-]*$/.test(part)) return out.push({ raw:part, w:part, k:"junk" });
+        out.push({ raw:part, w:part, k: known(part) ? "word" : (/^[A-Z]/.test(part) && looksReal(part) && part.length > 2) ? "name" : "junk" });
+      });
+    });
+    let prev = ""; out.forEach(t => { if (!t.w) return; const lw = t.w.toLowerCase(); if (lw === prev && t.k !== "junk") t.rep = true; prev = lw; });
+    return out;
+  }
+  /* the number of real words (repeats in a row count once) */
+  const count = text => tokens(text).filter(t => (t.k === "word" || t.k === "name") && !t.rep).length;
+  function sentences(text){
+    return String(text || "").replace(ABBR, m => m.replace(/\./g, "․")).split(/(?<=[.!?])["')\]]*\s+|\n+/).map(x => x.trim()).filter(x => /[A-Za-z]/.test(x));
+  }
+  /* what's wrong with this writing ("" = fine) */
+  function problem(text){
+    const t = mask(text).trim(); if (!t) return "";
+    const tk = tokens(t), real = tk.filter(x => x.k === "word" || x.k === "name"), junk = tk.filter(x => x.k === "junk");
+    const miss = junk.filter(x => x.w && suggest(x.w));
+    if (miss.length && junk.length === miss.length) return `Check your spelling: ${[...new Set(miss.map(x => x.raw))].slice(0, 3).map(x => "\u201C" + x.slice(0, 20) + "\u201D").join(", ")}. Press "Check spelling and grammar" to fix it.`;
+    if (junk.length && (junk.length >= 2 || junk.length / Math.max(1, real.length + junk.length) > 0.08))
+      return `Some of this isn't real English (${[...new Set(junk.map(x => x.raw))].slice(0, 3).map(x => "“" + x.slice(0, 20) + "”").join(", ")}). Fix the spelling and use real words only.`;
+    let run = 1; for (let i = 1; i < real.length; i++){ run = real[i].w.toLowerCase() === real[i-1].w.toLowerCase() ? run + 1 : 1; if (run >= 3) return `Don't repeat the same word ("${real[i].w}") over and over. Write proper sentences.`; }
+    if (real.length >= 12){ const f = {}; real.forEach(x => { const w = x.w.toLowerCase(); if (w.length > 3) f[w] = (f[w] || 0) + 1; }); const top = Object.entries(f).sort((a, b) => b[1] - a[1])[0]; if (top && top[1] / real.length > 0.3) return `You've used "${top[0]}" too many times. Write proper sentences.`; }
+    if (/(^|[\s(])i([\s',.!?]|$)/.test(t)) return `Write "I" as a capital letter.`;
+    if (/[a-z]{2,}[,.!?;:][A-Za-z]{2,}/.test(t.replace(/\S*(https?:\/\/|www\.|@)\S*/g, "").replace(/\b(e\.g|i\.e)\./gi, ""))) return "Put a space after every full stop and comma.";
+    const S = sentences(t);
+    for (const x of S){ const first = (x.match(/[A-Za-z]/) || [""])[0], lead = x.slice(0, x.indexOf(first));
+      if (first && first === first.toLowerCase() && !/\d/.test(lead)) return `Start every sentence with a capital letter: "${x.slice(0, 30)}…"`;
+      if (count(x) < 3 && !/:$/.test(x)) return `Write in full sentences. "${x.slice(0, 30)}" is too short to be a sentence.`; }
+    if (!/[.!?]["')\]]*$/.test(t)) return "End your last sentence with a full stop.";
+    return "";
+  }
+  /* close dictionary words for a misspelling (one or two small changes away) */
+  const SUG = new Map();
+  function suggest(w){
+    if (!LOW) return "";
+    if (SUG.has(w)) return SUG.get(w); const r = suggest0(w); if (SUG.size > 3000) SUG.clear(); SUG.set(w, r); return r;
+  }
+  function suggest0(w){
+    const lw = w.toLowerCase(), L = "abcdefghijklmnopqrstuvwxyz";
+    /* one small change away, with a score for how likely that kind of slip is: a missed letter, swapped letters, an extra letter, a wrong letter */
+    const e1 = x => { const r = new Map(), put = (y, n) => { if ((r.get(y) || 0) < n) r.set(y, n); };
+      for (let i = 0; i <= x.length; i++){ const a = x.slice(0, i), b = x.slice(i);
+        if (b) put(a + b.slice(1), 2); if (b.length > 1) put(a + b[1] + b[0] + b.slice(2), 4);
+        for (const c of L){ if (b && c !== b[0]) put(a + c + b.slice(1), 1); put(a + c + b, c === x[i - 1] || c === b[0] ? 5 : 3); } } return r; };
+    const ok = x => LOW.has(x) && (x.length > 2 || SHORT.has(x)) && (lw.length > 3 || COMMON.has(x));
+    let c = [...e1(lw)].filter(([x]) => ok(x));
+    if (!c.length && lw.length > 4 && lw.length < 14){ const s2 = new Map(); e1(lw).forEach((n, x) => e1(x).forEach((m, y) => { if (ok(y) && (s2.get(y) || 0) < Math.min(n, m)) s2.set(y, Math.min(n, m)); })); c = [...s2]; }
+    if (!c.length) return "";
+    const sc = ([x, n]) => (COMMON.has(x) ? 100 : 0) + n * 3 + (x[0] === lw[0] ? 4 : 0);
+    c.sort((a, b) => sc(b) - sc(a) || a[0].localeCompare(b[0]));
+    const best = c[0][0]; return w[0] === w[0].toUpperCase() ? best[0].toUpperCase() + best.slice(1) : best;
+  }
+  const COMMON = new Set(("the be to of and a in that have it for not on with he as you do at this but his by from they we say her she or an will my one all would there their what so up out if about who get which go me when make can like time no just him know take people into year your good some could them see other than then now look only come its over think also back after use two how our work first well way even new want because any these give day most us design product user users solution solutions problem research idea ideas make made test testing tested material materials needs need should would could really very important different information environment success successful believe receive separate definitely necessary beginning interesting through though thought while where were wear we're there's their friend friends people school student students teacher website app game client feedback improve improvement improvements specification criteria strength strengths weakness weaknesses because until which whether already always also although").split(" "));
+  /* spelling and grammar issues in one piece of text: [{ i, word, fix, why }] (fix "" = can't suggest one) */
+  /* links, emails, e.g./i.e./a.m. and anything with a digit in it are blanked out (same length) before checking */
+  const mask = text => String(text || "").replace(/\S*(https?:\/\/|www\.|@)\S*|\b(e\.g|i\.e|a\.m|p\.m)\.?|\S*\d\S*/gi, m => " ".repeat(m.length));
+  function check(text){
+    const t = mask(text), out = [], add = (i, word, fix, why) => out.push({ i, word, fix, why });
+    // spelling: British English and common mistakes first, then anything not in the dictionary
+    t.replace(/[A-Za-z][A-Za-z'’\-]*/g, (w, i) => {
+      const bare = w.replace(/['’\-]+$/, ""), f = SPELL.fix(bare);
+      if (f) return add(i, bare, f, "spelling"), w;
+      if (/^[A-Z]{2,6}s?$/.test(bare)) return w;                      // MYP, UAE, PDFs
+      if (!known(bare)){ const before = t.slice(0, i).trimEnd(), startOfSentence = !before || /[.!?]["')\]]*$/.test(before);
+        const sug = suggest(bare);
+        if (/^[A-Z]/.test(bare) && !startOfSentence && !sug) return w;   // most likely a name
+        if (/^[A-Z]/.test(bare) && looksReal(bare) && !sug) return w;
+        add(i, bare, sug, sug ? "spelling" : "notword"); }
+      return w; });
+    // grammar
+    t.replace(/(^|[\s(])(i)(?=[\s',.!?]|$)/g, (m, a, b, i) => (add(i + a.length, "i", "I", "capital"), m));
+    t.replace(/\b([A-Za-z]+)\s+\1\b/gi, (m, w, i) => { if (!/^(had|that|bye|ha|no|very|so|knock|bla|blah)$/i.test(w)) add(i, m, w, "double"); return m; });
+    t.replace(/([a-z]{2,})([,.!?;:])([A-Za-z]{2,})/g, (m, a, p, b, i) => { if (!/^(com|org|net|ae|uk|co|io|html|pdf|png|jpg)$/i.test(b) && !/\.(com|org)/i.test(m)) add(i, m, a + p + " " + b, "space"); return m; });
+    t.replace(/(?:^|[\s(])(an?)\s+([A-Za-z]+)/gi, (m, art, w, i) => { const lw = w.toLowerCase(), j = i + m.indexOf(art);
+      const vowelSound = /^(hour|honest|honour|honor|heir)/.test(lw) || (/^[aeiou]/.test(lw) && !/^(uni|use|usu|uti|eu|one|once|ewe|ure)/.test(lw)) || /^[A-Z]{2,}$/.test(w) && /^[AEFHILMNORSX]/.test(w);
+      if (art.toLowerCase() === "a" && vowelSound) add(j, art + " " + w, (art === "A" ? "An " : "an ") + w, "a/an");
+      if (art.toLowerCase() === "an" && !vowelSound) add(j, art + " " + w, (art === "An" ? "A " : "a ") + w, "a/an"); return m; });
+    { let pos = 0; String(t).replace(ABBR, m => m.replace(/\./g, "․")).split(/((?<=[.!?])["')\]]*\s+|\n+)/).forEach(part => {
+        const k = part.search(/[A-Za-z]/); if (k >= 0 && !/^\s+$/.test(part) && /[a-z]/.test(part[k]) && !/\d/.test(part.slice(0, k)) && !/^(e\.g|i\.e|etc|https?|www)/i.test(part.slice(k))){
+          const wd = part.slice(k).match(/^[A-Za-z]+/)[0]; if (wd !== "i") add(pos + k, wd, wd[0].toUpperCase() + wd.slice(1), "capital"); }
+        pos += part.length; }); }
+    if (/[A-Za-z0-9]["')\]]*\s*$/.test(t) && t.trim().split(/\s+/).length >= 3){ const end = t.replace(/\s+$/, ""), m = end.match(/[A-Za-z0-9]+["')\]]*$/); add(end.length - m[0].length, m[0], m[0] + ".", "stop"); }
+    // one issue per position
+    const seen = new Set(); return out.sort((a, b) => a.i - b.i).filter(x => { const k = x.i; if (seen.has(k)) return false; seen.add(k); return true; });
+  }
+  return { load, ready, onReady, count, problem, check, known, suggest, tokens };
+})();
+try { LIT.load(); window.__lit = LIT; } catch(e){}
+
 const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const stripTags = s => String(s).replace(/<[^>]+>/g, "");
@@ -2661,7 +2790,7 @@ function renderMast(){
 
 /* ================= ROUTER ================= */
 let view = { name:"home", crit:null, step:0, strand:0 };
-function go(v){ view = Object.assign({ name:"home", crit:null, step:0, strand:0 }, v); try{speechSynthesis.cancel()}catch(e){} stopVideo(); stopReading(); render(); window.scrollTo({top:0}); }
+function go(v){ try { if (window.SDC && SDC.slow && !(v && v.name === "crit")) SDC.slow.stop(); } catch(e){} view = Object.assign({ name:"home", crit:null, step:0, strand:0 }, v); try{speechSynthesis.cancel()}catch(e){} stopVideo(); stopReading(); render(); window.scrollTo({top:0}); }
 function render(){
   renderMast();
   $("#previewBanner").hidden = !session.preview;
@@ -3309,16 +3438,20 @@ const SPELL = (() => {
 })();
 function spellPanel(box, root){
   const els = [...root.querySelectorAll('textarea[id^="f_"], .tin input[type=text][data-c]')].filter(x => !x.inputMode || x.inputMode === "text" || x.tagName === "TEXTAREA").filter(x => x.inputMode !== "decimal");
-  const issues = []; els.forEach(el => SPELL.scan(el.value).forEach(s => issues.push(Object.assign(s, { el }))));
-  if (!issues.length){ box.innerHTML = `<div class="notice ok">No spelling problems found. Your spelling matches British English.</div>`; return; }
-  const seen = new Map(); issues.forEach(s => { const k = s.word + ">" + s.fix; seen.set(k, (seen.get(k) || []).concat([s])); });
-  box.innerHTML = `<div class="notice warn stack" style="gap:8px"><b>${issues.length} spelling ${issues.length === 1 ? "suggestion" : "suggestions"} (British English)</b>
-    <div class="stack" style="gap:6px">${[...seen.entries()].map(([k, list], i) => `<div class="row" style="gap:8px"><span><s>${esc(list[0].word)}</s> → <b>${esc(list[0].fix)}</b>${list.length > 1 ? ` <span class="muted">(${list.length} times)</span>` : ""}</span><button class="btn sm sec" data-sp="${i}">Fix</button></div>`).join("")}</div>
-    <div class="row"><button class="btn sm" id="spAll">Fix all</button><button class="btn sm ghost" id="spClose">Close</button></div></div>`;
-  const groups = [...seen.values()];
-  const apply = list => list.forEach(s => { const re = new RegExp(`\\b${s.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`); s.el.value = s.el.value.replace(re, s.fix); s.el.dispatchEvent(new Event("input")); });
+  if (!LIT.ready()){ box.innerHTML = `<div class="notice">Checking your spelling and grammar…</div>`;
+    LIT.load().then(ok => { if (!box.isConnected) return; if (ok) spellPanel(box, root); else box.innerHTML = `<div class="notice warn">The spelling check couldn't load. Check your internet connection and press the button again.</div>`; }); return; }
+  const issues = []; els.forEach(el => LIT.check(el.value).filter(x => el.tagName === "TEXTAREA" || ["stop", "capital"].indexOf(x.why) < 0).forEach(x => issues.push(Object.assign(x, { el }))));
+  if (!issues.length){ box.innerHTML = `<div class="notice ok">✓ No spelling or grammar problems found. Your writing uses British English.</div>`; return; }
+  const WHY = { spelling:"Spelling", notword:"Not a real word", capital:"Capital letter", double:"Word written twice", space:"Missing space", "a/an":"a or an", stop:"Full stop missing" };
+  const seen = new Map(); issues.forEach(x => { const k = x.why + "|" + x.word + ">" + x.fix; seen.set(k, (seen.get(k) || []).concat([x])); });
+  const groups = [...seen.values()], fixable = groups.filter(g => g[0].fix).length;
+  box.innerHTML = `<div class="notice warn stack" style="gap:8px"><b>${issues.length} spelling and grammar ${issues.length === 1 ? "problem" : "problems"} (British English)</b>
+    <div class="stack" style="gap:6px">${groups.map((list, i) => { const x = list[0]; return `<div class="row" style="gap:8px;align-items:center"><span class="pill" style="font-size:11px">${esc(WHY[x.why] || "")}</span><span>${x.fix ? `<s>${esc(x.word)}</s> → <b>${esc(x.fix)}</b>` : `<b>${esc(x.word)}</b> <span class="muted">isn't a real word. Check it and write it again.</span>`}${list.length > 1 ? ` <span class="muted">(${list.length} times)</span>` : ""}</span>${x.fix ? `<button class="btn sm sec" data-sp="${i}">Fix</button>` : ""}</div>`; }).join("")}</div>
+    <div class="row">${fixable ? `<button class="btn sm" id="spAll">Fix all</button>` : ""}<button class="btn sm ghost" id="spClose">Close</button></div></div>`;
+  const apply = list => { const by = new Map(); list.forEach(x => by.set(x.el, (by.get(x.el) || []).concat([x])));
+    by.forEach((xs, el) => { let v = el.value; xs.filter(x => x.fix).sort((a, b) => b.i - a.i).forEach(x => { if (v.substr(x.i, x.word.length) === x.word) v = v.slice(0, x.i) + x.fix + v.slice(x.i + x.word.length); }); el.value = v; el.dispatchEvent(new Event("input")); }); };
   box.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => { apply(groups[+b.dataset.sp]); spellPanel(box, root); });
-  $("#spAll").onclick = () => { groups.forEach(apply); spellPanel(box, root); speak("Spelling fixed."); };
+  if ($("#spAll")) $("#spAll").onclick = () => { apply(issues.filter(x => x.fix)); spellPanel(box, root); speak("Fixed."); };
   $("#spClose").onclick = () => { box.innerHTML = ""; };
 }
 
@@ -3674,7 +3807,7 @@ function cellProblem(f, k, val){
 function rowDone(f, r){ return r && f.cols.every((_,k) => (f.rowLabels && k === 0) || !cellProblem(f, k, r[k])); }
 function textProblem(f, val){ if (f.fmt === "urlOrNone"){ const v = String(val || "").trim(); if (!(URL_RE.test(v) || /^not online$/i.test(v))) return "Enter a full web address starting with https://, or write: not online"; } return ""; }
 function fieldValid(f, val){
-  if (f.t === "text") return words(val) >= f.min && !textProblem(f, val);
+  if (f.t === "text") return f.fmt ? !textProblem(f, val) : LIT.count(val) >= f.min && !LIT.problem(val);
   if (f.t === "table"){ const rows = (val||[]).filter(r => rowDone(f, r));
     const bad = (val||[]).some(r => r && f.cols.some((_,k) => !(f.rowLabels && k === 0) && String(r[k]||"").trim() && cellProblem(f, k, r[k]) && cellProblem(f, k, r[k]) !== "empty"));
     return rows.length >= tableRowsNeeded(f.rows, f) && !bad; }
@@ -3688,6 +3821,7 @@ function paneTask(pane, ctx){
   const reach = i => i === 0 || p.done.slice(0, i).every(Boolean);
   if (!reach(view.strand)) view.strand = Math.max(0, p.done.findIndex(d => !d));
   const si = view.strand;
+  try { if (SDCG && window.SDC && SDC.slow && !session.preview && ctx.u.role !== "teacher"){ if (p.done[si]) SDC.slow.stop(); else SDC.slow.start("ds|" + g + "|" + c + "|" + si, uLabel(g) + " · Criterion " + c + " · Strand " + ROMAN[si], sdcAcct(ctx.u, session.email), [12, 20, 30]); } } catch(e){}   // taking too long on one strand
   pane.innerHTML = `<div class="stack">
     <p class="muted" style="margin:0;font-size:13.5px">Work through the strands in order. Each one opens when the one before it is complete, and you can download your work once all four are done.</p>
     <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
@@ -3705,7 +3839,7 @@ function paneTask(pane, ctx){
       <div id="sMsg"></div>
       <div class="row" style="justify-content:space-between">
         <div class="row"><button class="btn ghost" id="prevS" ${si===0?"disabled":""}>← Strand ${ROMAN[Math.max(0,si-1)]}</button>
-        <button class="btn sec" id="spellBtn" type="button">Check spelling (British English)</button></div>
+        <button class="btn sec" id="spellBtn" type="button">Check spelling and grammar</button></div>
         <button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button>
       </div></div></div>`;
   pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
@@ -3714,11 +3848,12 @@ function paneTask(pane, ctx){
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
   $("#spellBtn").onclick = () => spellPanel($("#spellBox"), $("#fields"));
-  $("#doneS").onclick = () => {
-    const missing = F[si].filter(f => !fieldValid(f, p.fields[f.id])).map(f => fill(f.label, g, sc));
+  $("#doneS").onclick = async () => {
+    if (!LIT.ready()) await Promise.race([LIT.load(), new Promise(r => setTimeout(r, 6000))]);
+    const missing = F[si].filter(f => !fieldValid(f, p.fields[f.id])).map(f => { const v = p.fields[f.id], why = f.t === "text" && !f.fmt ? (LIT.problem(v) || (LIT.count(v) < f.min ? `only ${LIT.count(v)} of ${f.min} real words` : "")) : ""; return fill(f.label, g, sc) + (why ? " (" + why + ")" : ""); });
     if (!p.bands[si]) missing.push("Your self-rating for this strand");
     if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak(P().nearly); return; }
-    const was = p.done[si]; p.done[si] = true; if (was && p.finished){ p.finished = false; p.edited = true; } save();
+    const was = p.done[si]; p.done[si] = true; try { if (window.SDC && SDC.slow) SDC.slow.stop(); } catch(e){} if (was && p.finished){ p.finished = false; p.edited = true; } save();
     if (!was) logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`);
     sendWork(c, "snapshot");
     if (p.done.every(Boolean)){ speak(P().allDone); view.step = 6; render(); return; }
@@ -3740,7 +3875,8 @@ function buildField(f, ctx){
     const v = p.fields[f.id] || "";
     el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><textarea id="f_${f.id}" class="notranslate" spellcheck="true" lang="en-GB">${esc(v)}</textarea><span class="counter" id="c_${f.id}"></span>`;
     const ta = el.querySelector("textarea"), cn = el.querySelector(".counter");
-    const upd = () => { const w = words(ta.value); cn.textContent = `${w} / ${f.min} words minimum`; cn.classList.toggle("ok", w >= f.min); };
+    const upd = () => { const w = LIT.count(ta.value), pr = LIT.problem(ta.value); cn.textContent = `${w} / ${f.min} real words minimum` + (pr ? " · ⚠ " + pr : w >= f.min ? " · ✓ Good" : ""); cn.classList.toggle("ok", w >= f.min && !pr); cn.classList.toggle("bad", !!pr); };
+    LIT.onReady(() => { if (ta.isConnected) upd(); });
     ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
     upd();
   } else if (f.t === "table"){
