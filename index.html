@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261102n"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261103a"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2491,7 +2491,8 @@ function fill(str, g, sc){
 function courseState(){
   const base = { unlocks: CONFIG.unlocks, teachers: CONFIG.teachers || [], declined: CONFIG.declined || [] };
   const src = LIVE || DB.localState || {};
-  return { unlocks: src.unlocks || base.unlocks, teachers: src.teachers || base.teachers, declined: src.declined || base.declined };
+  const stale = src.t && schoolYear(Date.parse(src.t)) < schoolYear();   // set last school year: closed again from 1 September
+  return { unlocks: stale ? {} : (src.unlocks || base.unlocks), teachers: src.teachers || base.teachers, declined: src.declined || base.declined };
 }
 function unlocks(){ return courseState().unlocks; }
 function approvedTeacher(email){ return courseState().teachers.find(t => t.email === email) || null; }
@@ -2500,6 +2501,7 @@ const isTester = () => !!(window.SDC && SDC.isTester && session.email && SDC.isT
 function isOpen(g, c){
   if (COURSE.criteria[c].comingSoon) return false;
   if (session.preview || isTester()) return true;
+  const me = user(); if (me && me.role !== "teacher" && !myUnits(me).includes(g)) return false;   // only this year's units
   const u = unlocks(); return !!(u[g] && u[g][c]);
 }
 
@@ -2590,7 +2592,7 @@ async function loadLive(){
         else if (d.request && d.request.email && SCHOOL.test(String(d.request.email))) reqs.push({ email:String(d.request.email), name:String(d.request.name||"").slice(0,80), salt:String(d.request.salt||""), hash:String(d.request.hash||""), t:String(d.request.t||"") }); } catch(e){}
     }
     REQUESTS = reqs;
-    if (state){ const next = { unlocks: state.unlocks, teachers: state.teachers || [], declined: state.declined || [] };
+    if (state){ const next = { unlocks: state.unlocks, teachers: state.teachers || [], declined: state.declined || [], t: state.t };
       const changed = JSON.stringify(LIVE) !== JSON.stringify(next); LIVE = next; if (changed && !$("#modalRoot .modal")) render(); }
   } catch(e){ /* offline: keep the baked settings */ }
 }
@@ -2798,7 +2800,7 @@ function renderLogin(app){
       const rc = await rosterCheck(email, name);
       if (SDCG && SDCG.mode !== "staff"){ msg("Checking…", "ok"); let ck = { ok:true }; try { ck = await SDC.canSignUp(email, name, SDCG.course); } catch(err){} if (!ck.ok) return msg(ck.msg); $("#lMsg").innerHTML = ""; }
       if (!rc.ok) return msg("This email and name are not on the SISD student list. Type your full name exactly as the school has it, with your SISD email. If it still doesn't work, ask your teacher.");
-      DB.users[email] = { role:"student", name, group: grade, cls, grade: sdcFirstUnit(grade), course: SDCG && SDCG.mode !== "staff" ? SDCG.course : undefined, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), progress:{} };
+      DB.users[email] = { role:"student", name, group: grade, cls, grade: sdcFirstUnit(grade), course: SDCG && SDCG.mode !== "staff" ? SDCG.course : undefined, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), yearOf: schoolYear(), progress:{} };
       const nu = DB.users[email];
       if (syncCfg()){ nu.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); try { await publishWrap(nu, email, await deriveAcct(email, pw)); } catch(err){ console.warn(err); } }
       session.email = email; DB.session = email; save();
@@ -3063,7 +3065,7 @@ async function publishWrap(u, email, A){
   const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
   u.wrapFor = A.lookup; return ver;
 }
-const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","progress","progressBy","choice","choiceBy","last"];
+const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","yearOf","history","progress","progressBy","choice","choiceBy","last"];
 function syncPayload(u){
   const imgs = {};
   const walk = v => {
@@ -3304,6 +3306,20 @@ function spellPanel(box, root){
 
 /* ================= HOME ================= */
 function critProgress(p){ if (!p) return 0; let s = 0; if (p.watched) s++; ["ex","me","ru"].forEach(k=>{ if (p.seen?.[k]) s++; }); if (p.ex?.done) s++; s += p.done.filter(Boolean).length; return Math.round(s/9*100); }
+/* last year's work: view and download only, no classwork */
+function historyBlock(u){
+  const H = (u.history || []).slice().reverse().filter(h => (h.units || []).some(g => COURSE.grades[g]));
+  if (!H.length) return "";
+  const yr = y => y ? ` (${y}–${String(y + 1).slice(2)})` : "";
+  return `<section class="stack" style="gap:10px"><hr style="border:0;border-top:1px solid var(--line);margin:0">
+    <div><div class="eyebrow">History · view only</div><h2 style="font-family:var(--f-display);font-size:clamp(19px,2.6vw,24px)">Your work from previous years</h2>
+      <p class="muted" style="margin:.3em 0 0;max-width:66ch;font-size:14px">This work is finished and kept for you. You can download it, but you can't change it.</p></div>
+    ${H.map(h => (h.units || []).filter(g => COURSE.grades[g]).map(g => { const P = (u.progressBy || {})[g] || {};
+      return `<div class="card stack" style="gap:6px"><div class="eyebrow">${esc((COURSE.groups[h.group] && COURSE.groups[h.group].label) || "Grade " + h.group)}${yr(h.year)}</div><b>${esc(gradeData(g).unit)}</b>
+        ${["A","B","C","D"].filter(c => P[c]).map(c => { const p = P[c], done = (p.done || []).filter(Boolean).length;
+          return `<div class="row" style="justify-content:space-between"><span>Criterion ${c}: ${esc(COURSE.criteria[c].name)} · ${done}/4 strands${p.finished ? " · handed in ✓" : ""}</span><button class="btn ghost sm" data-hpdf="${esc(g)}|${c}">${ICON.dl} Download (PDF)</button></div>`; }).join("") || `<span class="muted" style="font-size:13px">No saved work.</span>`}</div>`; }).join("")).join("")}
+  </section>`;
+}
 function renderExplore(app){
   const u = user();
   const mine = u.group || groupOf(u.grade);
@@ -3340,13 +3356,19 @@ function unitBlock(u, g, multi){
   </section>`;
 }
 function renderHome(app){
-  const u = user(), gk = u.group || groupOf(u.grade), grp0 = isTester() ? { label:"Test student · every grade", units: Object.values(COURSE.groups).flatMap(x => x.units) } : COURSE.groups[gk] || { label: gLabel(u.grade), units: [u.grade] }, grp = Object.assign({}, grp0, { units: sdcUnits(u, grp0.units) }), multi = grp.units.length > 1;
+  const u = user(), gk = u.group || groupOf(u.grade), grp0 = isTester() ? { label:"Test student · every grade", units: Object.values(COURSE.groups).flatMap(x => x.units) } : COURSE.groups[gk] || { label: "Grade " + gk, units: [] }, grp = Object.assign({}, grp0, { units: sdcUnits(u, grp0.units) }), multi = grp.units.length > 1;
+  if (promote(u)) return renderHome(app);   // a new school year started: move up first
   app.innerHTML = `<div class="stack" style="gap:26px">
+    ${!grp.units.length ? `<div class="card stack" style="gap:6px;border-left:6px solid var(--red,#DC2B3E)"><div class="eyebrow">${esc(grp.label)}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.2vw,30px)">Welcome to ${esc(grp.label)}!</h1>
+      <p class="muted" style="margin:0;max-width:66ch">Your ${esc(grp.label)} ${SDCG && SDCG.course === "it" ? "IT" : "Design"} work isn't open here yet. Your teacher will let you know when it starts. Until then you can look back at last year's work below.</p></div>` : ""}
     ${multi ? `<div class="stack" style="gap:4px"><div class="eyebrow">${esc(grp.label)}</div><h1 style="font-family:var(--f-display);font-size:clamp(24px,3.6vw,34px)">Your units</h1>
       <p class="muted" style="margin:0;max-width:66ch">Each unit has four criteria. You can open a criterion once your teacher switches it on; the others are view only.</p></div>` : ""}
     ${grp.units.map(g => unitBlock(u, g, multi)).join(multi ? `<hr style="border:0;border-top:1px solid var(--line);margin:0">` : "")}
+    ${historyBlock(u)}
     <div class="row" style="justify-content:space-between"><p class="muted" style="margin:0;font-size:13px">You can come back here at any time to see Criteria A to D, and go back into an open criterion to change your work.</p><button class="btn ghost sm" id="exploreBtn">See what other grades are learning →</button></div>
   </div>`;
+  app.querySelectorAll("[data-hpdf]").forEach(b => b.onclick = async () => { const [g, c] = b.dataset.hpdf.split("|"), p = ((u.progressBy || {})[g] || {})[c];
+    if (!p) return; b.disabled = true; try { await buildPDF({ u, c, g, gd: gradeData(g), cd: COURSE.criteria[c], p, sc: scenarioFor(session.email, g) }); } catch(e){ toast("The PDF could not be made: " + e.message, 4000); } b.disabled = false; });
   app.querySelectorAll(".crit.open[data-c]").forEach(b => b.onclick = () => { setUnit(u, b.dataset.g); go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }); });
   const ex = $("#exploreBtn"); if (ex) ex.onclick = () => go({ name:"explore" });
 }
@@ -4114,17 +4136,43 @@ function sdcTask(u, crit, event){
   const w = /^Strand .* complete$/.test(event) ? 3 : SDC_W[event]; if (!w) return;
   SDC.task(sdcAcct(u, session.email), uLabel(u.grade) + " · Criterion " + crit + " · " + event, w, /Strand/.test(event) ? "strand" : /Practice/.test(event) ? "practice" : "submission");
 }
+/* ---------- school years: each 1 September every student moves up one grade ----------
+   They then see only their new grade's units (opened when the teacher switches them on).
+   Last year's work stays visible as history (view and download only, no classwork). */
+const schoolYear = t => (window.SDC && SDC.ay) ? SDC.ay(t) : (d => d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1)(new Date(t == null ? Date.now() : t));
+function myUnits(u){ const grp = COURSE.groups[u.group || groupOf(u.grade)]; return grp ? sdcUnits(u, grp.units) : []; }
+function moveToGroup(u, gk, why){
+  const old = u.group || groupOf(u.grade);
+  if (String(gk) === String(old)) return false;
+  u.progressBy = u.progressBy || {}; u.choiceBy = u.choiceBy || {}; u.progressBy[u.grade] = u.progress || {}; u.choiceBy[u.grade] = u.choice || null;
+  if (why === "year"){ u.history = u.history || []; const done = (COURSE.groups[old] ? COURSE.groups[old].units : [u.grade]).filter(x => Object.keys(u.progressBy[x] || {}).length);
+    if (done.length && !u.history.some(h => h.group === old)) u.history.push({ group: old, year: u.yearOf, units: done }); }
+  u.group = String(gk);
+  const units = myUnits(u);
+  if (units.length){ const unit = units[0]; u.grade = unit; u.progress = u.progressBy[unit] || {}; u.choice = u.choiceBy[unit] || null; }
+  else { u.progress = {}; u.choice = null; }   // no course for this grade yet: only history and other grades' topics
+  return true;
+}
+function promote(u){
+  if (!u || u.role === "teacher" || session.preview || isTester()) return false;
+  const now = schoolYear();
+  if (!u.yearOf) u.yearOf = schoolYear(u.created || Date.now());
+  const yrs = now - u.yearOf; if (yrs <= 0) return false;
+  const old = u.group || groupOf(u.grade), n = parseInt(old, 10);
+  u.yearOf = now;
+  if (isNaN(n)) return false;
+  moveToGroup(u, String(n + yrs), "year"); save(true); return true;
+}
 function sdcApply(u, A){
   if (!A) return;
-  if (A.g && COURSE.groups[A.g] && A.g !== (u.group || groupOf(u.grade))){
-    u.progressBy = u.progressBy || {}; u.choiceBy = u.choiceBy || {}; u.progressBy[u.grade] = u.progress || {}; u.choiceBy[u.grade] = u.choice || null;
-    u.group = A.g; const unit = sdcUnits(u, COURSE.groups[A.g].units)[0]; u.grade = unit; u.progress = u.progressBy[unit] || {}; u.choice = u.choiceBy[unit] || null;
-  }
+  const ag = A.g && window.SDC && SDC.rolled ? SDC.rolled(A.g, A.at) : A.g;   // a change made last school year has moved up since
+  if (ag && ag !== (u.group || groupOf(u.grade)) && (COURSE.groups[ag] || ag !== A.g)){ moveToGroup(u, ag, ag !== A.g ? "year" : "admin"); u.yearOf = schoolYear(); }
   if (A.cls != null && A.cls !== "") u.cls = A.cls;
   if (A.t) u.teacher = A.t;
 }
 /* after a student signs in or signs up: is this the course they are registered for? */
 async function sdcAfter(u, email, signup){
+  if (u && u.role !== "teacher") promote(u);
   if (!SDCG || SDCG.mode === "staff" || !u || u.role === "teacher") return true;
   const c = SDCG.course, grp = u.group || groupOf(u.grade);
   if (SDC.isTester(email)){   // test student: any course, any grade
@@ -4138,7 +4186,7 @@ async function sdcAfter(u, email, signup){
   if (A0 && A0.c === c){ u.course = c; sdcApply(u, A0); }   // the admin has moved this student: their setting wins
   const grp1 = u.group || groupOf(u.grade);
   if (!A0 && u.course && u.course !== c) { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { registered:u.course }); return fail(`This account is registered for <b>${esc(SDC.course(u.course).name)}</b>, not ${esc(SDC.course(c).name)}. You can only see the course you are registered for. If this is wrong, ask your teacher: only they can change your course.`); }
-  if (c === "it" && grp1 !== "10") { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { reason:"grade" }); return fail(`IT is only for Grade 10, and this account is for ${esc(groupLabel(u))}. Choose Design instead.`); }
+  if (c === "it" && grp1 !== "10" && !(u.history || []).some(h => (h.units || []).some(x => IT_UNITS.includes(x)))) { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { reason:"grade" }); return fail(`IT is only for Grade 10, and this account is for ${esc(groupLabel(u))}. Choose Design instead.`); }
   let ck = { ok:true }; try { ck = await SDC.confirm(sdcAcct(Object.assign({}, u, { course:c }), email), signup); } catch(e){}
   if (!ck.ok) return fail(ck.msg, ck.verify);
   u.course = c; sdcApply(u, ck.assign);
