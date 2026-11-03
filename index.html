@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261103o"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261103p"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2708,12 +2708,15 @@ function renderLogin(app){
     $("#lFoot").textContent = r === "teacher" && mode === "up" ? "Teacher accounts are checked by the course admin. You can sign in once your request is approved." : "Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion."; };
   const setMode = m => { mode = m; $("#tIn").setAttribute("aria-selected", m==="in"); $("#tUp").setAttribute("aria-selected", m==="up");
     $("#upOnly").hidden = $("#roleRow").hidden = $("#pw2Row").hidden = $("#pwRule").hidden = m !== "up";
-    $("#pwLbl").textContent = m === "in" ? "Password" : "Create a password"; $("#lPw").autocomplete = m === "in" ? "current-password" : "new-password"; $("#lMsg").innerHTML = ""; setRole(role); };
+    $("#pwLbl").textContent = m === "in" ? "Password" : "Create a password"; $("#lPw").autocomplete = m === "in" ? "current-password" : "new-password"; $("#lMsg").innerHTML = "";
+    if (SDCG && SDCG.mode === "staff"){ role = "teacher"; $("#roleRow").hidden = true; }   // staff door: teacher accounts only
+    setRole(role); };
   $("#tIn").onclick = () => setMode("in"); $("#tUp").onclick = () => setMode("up");
   $("#roleSeg").querySelectorAll("button").forEach(b => b.onclick = () => setRole(b.dataset.r));
   $("#lGrade").onchange = () => { const grp = COURSE.groups[$("#lGrade").value], cl = grp ? (grp.classes || []) : [];
     $("#lClassRow").hidden = cl.length < 2; $("#lClass").innerHTML = (cl.length > 1 ? `<option value="">Choose…</option>` : "") + cl.map(k => `<option value="${k.id}">${esc(k.label)}</option>`).join(""); };
   const msg = (t, kind="bad") => $("#lMsg").innerHTML = `<div class="notice ${kind}">${t}</div>`;
+  if (SDCG && SDCG.mode === "staff"){ setRole("teacher"); $("#roleRow").hidden = true; }   // staff door: teacher accounts only
   if (SDCG && SDCG.mode !== "staff"){
     const C = SDC.course(SDCG.course), tabs = app.querySelector(".tabs"); if (tabs) tabs.hidden = true;
     const note = t => $("#lf").insertAdjacentHTML("afterbegin", `<div class="notice" style="font-weight:bold">${t}</div>`);
@@ -4224,6 +4227,10 @@ function sdcApply(u, A){
 /* after a student signs in or signs up: is this the course they are registered for? */
 async function sdcAfter(u, email, signup){
   if (u && u.role !== "teacher") promote(u);
+  if (SDCG && SDCG.mode === "staff" && u && u.role !== "teacher" && !isTester()){   // the staff door is for teachers only
+    session = { email:null, preview:false, back:null }; DB.session = null; save(true);
+    SDC.signedOutNotice("That was the <b>staff</b> sign-in. Students: choose your course on this page and sign in there.", "warn"); SDC.leave("blocked"); return false;
+  }
   if (!SDCG || SDCG.mode === "staff" || !u || u.role === "teacher") return true;
   const c = SDCG.course, grp = u.group || groupOf(u.grade);
   if (SDC.isTester(email)){   // test student: any course, any grade
