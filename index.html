@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261103s"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261103t"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2496,11 +2496,13 @@ function courseState(){
 }
 function unlocks(){ return courseState().unlocks; }
 function approvedTeacher(email){ return courseState().teachers.find(t => t.email === email) || null; }
+/* each teacher once: the course's own names first, then approved teachers whose surname isn't already listed
+   (so "Miss Abdelaziz" and "Sahar Abdelaziz" don't both appear) */
 function teacherNames(){
-  const T = courseState().teachers, hide = T.filter(t => t.pick === false).flatMap(t => (t.names && t.names.length ? t.names : [t.name]));
-  const same = (a, b) => window.SDC && SDC.sameTeacher ? SDC.sameTeacher(a, b) : a === b;
-  const n = new Set(COURSE.teachers); T.forEach(t => { if (t.pick !== false) n.add(t.name); });
-  return [...n].filter(x => !hide.some(h => same(h, x)));
+  const same = (a, b) => window.SDC && SDC.sameTeacher ? SDC.sameTeacher(a, b) : String(a).toLowerCase() === String(b).toLowerCase();
+  const out = [];
+  COURSE.teachers.concat(courseState().teachers.map(t => t.name)).forEach(n => { if (n && !out.some(x => same(x, n))) out.push(n); });
+  return out;
 }
 const isTester = () => !!(window.SDC && SDC.isTester && session.email && SDC.isTester(session.email));
 function isOpen(g, c){
