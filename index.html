@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261103c"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261103d"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2788,6 +2788,7 @@ function renderLogin(app){
         DB.users[email] = { role:"teacher", name, salt:rec.salt, hash:rec.hash, created:req.t };
         DB.pending = (DB.pending||[]).filter(p => p.email !== email).concat([req]); save();
         const s = settings(); if (s.controlForm) postForm(s.controlForm, [JSON.stringify({ request:req })]);
+        try { if (window.SDC && SDC.notifyRequest) SDC.notifyRequest({ email, name, where:"Design course" }); } catch(err){}   // emails the super admin straight away
         DB.queue.push([email, name, "Staff", "-", "-", "Teacher access requested", "Teacher", "Waiting for admin approval", req.t]); save(); flushQueue();
         setMode("in"); $("#lEmail").value = email;
         return msg("Request sent. The course admin will approve your teacher account. You can sign in once it is approved.", "ok");
