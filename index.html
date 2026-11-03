@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261103y"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261103z"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3210,7 +3210,7 @@ async function publishWrap(u, email, A){
   const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
   u.wrapFor = A.lookup; return ver;
 }
-const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last"];
+const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk"];
 function syncPayload(u){
   const imgs = {};
   const walk = v => {
@@ -3516,13 +3516,26 @@ function renderHome(app){
       <p class="muted" style="margin:0;max-width:66ch">Each unit has four criteria. You can open a criterion once your teacher switches it on; the others are view only.</p></div>` : ""}
     ${grp.units.map(g => unitBlock(u, g, multi)).join(multi ? `<hr style="border:0;border-top:1px solid var(--line);margin:0">` : "")}
     ${historyBlock(u)}
+    <div id="rankBox"></div>
     <div class="row" style="justify-content:space-between"><p class="muted" style="margin:0;font-size:13px">You can come back here at any time to see Criteria A to D, and go back into an open criterion to change your work.</p><button class="btn ghost sm" id="exploreBtn">See what other grades are learning →</button></div>
   </div>`;
   app.querySelectorAll("[data-hpdf]").forEach(b => b.onclick = async () => { const [g, c] = b.dataset.hpdf.split("|"), p = ((u.progressBy || {})[g] || {})[c];
     if (!p) return; b.disabled = true; try { await buildPDF({ u, c, g, gd: gradeData(g), cd: COURSE.criteria[c], p, sc: scenarioFor(session.email, g) }); } catch(e){ toast("The PDF could not be made: " + e.message, 4000); } b.disabled = false; });
   app.querySelectorAll(".crit.open[data-c]").forEach(b => b.onclick = () => { setUnit(u, b.dataset.g); go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }); });
   const ex = $("#exploreBtn"); if (ex) ex.onclick = () => go({ name:"explore" });
+  rankShow(u);
 }
+/* ---------- weekly class rankings: exercises completed = strands completed + practice questions answered correctly ---------- */
+function rankBump(u){ try { if (!u || !window.SDC || !SDC.rank) return; const w = SDC.rank.weekId(); let r = u.rk || { w, n:0 };
+  if (r.w !== w){ r = { w, n:0, pw: r.w, pn: r.w === SDC.rank.prevWeek(w) ? r.n : 0 }; } r.n++; u.rk = r; save(); rankReport(u); } catch(e){} }
+function dsCounts(u){
+  const w = SDC.rank.weekId(), r = u.rk || {}, out = { total:0, week: r.w === w ? r.n : 0, last: r.w === SDC.rank.prevWeek(w) ? r.n : r.pw === SDC.rank.prevWeek(w) ? (r.pn || 0) : 0 };
+  const all = [u.progress || {}].concat(Object.entries(u.progressBy || {}).filter(([g]) => g !== u.grade).map(x => x[1]));
+  all.forEach(P => Object.values(P || {}).forEach(p => { if (!p) return; out.total += (p.done || []).filter(Boolean).length + ((p.ex && p.ex.correct) || 0); }));
+  return out;
+}
+function rankReport(u){ try { if (SDCG && u && u.role !== "teacher" && !session.preview && SDC.rank) SDC.rank.report(sdcAcct(u, session.email), dsCounts(u)); } catch(e){} }
+function rankShow(u){ try { const box = $("#rankBox"); if (!box) return; if (!SDCG || !u || u.role === "teacher" || session.preview || !SDC.rank){ box.innerHTML = ""; return; } rankReport(u); setTimeout(() => SDC.rank.mount($("#rankBox"), sdcAcct(u, session.email)), 1200); } catch(e){} }
 
 /* ================= CRITERION FLOW ================= */
 const STEPS = [
@@ -3780,7 +3793,7 @@ function panePractice(pane, ctx){
         body.querySelectorAll(".seg").forEach(sg => { const ok = cls[sg.dataset.i] === q.items[sg.dataset.i][1]; sg.style.outline = `2px solid ${ok?"var(--ok)":"var(--bad)"}`; }); }
       answered = true; p.ex.attempts++;
       const qi = p.ex.queue.shift();
-      if (right){ p.ex.correct++; p.ex.points += 10; speak(pickOne(P().right)); }
+      if (right){ p.ex.correct++; p.ex.points += 10; rankBump(ctx.u); speak(pickOne(P().right)); }
       else { p.ex.queue.push(qi); speak(pickOne(P().wrong)); }
       if (!p.ex.done && p.ex.correct >= NEED){ p.ex.done = true; logEvent(ctx.c, "Practice passed", `Correct: ${p.ex.correct}; Points: ${p.ex.points}; Attempts: ${p.ex.attempts}; Hints: ${p.ex.hints}`); setTimeout(()=>speak(P().unlocked), 1400); }
       save(); renderMast();
@@ -3854,7 +3867,7 @@ function paneTask(pane, ctx){
     if (!p.bands[si]) missing.push("Your self-rating for this strand");
     if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak(P().nearly); return; }
     const was = p.done[si]; p.done[si] = true; try { if (window.SDC && SDC.slow) SDC.slow.stop(); } catch(e){} if (was && p.finished){ p.finished = false; p.edited = true; } save();
-    if (!was) logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`);
+    if (!was){ logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`); rankBump(ctx.u); }
     sendWork(c, "snapshot");
     if (p.done.every(Boolean)){ speak(P().allDone); view.step = 6; render(); return; }
     speak(pickOne(P().right));
