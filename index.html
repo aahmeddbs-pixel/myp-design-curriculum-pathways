@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261103k"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261103l"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2633,6 +2633,8 @@ function badgeSVG(text, sub){
 /* ================= MASTHEAD ================= */
 function renderMast(){
   const u = user(); const r = $("#mastRight");
+  { const sl = $("#staffLink"); if (sl) sl.hidden = !!(u && u.role !== "teacher"); }   // students never see the Staff link once signed in
+  if (SDCG && SDCG.mode !== "staff"){ try { SDC.setSignedIn(!!u); } catch(e){} }
   if (!u){ r.innerHTML = langSelect(); bindLang(); return; }
   const signOut = `<button class="chip" id="signOut">Sign out</button>`;
   if (u.role === "teacher" && !session.preview){
@@ -2645,7 +2647,9 @@ function renderMast(){
     $("#voiceBtn").onclick = () => { DB.voice = !DB.voice; save(); if (!DB.voice) try{speechSynthesis.cancel()}catch(e){} renderMast(); };
   }
   bindLang();
-  const so = $("#signOut"); if (so) so.onclick = () => { if (pendingSnap){ clearTimeout(snapTimer); const pc = pendingSnap; pendingSnap = null; sendWork(pc, "snapshot"); } if (syncable()) syncNow(); session = { email:null, preview:false, back:null }; staffIn = false; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){} if (SDCG) return SDC.leave("out"); render(); };
+  const so = $("#signOut"); if (so) so.onclick = () => { if (pendingSnap){ clearTimeout(snapTimer); const pc = pendingSnap; pendingSnap = null; sendWork(pc, "snapshot"); } if (syncable()) syncNow(); session = { email:null, preview:false, back:null }; staffIn = false; DB.session = null; save(); try{speechSynthesis.cancel()}catch(e){}
+    if (SDCG && SDCG.mode !== "staff"){ SDCG.mode = "signin"; SDC.patchGate({ mode:"signin", logged:false }); go({ name:"home" }); return; }   // stay here, on the sign-in screen
+    if (SDCG) return SDC.leave("out"); render(); };
 }
 
 /* ================= ROUTER ================= */
@@ -2718,7 +2722,7 @@ function renderLogin(app){
       note(`Signing up for <b>${esc(C.name)}, Grade ${esc(SDCG.grade)}</b>. Only your teacher can change your course or grade later.`);
     } else {
       setMode("in");
-      note(`Signing into <b>${esc(C.name)}</b>. Your teacher can see which course you sign into. New here? Use <b>Change course / sign out</b> at the top and choose Sign up.`);
+      note(`Signing into <b>${esc(C.name)}</b>. Your teacher can see which course you sign into. New here? Open <b>Change course</b> at the top and choose <b>＋ Sign up for a course</b>.`);
     }
   }
   $("#lf").onsubmit = async e => {
@@ -4198,7 +4202,9 @@ async function sdcAfter(u, email, signup){
 }
 if (SDCG){
   window.SDC_onLang = code => { stopReading(); applyLang(code); renderMast(); };   // the language menu in the platform bar drives this page's own translator
-  try { SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); else SDC.leave("out"); }, false, "#app"); } catch(e){}
+  try { SDC.strip(SDCG.course, () => { const so = $("#signOut"); if (so && user()) so.click(); }, false, "#app",
+    () => { if (!user()) render(); const t = $("#tIn"); if (t) t.click(); const e = $("#lEmail"); if (e){ e.focus(); e.scrollIntoView({ block:"center" }); } }); } catch(e){}
+  { const st = document.createElement("style"); st.textContent = "#mastRight #signOut{display:none!important}"; document.head.appendChild(st); }   // Sign out is in the platform bar
   window.SDC_beforeRead = () => stopReading();
   try { if (SDC.listen) SDC.listen("#pane:not(:has(#player)):not(:has(#dlPdf))", "", "bar"); } catch(e){}   // Read to me only on the steps that explain or set work: example, method, rubric, practice, task
   { const st = document.createElement("style"); st.textContent = ".listen{display:none!important}[data-read]:not(.brief)>*:nth-child(2){padding-right:0!important}.brief[data-read]{padding-right:22px!important}"; document.head.appendChild(st); }   // the page has one Read to me button instead
