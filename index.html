@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261104a"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261104b"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3226,7 +3226,9 @@ function syncPayload(u){
 function syncable(){ const u = session.email && DB.users[session.email]; return u && u.role === "student" && !session.preview && session.email !== PREVIEW && u.dk && syncCfg() ? u : null; }
 let syncTimer = null, syncBusy = false, syncDirty = false;
 function afterSave(){ if (syncBusy || !syncable()) return; syncable().touchedAt = Date.now(); syncDirty = true; }
-setInterval(() => { if (syncDirty && !syncBusy) syncNow(); }, SYNC_EVERY);
+setInterval(() => { if (syncDirty && !syncBusy) syncNow(); else if ((DB.syncQ || []).length && !syncFlushing) flushSync(); }, SYNC_EVERY);
+/* "Saving… / ✓ Saved" in the top bar */
+try { if (window.SDC && SDC.saveBadge) SDC.saveBadge.watch(() => ({ on: !!(SDCG && syncable()), pending: syncDirty || syncBusy || syncFlushing || (DB.syncQ || []).length > 0 })); } catch(e){}
 async function syncNow(force){
   const u = syncable(), email = session.email; if (!u) return;
   syncBusy = true; syncDirty = false;
