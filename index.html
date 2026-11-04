@@ -1596,10 +1596,10 @@ Object.assign(COURSE.grades["7"], {
         TB("b4t", "Requirements", ["Requirement (software, images, music, voiceover)", "Details"], 4, 3) ]
     ],
     C: [
-      [ TB("c1p", "Task 1: Logical plan — final poster (step-by-step instruction manual)", ["Step #", "What to do (detailed instruction)", "Tools / software / resources", "Time"], 6, 5),
-        T("c1r", "What resources will you need in total? (software, materials, images…)", 20),
-        TB("c1v", "Task 2: Logical plan — 30-second video (step-by-step instruction manual)", ["Step #", "What to do (detailed instruction)", "Tools / software / resources", "Time"], 6, 5),
-        T("c1c", "How does this plan connect to your Criterion B storyboard? Explain.", 25),
+      [ TB("c1p", "Task 1: Logical plan for YOUR awareness poster — the final poster layout you chose and developed in Criterion B, strand iv (B.iv). Write step-by-step instructions that a classmate could follow to make exactly that poster.", ["Step #", "What to do (detailed instruction)", "Tools / software / resources", "Time"], 6, 5),
+        T("c1r", "What resources will you need in total to make your B.iv poster and video? (software, materials, images…)", 20),
+        TB("c1v", "Task 2: Logical plan for YOUR 30-second awareness video — the video storyboard from Criterion B, strand iv (B.iv). Step-by-step instructions to make that video.", ["Step #", "What to do (detailed instruction)", "Tools / software / resources", "Time"], 6, 5),
+        T("c1c", "How does this plan connect to the poster layout and storyboard you chose in Criterion B, strand iv? Explain.", 25),
         RL("c1s", "Scene plan — explain what happens in each scene, with transitions, sounds and animation", "Scene", ["Scene 1", "Scene 2", "Scene 3", "Scene 4", "Scene 5", "Scene 6"], ["Duration", "Scene description"]) ],
       [ CH("c2tool", "Which software did you use?", ["Canva for Education", "Adobe Express", "Clipchamp", "Other free software"]),
         SK("c2p11", "Poster 1 — screenshot 1", true), T("c2q11", "What does this show? What technical skills did you use at this stage?", 12),
@@ -2148,7 +2148,7 @@ COURSE.buildTasks = function(c, gd){
     ];
   }
   if (c === "C") return [
-    [ TB("c1t", `Logical plan: a step-by-step instruction manual to bring your developed design to life (at least ${n.steps} steps). Every step must be SMART: specific, measurable, achievable, realistic and timely.`, ["Step number", "Detailed instruction (exactly what to do)", "Tools / resources", "Time (minutes)"], n.steps + 2, n.steps, ["num", null, null, "num"]),
+    [ TB("c1t", `${gd === COURSE.grades["7"] ? "Logical plan for YOUR awareness poster: a step-by-step instruction manual to make the final poster you chose and developed in Criterion B, strand iv (B.iv)" : "Logical plan: a step-by-step instruction manual to bring your developed design to life"} (at least ${n.steps} steps). Every step must be SMART: specific, measurable, achievable, realistic and timely.`, ["Step number", "Detailed instruction (exactly what to do)", "Tools / resources", "Time (minutes)"], n.steps + 2, n.steps, ["num", null, null, "num"]),
       T("c1tot", "Total time, and how it fits into your lessons", 6) ],
     [ CH("c2tool", "Which software or tools did you use?", L.tools.map(t => t.name).concat(["Other"])),
       CL("c2k", `Tick the technical skills you used (at least ${n.skills})`, L.skills, Math.min(n.skills, L.skills.length)),
@@ -3845,6 +3845,7 @@ function paneTask(pane, ctx){
         <p style="margin:0;font-size:14px">ACCESS FM is a checklist of eight areas every design must consider. Write at least one specific, measurable requirement for each area in the table below.</p>
         <div class="scroll"><table class="tbl"><tr><th>Letter</th><th>Stands for</th><th>What it means</th><th>Example requirement</th></tr>${COURSE.ACCESSFM.map(r => `<tr><td style="font-family:var(--f-display);color:var(--accent);font-size:18px;text-align:center">${r[0]}</td><td><b>${esc(r[1])}</b></td><td>${esc(r[2])}</td><td class="muted">${esc(r[3])}</td></tr>`).join("")}</table></div></div>` : ""}
       ${c === "C" && si === 1 && gd.lab ? `<details open class="notranslate-none"><summary><b>Build Lab: software, milestones and skills</b></summary><div style="margin-top:10px">${labCard(gd, true)}</div></details>` : ""}
+      ${planFrom(ctx, si)}
       <div class="stack" id="fields"></div>
       <div class="field"><span class="lbl">Rate yourself against the rubric for this strand</span>
         <div class="bands">${["1–2","3–4","5–6","7–8"].map(b=>`<button data-b="${b}" aria-pressed="${p.bands[si]===b}">${b}</button>`).join("")}</div></div>
@@ -3873,6 +3874,16 @@ function paneTask(pane, ctx){
     speak(pickOne(P().right));
     const next = p.done.findIndex(d=>!d); view.strand = next; render(); window.scrollTo({top:0, behavior:"smooth"});
   };
+}
+/* Grade 7, Criterion C strand i: the logical plan is for the poster (and video) they chose in Criterion B, strand iv */
+function planFrom(ctx, si){
+  const { u, c, g, sc } = ctx; if (c !== "C" || si !== 0 || String(g) !== "7") return "";
+  const B = ((u.progress || {}).B || {}).fields || {}, img = B.b4s, cause = sc && sc.chosen && sc.title || "";
+  return `<div class="notice" style="border-left:6px solid var(--accent,#DC2B3E);display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><b>📋 Your logical plan is for YOUR awareness poster.</b>
+      <p style="margin:6px 0 0">Plan how to make the <b>final poster layout you chose and developed in Criterion B, strand iv (B.iv)</b>${cause ? ` for your campaign about <b>${esc(cause)}</b>` : ""}. Don't plan a new or different poster: a classmate should be able to follow your steps and make exactly the poster you designed in B.iv.</p>
+      ${img ? "" : `<p class="muted" style="margin:6px 0 0;font-size:13px">Your B.iv poster layout isn't saved yet. Go back to Criterion B, strand iv, and finish it first so you know exactly what you are planning.</p>`}</div>
+    ${img ? `<figure style="margin:0;text-align:center"><img src="${img}" alt="Your final poster layout from B.iv" style="max-width:200px;max-height:220px;border:1px solid var(--line);border-radius:8px;background:#fff"><figcaption class="muted" style="font-size:12px;margin-top:4px">Your B.iv poster layout</figcaption></figure>` : ""}</div>`;
 }
 function buildField(f, ctx){
   const { p, g, sc } = ctx, el = document.createElement("div"); el.className = "field";
