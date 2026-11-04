@@ -3854,13 +3854,14 @@ function paneTask(pane, ctx){
       <div class="row" style="justify-content:space-between">
         <div class="row"><button class="btn ghost" id="prevS" ${si===0?"disabled":""}>← Strand ${ROMAN[Math.max(0,si-1)]}</button>
         <button class="btn sec" id="spellBtn" type="button">Check spelling and grammar</button></div>
-        <button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button>
+        <div class="row">${p.done.every(Boolean) ? `<button class="btn ghost" id="toSub" type="button" title="Go to Download &amp; hand in without changing this strand">Back to Download &amp; hand in</button>` : ""}<button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button></div>
       </div></div></div>`;
   pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
   F[si].forEach(f => box.appendChild(buildField(f, ctx)));
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
+  if ($("#toSub")) $("#toSub").onclick = () => { view.step = 6; render(); window.scrollTo({ top:0, behavior:"smooth" }); };
   $("#spellBtn").onclick = () => spellPanel($("#spellBox"), $("#fields"));
   $("#doneS").onclick = async () => {
     if (!LIT.ready()) await Promise.race([LIT.load(), new Promise(r => setTimeout(r, 6000))]);
@@ -3986,8 +3987,8 @@ function paneSubmit(pane, ctx){
   const { c, p } = ctx, s = settings();
   pane.innerHTML = `<div class="card stack">
     <div class="eyebrow">All four strands complete</div><h2>Download and hand in Criterion ${c}</h2>
-    <div class="scroll"><table class="tbl"><tr><th>Strand</th><th>Status</th><th>Your self-rating</th></tr>${ROMAN.map((r,i)=>`<tr><td>${r}</td><td>${p.done[i]?"Complete ✓":"Not complete"}</td><td>${p.bands[i]||"—"}</td></tr>`).join("")}</table></div>
-    <p style="margin:0">Changed something? Use <b>Edit my answers</b>, then download your PDF and save a new copy for your teacher.</p>
+    <div class="scroll"><table class="tbl"><tr><th>Strand</th><th>Status</th><th>Your self-rating</th><th></th></tr>${ROMAN.map((r,i)=>`<tr><td>${r}</td><td>${p.done[i]?"Complete ✓":"Not complete"}</td><td>${p.bands[i]||"—"}</td><td><button class="btn ghost sm" data-back="${i}" title="Go back to strand ${r} to improve your answers">← Back to strand ${r}</button></td></tr>`).join("")}</table></div>
+    <p style="margin:0"><b>Before you download:</b> read your work again. Want to improve something? Press <b>← Back to strand …</b> for that strand, make your changes and press <b>Save changes</b>. You come straight back here to download your PDF.</p>
     <p style="margin:0">Your PDF includes all your answers, tables and sketches. Upload it wherever your teacher asks (for example ManageBac or Teams). A copy is also saved for your teacher automatically.</p>
     <div class="row"><button class="btn" id="dlPdf">${ICON.dl} Download my work (PDF)</button><button class="btn sec" id="saveCopy">Save a copy for my teacher</button><button class="btn ghost" id="edit">Edit my answers</button></div>
     <div id="subMsg">${p.finished?`<div class="notice ok">Copy saved for your teacher on ${new Date(p.savedAt).toLocaleString()}.</div>`:""}</div>
@@ -4001,6 +4002,7 @@ function paneSubmit(pane, ctx){
   $("#saveCopy").onclick = () => { saveCopy(); speak(P().copy); };
   $("#dlPdf").onclick = async () => { try { await buildPDF(ctx); if (!p.finished) saveCopy(); speak(P().pdf); } catch(e){ $("#subMsg").innerHTML = `<div class="notice bad">The PDF could not be created on this device (${esc(e.message)}). Open the course in Chrome or Edge and try again.</div>`; } };
   $("#edit").onclick = () => { view.step = 5; view.strand = 0; render(); };
+  pane.querySelectorAll("[data-back]").forEach(b => b.onclick = () => { view.step = 5; view.strand = +b.dataset.back; render(); window.scrollTo({ top:0, behavior:"smooth" }); });
 }
 
 /* ================= PDF ================= */
