@@ -268,8 +268,8 @@ const CONFIG = {
   "videoLinks": {},
   "studioUrl": "https://claude.ai/artifact/GwxfxmzBWyxbjy18kkdY7Z",
   "roster": null,
-  "syncForm": "https://docs.google.com/forms/d/e/1FAIpQLScdyzD_IdGF7TkLSAh1yGxXuryf5Fz76DjpjawDLuby7-hBKw/viewform?usp=pp_url&entry.1268649456=x",
-  "syncSheet": "https://docs.google.com/spreadsheets/d/1SqJekhyGDbaCp5HUa5S6myV27u3bshm51DmXVCuN6do/edit?usp=drivesdk",
+  "syncForm": "https://docs.google.com/forms/d/e/1FAIpQLSdGZGdrzAvN_21zfKHufKcba8003hZIeUhzTKQJ3Mun53trlQ/viewform?usp=pp_url&entry.544835510=x",
+  "syncSheet": "https://docs.google.com/spreadsheets/d/12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0/edit#gid=1433531983",
   "adminKeys": {
     "sigPub": {
       "key_ops": [
@@ -3328,14 +3328,14 @@ async function syncIn(u, email, pw){
   try {
     if (pw){
       const A = await deriveAcct(email, pw);
-      if (u.syncV !== 3){ u.wrapFor = ""; u.syncSent = {}; u.syncSig = ""; }   // once: send everything again (saves before 2 Nov 2026 never reached the sheet)
+      if (u.syncV !== 4){ u.wrapFor = ""; u.syncSent = {}; u.syncSig = ""; }   // once: send everything again (the old Design sync form asked for a Google sign-in, so saves before 4 Nov 2026 never arrived)
       if (!u.dk || u.wrapFor !== A.lookup){
         const dk = await openWrap(cfg, A);
         if (dk) u.dk = dk; else if (!u.dk){ u.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); u.syncSent = {}; u.syncedAt = 0; }
         if (!dk) await publishWrap(u, email, A); else u.wrapFor = A.lookup;
         if (!dk) { syncDirty = true; }
       }
-      if (u.syncV !== 3){ u.syncV = 3; syncDirty = true; save(true); }
+      if (u.syncV !== 4){ u.syncV = 4; syncDirty = true; save(true); }
     }
     if (!u.dk) return "";
     const got = await openData(cfg, u.dk);
