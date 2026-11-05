@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105b"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105c"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2513,7 +2513,8 @@ const LANGS = {
   en: { label: "English", voice: "en-GB" },
   fr: { label: "Français", voice: "fr-FR" },
   ru: { label: "Русский", voice: "ru-RU" },
-  es: { label: "Español", voice: "es-ES" }
+  es: { label: "Español", voice: "es-ES" },
+  de: { label: "Deutsch", voice: "de-DE" }
 };
 const PHRASES = {
   en: { right: ["Brilliant, well done!", "Yes! You've got it.", "Great thinking, keep going!", "That's exactly right!", "Superb, you're on a roll!", "I knew you could do it!"],
@@ -2531,7 +2532,11 @@ const PHRASES = {
   es: { right: ["¡Genial, bien hecho!", "¡Sí! Es correcto.", "¡Gran idea, sigue así!", "¡Exacto!", "¡Excelente, vas muy bien!"],
         wrong: ["¡Casi! Lee la explicación e intenta la siguiente.", "No del todo. ¡Tú puedes!", "Buen intento. ¡Creo en ti!", "¡Sigue, estás aprendiendo!"],
         welcome: n => `Bienvenido, ${n}. Vamos a diseñar algo genial.`, unlocked: "¡Fantástico! Has desbloqueado tu tarea principal.", nearly: "Casi terminado. Completa las partes que faltan.",
-        allDone: "¡Trabajo increíble! Las cuatro partes están completas. Descarga tu trabajo y entrégalo.", sketch: "Boceto guardado. Buen trabajo.", copy: "Se guardó una copia para tu profesor. ¡Excelente!", pdf: "Tu PDF se está descargando. Entrégalo donde indique tu profesor." }
+        allDone: "¡Trabajo increíble! Las cuatro partes están completas. Descarga tu trabajo y entrégalo.", sketch: "Boceto guardado. Buen trabajo.", copy: "Se guardó una copia para tu profesor. ¡Excelente!", pdf: "Tu PDF se está descargando. Entrégalo donde indique tu profesor." },
+  de: { right: ["Super, gut gemacht!", "Ja! Genau richtig.", "Tolle Idee, mach weiter so!", "Das ist völlig richtig!", "Klasse, du bist richtig gut dabei!", "Ich wusste, dass du das kannst!"],
+        wrong: ["Fast! Lies die Erklärung und versuche die nächste Frage.", "Noch nicht ganz. Du schaffst das!", "Guter Versuch. Ich glaube an dich!", "Mach weiter, du lernst dazu!"],
+        welcome: n => `Willkommen, ${n}. Lass uns etwas Tolles gestalten.`, unlocked: "Fantastisch! Deine Hauptaufgabe ist jetzt freigeschaltet.", nearly: "Fast geschafft. Ergänze die Teile, die noch fehlen.",
+        allDone: "Großartige Arbeit! Alle vier Aspekte sind fertig. Lade deine Arbeit herunter und gib sie ab.", sketch: "Skizze gespeichert. Gute Arbeit.", copy: "Eine Kopie wurde für deine Lehrkraft gespeichert. Großartig!", pdf: "Deine PDF wird heruntergeladen. Gib sie dort ab, wo deine Lehrkraft es möchte." }
 };
 function lang(){ let s = null; try { s = localStorage.getItem("sdc_lang"); } catch(e){} if (LANGS[s]) return s; return LANGS[DB.lang] ? DB.lang : "en"; }   // shared with SISD Design and Computing
 function P(){ return PHRASES[lang()]; }
@@ -2611,7 +2616,7 @@ function setCookieLang(code){
 }
 function loadTranslator(){
   if (gtLoaded) return; gtLoaded = true;
-  window.googleTranslateElementInit = () => { try { new google.translate.TranslateElement({ pageLanguage:"en", includedLanguages:"en,fr,ru,es", autoDisplay:false }, "gtHost"); } catch(e){} };
+  window.googleTranslateElementInit = () => { try { new google.translate.TranslateElement({ pageLanguage:"en", includedLanguages:"en,fr,ru,es,de", autoDisplay:false }, "gtHost"); } catch(e){} };
   const s = document.createElement("script"); s.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
   s.onerror = () => toast("Translation needs an internet connection. The course is showing in English.", 5000);
   document.body.appendChild(s);
@@ -2619,7 +2624,7 @@ function loadTranslator(){
 function applyLang(code, first){
   DB.lang = code; save(); document.documentElement.lang = code; try { localStorage.setItem("sdc_lang", code); } catch(e){}
   if (code === "en"){ setCookieLang("en"); if (!first && gtLoaded) location.reload(); return; }
-  setCookieLang(code); loadTranslator();
+  setCookieLang(code); try { if (window.SDC && SDC.gloss) SDC.gloss(document.body); } catch(e){} loadTranslator();
   // if the translator is already on the page, switch it directly
   let tries = 0; const t = setInterval(() => { const sel = document.querySelector(".goog-te-combo");
     if (sel){ if (sel.value !== code){ sel.value = code; sel.dispatchEvent(new Event("change")); } clearInterval(t); } else if (++tries > 40) clearInterval(t); }, 250);
@@ -3580,7 +3585,7 @@ function stepDone(p, i){
   switch(STEPS[i].k){ case "video": return p.watched; case "ex": return !!p.seen.ex; case "me": return !!p.seen.me; case "ru": return !!p.seen.ru;
     case "prac": return p.ex.done; case "task": return p.done.every(Boolean); case "sub": return p.finished; }
 }
-function stepUnlocked(p, i){ for (let j=0;j<i;j++) if (!stepDone(p,j)) return false; return true; }
+function stepUnlocked(p, i){ if (isTester()) return true; for (let j=0;j<i;j++) if (!stepDone(p,j)) return false; return true; }   // the test student can open every step
 function firstStep(c){ const p = prog(user(), c); for (let i=0;i<STEPS.length;i++) if (!stepDone(p,i)) return i; return STEPS.length-1; }
 
 function renderCrit(app){
@@ -3863,7 +3868,7 @@ const needed = (f, p) => !(f.grp === "video" && p.fields.__skipVideo);
 function strandValid(ctx, i){ const fs = fieldsFor(ctx.c, ctx.gd)[i]; return fs.every(f => !needed(f, ctx.p) || fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
 function paneTask(pane, ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
-  const reach = i => i === 0 || p.done.slice(0, i).every(Boolean);
+  const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
   if (!reach(view.strand)) view.strand = Math.max(0, p.done.findIndex(d => !d));
   const si = view.strand;
   try { if (SDCG && window.SDC && SDC.slow && !session.preview && ctx.u.role !== "teacher"){ if (p.done[si]) SDC.slow.stop(); else SDC.slow.start("ds|" + g + "|" + c + "|" + si, uLabel(g) + " · Criterion " + c + " · Strand " + ROMAN[si], sdcAcct(ctx.u, session.email), [12, 20, 30]); } } catch(e){}   // taking too long on one strand
@@ -3906,6 +3911,7 @@ function paneTask(pane, ctx){
     if (!LIT.ready()) await Promise.race([LIT.load(), new Promise(r => setTimeout(r, 6000))]);
     const missing = F[si].filter(f => needed(f, p) && !fieldValid(f, p.fields[f.id])).map(f => { const v = p.fields[f.id], why = f.t === "text" && !f.fmt ? (LIT.problem(v) || (LIT.count(v) < f.min ? `only ${LIT.count(v)} of ${f.min} real words` : "")) : ""; return fill(f.label, g, sc) + (why ? " (" + why + ")" : ""); });
     if (!p.bands[si]) missing.push("Your self-rating for this strand");
+    if (missing.length && isTester()){ toast("Test student: moving on without checking the answers."); missing.length = 0; }
     if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak(P().nearly); return; }
     const was = p.done[si]; p.done[si] = true; try { if (window.SDC && SDC.slow) SDC.slow.stop(); } catch(e){} if (was && p.finished){ p.finished = false; p.edited = true; } save();
     if (!was){ logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`); rankBump(ctx.u); }
