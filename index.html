@@ -2141,6 +2141,8 @@ function g7C2(gd){
 }
 COURSE.buildTasks = function(c, gd){
   if (c === "C" && gd === COURSE.grades["7"]){ const r = COURSE.buildTasks0(c, gd); r[1] = g7C2(gd); return r; }
+  if (c === "D" && gd === COURSE.grades["10"]){ const r = COURSE.buildTasks0(c, gd);   // D.ii: one upload of evidence for every test in the D.i test plan
+    r[1] = r[1].map(f => f.id === "d2e" ? { t:"evlist", id:"d2ev", src:"d1t", label:"Evidence for every test in your test plan (D.i): upload a screenshot, photo or survey result for each test" } : f); return r; }
   return COURSE.buildTasks0(c, gd);
 };
 COURSE.buildTasks0 = function(c, gd){
@@ -3099,7 +3101,7 @@ function workPayload(ctx, kind){
     strands: F.map((fs, i) => ({ n: ROMAN[i], strand: cd.strands[Y][i], done: !!p.done[i], self: p.bands[i] || "",
       fields: fs.map(f => { const v = p.fields[f.id];
         return { id: f.id, t: f.t, label: fill(f.label, g, sc), cols: f.cols, rowLabels: f.rowLabels, min: f.min,
-          value: f.t === "sketch" ? (v ? "IMAGE" : "") : f.t === "video" ? (v && v.url ? "Video: " + v.url : f.grp === "video" && p.fields.__skipVideo ? "SKIPPED (lose marks)" : "") : f.grp === "video" && p.fields.__skipVideo && !v ? "SKIPPED" : (v ?? "") }; }) })) };
+          value: f.t === "evlist" ? (v ? Array.from({ length: v.__n || 0 }, (_, i) => v[i] ? "IMAGE" : "") : []) : f.t === "sketch" ? (v ? "IMAGE" : "") : f.t === "video" ? (v && v.url ? "Video: " + v.url : f.grp === "video" && p.fields.__skipVideo ? "SKIPPED (lose marks)" : "") : f.grp === "video" && p.fields.__skipVideo && !v ? "SKIPPED" : (v ?? "") }; }) })) };
 }
 function queueChunks(ctx, tag, id, text, extra){
   const u = ctx.u, n = Math.max(1, Math.ceil(text.length / CHUNK));
@@ -3864,7 +3866,10 @@ function fieldValid(f, val){
   if (f.t === "choice") return !!val;
   if (f.t === "checklist") return (val||[]).length >= f.min;
   if (f.t === "video") return !!(val && val.url);
+  if (f.t === "evlist") return !!(val && val.__n > 0 && Array.from({ length: val.__n }, (_, i) => val[i]).every(Boolean));
 }
+/* the tests written in the D.i test plan (first column = test name) */
+function testsOf(p, srcId){ return (p.fields[srcId] || []).map((r, i) => ({ i, name: String((r || [])[0] || "").trim(), row: r || [] })).filter(t => t.row.some(x => String(x || "").trim())); }
 /* a field the student still has to do (the Grade 7 video task can be skipped) */
 const needed = (f, p) => !(f.grp === "video" && p.fields.__skipVideo);
 function strandValid(ctx, i){ const fs = fieldsFor(ctx.c, ctx.gd)[i]; return fs.every(f => !needed(f, ctx.p) || fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
@@ -4058,6 +4063,19 @@ function buildField(f, ctx){
   const { p, g, sc } = ctx, el = document.createElement("div"); el.className = "field";
   const label = fill(f.label, g, sc);
   if (f.t === "video"){ videoBox(el, f, ctx, label); return el; }
+  if (f.t === "evlist"){
+    const store = p.fields[f.id] = Object.assign({}, p.fields[f.id] || {}), tests = testsOf(p, f.src);
+    p.fields[f.id] = store; store.__n = tests.length;
+    el.innerHTML = `<span class="lbl">${esc(label)}</span>${tests.length ? `<p class="muted" style="margin:2px 0 8px;font-size:13px">One box for each of your ${tests.length} tests. Drop, paste or upload your evidence.</p>` : `<div class="notice warn">Write your tests in the test plan (strand i) first. A box for each test's evidence then appears here.</div>`}<div class="stack" style="gap:8px" data-evl></div><span class="counter"></span>`;
+    const host = el.querySelector("[data-evl]"), cn = el.querySelector(".counter");
+    // keep each test's evidence with the right test, even if rows were added: stored by position in the test plan
+    const holder = { fields: new Proxy(store, { get:(o, k) => o[k], set:(o, k, v) => { o[k] = v; upd(); scheduleSnapshot(ctx.c); return true; } }) };
+    tests.forEach((t, n) => { const map = store.__map = store.__map || {}; map[n] = t.i;
+      const sub = { t:"sketch", id:String(n), label:`Test ${n + 1}${t.name ? ": " + t.name : ""}`, evidence:true, noSketch:true };
+      host.appendChild(sketchBox(sub, sub.label, holder)); });
+    const upd = () => { const have = tests.filter((_, n) => store[n]).length; cn.textContent = `${have} of ${tests.length} tests have evidence`; cn.classList.toggle("ok", tests.length > 0 && have === tests.length); };
+    upd(); save(); return el;
+  }
   if (f.t === "text" && f.fmt){
     const v = p.fields[f.id] || "";
     el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><input type="text" id="f_${f.id}" class="notranslate" inputmode="url" placeholder="https://… or not online" value="${esc(v)}"><span class="counter"></span>`;
@@ -4186,7 +4204,7 @@ function answersText(ctx){
   let out = `Scenario: ${sc.title} | Practice: ${p.ex.correct} correct, ${p.ex.points} pts, ${p.ex.hints} hints\n`;
   F.forEach((fs,i) => { out += `\n== Strand ${ROMAN[i]} (self-rating ${p.bands[i]||"-"}) ==\n`;
     fs.forEach(f => { const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
-      if (f.grp === "video" && p.fields.__skipVideo) out += "SKIPPED (video task)\n"; else if (f.t === "video") out += (v && v.url ? v.url : "") + "\n"; else if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
+      if (f.t === "evlist") out += "Evidence for " + ((v && v.__n) || 0) + " tests\n"; else if (f.grp === "video" && p.fields.__skipVideo) out += "SKIPPED (video task)\n"; else if (f.t === "video") out += (v && v.url ? v.url : "") + "\n"; else if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
   return out;
 }
 /* ================= GRADE 10 PROJECT REPORT =================
@@ -4224,6 +4242,8 @@ function reportBlocks(u, only){
         const v = p.fields[f.id], label = fill(f.label, g, sc);
         if (f.t === "sketch"){ if (v){ sec.push({ k:"h3", t:rhOf(f, label) }); sec.push({ k:"img", src:v, cap:rhOf(f, label) }); lastImg = true; } return; }
         if (f.t === "video"){ if (v && v.url) sec.push({ k:"h3", t:"Finished video" }, { k:"p", t:v.url }); return; }
+        if (f.t === "evlist"){ const ts = testsOf(p, f.src); if (!ts.some((_, n) => v && v[n])) return; sec.push({ k:"h3", t:"Testing evidence" });
+          ts.forEach((t, n) => { if (v && v[n]) sec.push({ k:"img", src:v[n], cap:`Test ${n + 1}${t.name ? ": " + t.name : ""}` }); }); lastImg = true; return; }
         if (f.t === "table"){ const rows = (v || []).filter(r => r && r.slice(f.rowLabels ? 1 : 0).some(x => String(x || "").trim())); if (!rows.length) return;
           sec.push({ k:"h3", t:rhOf(f, label) }, { k:"table", head:f.cols, rows }); lastImg = false; return; }
         let txt = f.t === "checklist" ? (v || []).join(", ") : String(v || "").trim(); if (!txt || /^n\/?a$/i.test(txt)) return;
@@ -4413,6 +4433,10 @@ function buildPDF(ctx){
       const v = p.fields[f.id];
       if (f.grp === "video" && p.fields.__skipVideo){ if (!skipNoted){ skipNoted = true; need(12); para("Task 2 (the video): SKIPPED by the student. Marks are lost for this task.", 10.5, "bold", RED); } return; }
       if (f.t === "video"){ need(14); para(fill(f.label, g, sc), 10, "bold", NAVY); para(v && v.url ? "Finished video: " + v.url : "(no video uploaded)", 10.5); return; }
+      if (f.t === "evlist"){ need(12); para(fill(f.label, g, sc), 10, "bold", NAVY); const ts = testsOf(p, f.src);
+        ts.forEach((t, n) => { const im = v && v[n]; para(`Test ${n + 1}${t.name ? ": " + t.name : ""}`, 10, "bold");
+          if (im){ const pr = doc.getImageProperties(im), w = W-2*M, h = Math.min(100, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h+4); doc.addImage(im, "JPEG", M, y, ww, h); y += h + 5; } else para("(no evidence)", 10, "italic"); });
+        return; }
       if (f.t === "sketch" && v){ const pr = doc.getImageProperties(v); need(Math.min(120, (W-2*M) * pr.height / pr.width) + 12); }
       else if (f.t === "table") need(24); else need(12);
       para(fill(f.label, g, sc), 10, "bold", NAVY);
