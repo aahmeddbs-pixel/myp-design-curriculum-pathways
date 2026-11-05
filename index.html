@@ -2,7 +2,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105g"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105h"></script>
+<script src="/python-pathways/pp-sync.js?v=20261105h"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2901,7 +2902,7 @@ function renderLogin(app){
       note(`Signing up for <b>${esc(C.name)}, Grade ${esc(SDCG.grade)}</b>. Only your teacher can change your course or grade later.`);
     } else {
       setMode("in");
-      note(`Signing into <b>${esc(C.name)}</b>. Your teacher can see which course you sign into. New here? Open <b>Change course</b> at the top and choose <b>＋ Sign up for a course</b>.`);
+      note(`Signing into <b>${esc(C.name)}</b>. Your teacher can see which course you sign into. Taking Computer Science too? Type your school email and your Computer Science PIN. New here? Open <b>Change course</b> at the top and choose <b>＋ Sign up for a course</b>.`);
     }
   }
   $("#lf").onsubmit = async e => {
@@ -2918,6 +2919,9 @@ function renderLogin(app){
           if (!t0 || t0.role === "teacher"){ const g0 = SDCG && SDCG.course === "it" ? "10" : "6";
             t0 = DB.users[email] = { role:"student", name:"Test Student", group:g0, cls:"", grade:sdcFirstUnit(g0), course: SDCG && SDCG.mode !== "staff" ? SDCG.course : undefined, teacher:(COURSE.teachers || [])[0] || "Mr. Ahmed", created:new Date().toISOString(), progress:{} }; }
           Object.assign(t0, await hashPw(pw)); save(true);
+        }
+        if (/^\d{4}$/.test(pw) && SDCG && window.PPSync && PPSync.enabled() && (!DB.users[email] || DB.users[email].viaCS)){   // a 4-digit PIN: their Computer Science PIN (Design passwords are 10+ characters)
+          const r = await pinIntoDesign(email, pw, msg); if (r === true) return; if (r) return msg(r);
         }
         let u = DB.users[email];
         if (!u){
@@ -4734,6 +4738,30 @@ var SDCG = window.SDC ? SDC.gate() : null;
 window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
 const IT_UNITS = ["10IT", "10HH"];   // the G10 IT course: Networks and Harvest Hub
 function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (IT_UNITS.includes(u.grade) ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "", viaCS: !!u.viaCS }; }
+/* sign in to Design with the school email + Computer Science PIN (students taking both courses): works on any device */
+async function pinIntoDesign(email, pin, msg){
+  let name = (($("#lCsName") || {}).value || "").trim();
+  if (!name){ try { const all = JSON.parse(localStorage.getItem("pyl_accounts") || "{}"); const a = Object.values(all).find(x => x && String(x.email || "").toLowerCase() === email); if (a) name = a.name; } catch(e){} }
+  if (!name){
+    if (!$("#lCsName")) $("#lEmail").closest("label").insertAdjacentHTML("afterend", `<label class="f" id="lCsNameRow">Your full name (the same as in Computer Science)<input type="text" id="lCsName" autocomplete="name" placeholder="First and last name"></label>`);
+    setTimeout(() => $("#lCsName").focus(), 50);
+    return "Signing in with your Computer Science PIN? Type your full name too, then press <b>Sign in</b> again.";
+  }
+  msg("Checking your Computer Science account…", "ok");
+  const sl = name.toLowerCase().replace(/\s+/g, " ");
+  let dk = null, got = null;
+  try { dk = await PPSync.findKey(sl, pin); if (dk) got = await PPSync.pull(dk); } catch(e){ return "Your account could not be reached. Check the internet connection and try again."; }
+  const a = got && got.bundle && got.bundle.acct;
+  if (!dk || !a || String(a.email || "").toLowerCase() !== email){ noteFail(email); return "That name, email and PIN don't match a Computer Science account. Check all three. If you have a Design password, use that instead."; }
+  clearFails(email);
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("sdc-cs-design|" + email + "|" + dk)));
+  const nm = String(a.name || name), cs = { name:nm, email, grade:String(a.grade || ""), teacher:a.teacher || "" };
+  SDCG.link = { cs, design:{ email, pw:"cs" + [...h].slice(0, 20).map(v => v.toString(16).padStart(2, "0")).join(""), name:nm, grade:cs.grade, teacher:cs.teacher, created:a.created || Date.now() } };
+  try { SDC.patchGate({ link: SDCG.link }); } catch(e){}
+  $("#lMsg").innerHTML = "";
+  if (await linkIn()) return true;
+  return "This email has its own Design password on this device. Use that password to sign in.";
+}
 /* ---------- Computer Science students joining Design ----------
    The first time, their teacher approves it (and sets the grade/class); after that they switch straight in. */
 let LINKWAIT = null;   // { state: "asked" | "declined" | "nogo", grade, teacher }
