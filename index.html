@@ -62,6 +62,7 @@ main{padding-block:22px 60px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:bold}
 input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 12px;width:100%;font-weight:normal}
 textarea{min-height:110px;resize:vertical;line-height:1.5}
+textarea.tcell{min-height:44px;min-width:140px;padding:6px 8px;font-size:14px;resize:vertical;overflow:hidden}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 @media (max-width:640px){.grid2{grid-template-columns:1fr}}
 .notice{border-radius:8px;padding:10px 14px;font-size:14px}
@@ -3472,7 +3473,7 @@ const SPELL = (() => {
   return { scan, fix };
 })();
 function spellPanel(box, root){
-  const els = [...root.querySelectorAll('textarea[id^="f_"], .tin input[type=text][data-c]')].filter(x => !x.inputMode || x.inputMode === "text" || x.tagName === "TEXTAREA").filter(x => x.inputMode !== "decimal");
+  const els = [...root.querySelectorAll('textarea[id^="f_"], .tin input[type=text][data-c], .tin textarea[data-c]')].filter(x => !x.inputMode || x.inputMode === "text" || x.tagName === "TEXTAREA").filter(x => x.inputMode !== "decimal");
   if (!LIT.ready()){ box.innerHTML = `<div class="notice">Checking your spelling and grammar…</div>`;
     LIT.load().then(ok => { if (!box.isConnected) return; if (ok) spellPanel(box, root); else box.innerHTML = `<div class="notice warn">The spelling check couldn't load. Check your internet connection and press the button again.</div>`; }); return; }
   const issues = []; els.forEach(el => LIT.check(el.value).filter(x => el.tagName === "TEXTAREA" || ["stop", "capital"].indexOf(x.why) < 0).forEach(x => issues.push(Object.assign(x, { el }))));
@@ -4050,6 +4051,9 @@ function videoBox(el, f, ctx, label){
   };
   paint();
 }
+/* Grade 10 ePortfolio: students can write as much as they like (boxes grow, tables can get more rows), never less */
+const deepUnit = g => String(g) === "10";
+const autoGrow = ta => { const fit = () => { ta.style.height = "auto"; ta.style.height = Math.max(ta.scrollHeight + 2, ta.classList.contains("tcell") ? 44 : 110) + "px"; }; ta.addEventListener("input", fit); requestAnimationFrame(fit); };
 function buildField(f, ctx){
   const { p, g, sc } = ctx, el = document.createElement("div"); el.className = "field";
   const label = fill(f.label, g, sc);
@@ -4065,7 +4069,9 @@ function buildField(f, ctx){
     const v = p.fields[f.id] || "";
     el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><textarea id="f_${f.id}" class="notranslate" spellcheck="true" lang="en-GB">${esc(v)}</textarea><span class="counter" id="c_${f.id}"></span>`;
     const ta = el.querySelector("textarea"), cn = el.querySelector(".counter");
-    const upd = () => { const w = LIT.count(ta.value), pr = LIT.problem(ta.value); cn.textContent = `${w} / ${f.min} real words minimum` + (pr ? " · ⚠ " + pr : w >= f.min ? " · ✓ Good" : ""); cn.classList.toggle("ok", w >= f.min && !pr); cn.classList.toggle("bad", !!pr); };
+    const deep = deepUnit(g), goal = f.min * 2;
+    const upd = () => { const w = LIT.count(ta.value), pr = LIT.problem(ta.value); cn.textContent = `${w} / ${f.min} real words minimum` + (pr ? " · ⚠ " + pr : deep && w >= f.min && w < goal ? ` · ✓ Good. For full depth, aim for ${goal}+ words: explain, give examples and evidence.` : w >= f.min ? " · ✓ Good" + (deep ? ", in depth" : "") : ""); cn.classList.toggle("ok", w >= f.min && !pr); cn.classList.toggle("bad", !!pr); };
+    if (deep) autoGrow(ta);
     LIT.onReady(() => { if (ta.isConnected) upd(); });
     ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
     upd();
@@ -4077,15 +4083,18 @@ function buildField(f, ctx){
       if (t && t.opts) return `<td><select ${base}><option value="">Choose…</option>${t.opts.map(o => `<option value="${esc(o)}" ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></td>`;
       if (t === "url") return `<td class="notranslate"><input type="url" inputmode="url" placeholder="https://…" ${base} value="${esc(val||"")}"></td>`;
       if (t === "num") return `<td class="notranslate"><input type="text" inputmode="decimal" placeholder="0" style="min-width:70px" ${base} value="${esc(val||"")}"></td>`;
+      if (deepUnit(g)) return `<td class="notranslate"><textarea class="tcell" rows="2" spellcheck="true" lang="en-GB" ${base}>${esc(val||"")}</textarea></td>`;
       return `<td class="notranslate"><input type="text" spellcheck="true" lang="en-GB" ${base} value="${esc(val||"")}"></td>`; };
     p.fields[f.id] = v;
-    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=> (f.rowLabels && ci===0) ? `<th scope="row" style="text-transform:none;letter-spacing:0;font-size:13px">${esc(f.rowLabels[ri])}</th>` : cell(ri, ci, r[ci])).join("")}</tr>`).join("")}</table></div><span class="counter"></span>`;
+    el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=> (f.rowLabels && ci===0) ? `<th scope="row" style="text-transform:none;letter-spacing:0;font-size:13px">${esc(f.rowLabels[ri])}</th>` : cell(ri, ci, r[ci])).join("")}</tr>`).join("")}</table></div>${deepUnit(g) && !f.rowLabels ? `<div class="row" style="gap:8px;margin-top:6px"><button class="btn sm sec" type="button" data-addrow>＋ Add a row</button><span class="muted" style="font-size:12.5px">Add as many rows as you need to go into depth.</span></div>` : ""}<span class="counter"></span>`;
     const cn = el.querySelector(".counter");
+    el.querySelectorAll("textarea.tcell").forEach(autoGrow);
+    const ar = el.querySelector("[data-addrow]"); if (ar) ar.onclick = () => { v.push(f.cols.map(() => "")); p.fields[f.id] = v; save(); const n = buildField(f, ctx); el.replaceWith(n); const last = n.querySelectorAll("tr"); const inp = last[last.length - 1] && last[last.length - 1].querySelector("textarea,input,select"); if (inp) inp.focus(); };
     const upd = () => { const done = v.filter(r => rowDone(f, r)).length, need = tableRowsNeeded(f.rows, f);
       let hint = ""; v.forEach((r, ri) => f.cols.forEach((_, k) => { if (hint || (f.rowLabels && k === 0)) return; const val = String(r[k]||"").trim(); if (!val) return; const pr = cellProblem(f, k, val); if (pr) hint = ` · Row ${ri+1}: ${pr}`; }));
-      el.querySelectorAll("input[data-c],select[data-c]").forEach(x => { const val = x.value.trim(); x.classList.toggle("bad", !!val && !!cellProblem(f, +x.dataset.c, val)); });
-      cn.textContent = (f.rowLabels ? `${done} of ${f.rows} rows complete` : `${done} of ${f.rows} rows complete (at least ${need} needed)`) + hint; cn.classList.toggle("ok", done >= need && !hint); };
-    el.querySelectorAll("input[data-c],select[data-c]").forEach(inp => inp.oninput = inp.onchange = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); });
+      el.querySelectorAll("input[data-c],select[data-c],textarea[data-c]").forEach(x => { const val = x.value.trim(); x.classList.toggle("bad", !!val && !!cellProblem(f, +x.dataset.c, val)); });
+      cn.textContent = (f.rowLabels ? `${done} of ${f.rows} rows complete` : `${done} of ${v.length} rows complete (at least ${need} needed)`) + hint; cn.classList.toggle("ok", done >= need && !hint); };
+    el.querySelectorAll("input[data-c],select[data-c],textarea[data-c]").forEach(inp => inp.oninput = inp.onchange = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); });
     upd();
   } else if (f.t === "sketch"){
     el.appendChild(sketchBox(f, label, p));
