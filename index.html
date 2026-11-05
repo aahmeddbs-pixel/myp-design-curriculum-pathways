@@ -2,8 +2,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105j"></script>
-<script src="/python-pathways/pp-sync.js?v=20261105j"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105k"></script>
+<script src="/python-pathways/pp-sync.js?v=20261105k"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -63,7 +63,12 @@ main{padding-block:22px 60px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:bold}
 input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 12px;width:100%;font-weight:normal}
 textarea{min-height:110px;resize:vertical;line-height:1.5}
-textarea.tcell{min-height:44px;min-width:140px;padding:6px 8px;font-size:14px;resize:vertical;overflow:hidden}
+textarea.tcell{min-height:44px;min-width:150px;padding:6px 8px;font-size:14px;resize:vertical;overflow:hidden}
+textarea{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;overflow-x:hidden}
+input[type=text],input[type=url],input[type=email]{text-overflow:ellipsis}
+table.tin{width:100%}
+table.tin td{vertical-align:top}
+.card,.tbl td,.notice,p,li,.lbl,.counter{overflow-wrap:anywhere}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 @media (max-width:640px){.grid2{grid-template-columns:1fr}}
 .notice{border-radius:8px;padding:10px 14px;font-size:14px}
@@ -3057,8 +3062,8 @@ function renderChooser(box, done){
     <div class="crit-grid" ${gd.choose.ownOnly?"hidden":""}>${gd.scenarios.map(s=>`<button class="crit open" data-ch="${s.id}" ${s.id===cur?'style="border-color:var(--accent)"':""}><h3>${esc(s.title)}</h3><p class="muted" style="margin:0;font-size:13px">${esc(s.custom ? (s.ideas ? "Choose this audience, then name your product." : "Suggest your own idea and explain the problem it solves.") : s.brief)}</p>${s.ideas?`<p style="margin:0;font-size:12.5px">${esc(s.ideas)}</p>`:""}</button>`).join("")}</div>
     <form id="ownForm" class="card stack" hidden novalidate>
       <h3 id="owH">Your own idea</h3>
-      <label class="f">${esc(gd.choose.titleLabel||"Name of your idea")}<input type="text" id="owT" class="notranslate"></label>
-      <label class="f" id="owURow">${esc(gd.choose.userLabel||"Who is it for?")}<input type="text" id="owU" class="notranslate" placeholder="the people it will help"></label>
+      <label class="f">${esc(gd.choose.titleLabel||"Name of your idea")}<textarea id="owT" class="notranslate tcell" rows="1"></textarea></label>
+      <label class="f" id="owURow">${esc(gd.choose.userLabel||"Who is it for?")}<textarea id="owU" class="notranslate tcell" rows="1" placeholder="the people it will help"></textarea></label>
       <label class="f">${esc(gd.choose.problemLabel||"What problem does it solve?")}<textarea id="owP" class="notranslate" style="min-height:80px"></textarea></label>
       <div id="owMsg"></div>
       <div class="row"><button class="btn" type="submit">Use this scenario</button><button class="btn ghost" type="button" id="owCancel">Cancel</button></div>
@@ -3076,6 +3081,7 @@ function renderChooser(box, done){
     pickIt({ id: s.id, title: s.title });
   });
   $("#owCancel").onclick = () => { $("#ownForm").hidden = true; };
+  ["#owT", "#owU"].forEach(x => { const t = $(x); if (!t) return; autoGrow(t); t.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); } }); });   // one line of text that wraps instead of scrolling
   $("#ownForm").onsubmit = e => { e.preventDefault(); const t = $("#owT").value.trim(), us = $("#owU").value.trim(), pr = $("#owP").value.trim();
     if (t.length < 3) return $("#owMsg").innerHTML = `<div class="notice bad">Give your idea a name.</div>`;
     if (words(pr) < 8) return $("#owMsg").innerHTML = `<div class="notice bad">Describe the problem in at least 8 words.</div>`;
@@ -4122,7 +4128,7 @@ function buildField(f, ctx){
     const ta = el.querySelector("textarea"), cn = el.querySelector(".counter");
     const deep = deepUnit(g), goal = f.min * 2;
     const upd = () => { const w = LIT.count(ta.value), pr = LIT.problem(ta.value); cn.textContent = `${w} / ${f.min} real words minimum` + (pr ? " · ⚠ " + pr : deep && w >= f.min && w < goal ? ` · ✓ Good. For full depth, aim for ${goal}+ words: explain, give examples and evidence.` : w >= f.min ? " · ✓ Good" + (deep ? ", in depth" : "") : ""); cn.classList.toggle("ok", w >= f.min && !pr); cn.classList.toggle("bad", !!pr); };
-    if (deep) autoGrow(ta);
+    autoGrow(ta);   // grows as they write: nothing scrolls out of view
     LIT.onReady(() => { if (ta.isConnected) upd(); });
     ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
     upd();
@@ -4134,8 +4140,7 @@ function buildField(f, ctx){
       if (t && t.opts) return `<td><select ${base}><option value="">Choose…</option>${t.opts.map(o => `<option value="${esc(o)}" ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></td>`;
       if (t === "url") return `<td class="notranslate"><input type="url" inputmode="url" placeholder="https://…" ${base} value="${esc(val||"")}"></td>`;
       if (t === "num") return `<td class="notranslate"><input type="text" inputmode="decimal" placeholder="0" style="min-width:70px" ${base} value="${esc(val||"")}"></td>`;
-      if (deepUnit(g)) return `<td class="notranslate"><textarea class="tcell" rows="2" spellcheck="true" lang="en-GB" ${base}>${esc(val||"")}</textarea></td>`;
-      return `<td class="notranslate"><input type="text" spellcheck="true" lang="en-GB" ${base} value="${esc(val||"")}"></td>`; };
+      return `<td class="notranslate"><textarea class="tcell" rows="${deepUnit(g) ? 2 : 1}" spellcheck="true" lang="en-GB" ${base}>${esc(val||"")}</textarea></td>`; };   // text wraps and the box grows as they write
     p.fields[f.id] = v;
     el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=> (f.rowLabels && ci===0) ? `<th scope="row" style="text-transform:none;letter-spacing:0;font-size:13px">${esc(f.rowLabels[ri])}</th>` : cell(ri, ci, r[ci])).join("")}</tr>`).join("")}</table></div>${deepUnit(g) && !f.rowLabels ? `<div class="row" style="gap:8px;margin-top:6px"><button class="btn sm sec" type="button" data-addrow>＋ Add a row</button><span class="muted" style="font-size:12.5px">Add as many rows as you need to go into depth.</span></div>` : ""}<span class="counter"></span>`;
     const cn = el.querySelector(".counter");
