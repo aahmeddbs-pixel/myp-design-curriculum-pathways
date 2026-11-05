@@ -2,9 +2,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105m"></script>
-<script src="/python-pathways/pp-sync.js?v=20261105m"></script>
-<script src="keywords.js?v=20261105m"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105n"></script>
+<script src="/python-pathways/pp-sync.js?v=20261105n"></script>
+<script src="keywords.js?v=20261105n"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -160,7 +160,11 @@ table.tin td{vertical-align:top}
 .scroll{overflow-x:auto;max-width:100%}
 .model p{margin:.3em 0 .6em}
 .model .note{font-size:13px;color:var(--muted);font-style:italic}
-.strand-h{display:flex;gap:12px;align-items:baseline}
+.strand-h{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.strand-h h3{flex:1;min-width:200px}
+#strandVoice{flex:0 0 auto;margin-left:auto}
+#strandVoice .row{margin:0!important}
+#strandVoice #sbNote{display:none}
 .roman{font-family:var(--f-display);color:var(--accent);font-size:20px;min-width:34px}
 .why{background:var(--okbg);color:var(--ok);font-size:13px;padding:8px 12px;border-radius:7px}
 .rub th:first-child,.rub td:first-child{width:70px;text-align:center;font-family:var(--f-mono)}
@@ -3923,8 +3927,7 @@ function paneTask(pane, ctx){
     <p class="muted" style="margin:0;font-size:13.5px">Work through the strands in order. Each one opens when the one before it is complete, and you can download your work once all four are done.</p>
     <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
-      <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3></div>
-      <div id="strandVoice" class="sdcNoRead"></div>
+      <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3><div id="strandVoice" class="sdcNoRead"></div></div>
       <p class="muted" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
       <div id="kwBox"></div>
       ${c === "B" && si === 0 && COURSE.ACCESSFM ? `<div class="card stack" style="gap:8px;background:var(--soft)"><div class="eyebrow">ACCESS FM — use it to write your specification</div>
@@ -4089,7 +4092,7 @@ function strandVoice(box, g, c, si){
       if (audio){ if (audio.paused){ try { speechSynthesis.cancel(); } catch(e){} audio.play().catch(() => {}); } else audio.pause(); return; }
       if (reading){ reading = false; try { if (SDC.stopNarrating) SDC.stopNarrating(); speechSynthesis.cancel(); } catch(e){} label(false); return; }
       const card = document.getElementById("strandCard"); if (!card) return;
-      const text = [...card.querySelectorAll(".strand-h h3, .strand-h + div + p, #fields .lbl")].map(e => e.innerText.trim()).filter(Boolean).join(". ");
+      const text = [...card.querySelectorAll(".strand-h h3, .strand-h + p, #fields .lbl")].map(e => e.innerText.trim()).filter(Boolean).join(". ");
       reading = true; label(true);
       const done = () => { reading = false; label(false); };
       try { if (!(window.SDC && SDC.narrate && SDC.narrate(text, { onend: done }))) { const u = new SpeechSynthesisUtterance(text); u.lang = "en-GB"; u.onend = done; speechSynthesis.cancel(); speechSynthesis.speak(u); } } catch(e){ done(); }
