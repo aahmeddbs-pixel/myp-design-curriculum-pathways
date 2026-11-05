@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105a"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105b"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2114,7 +2114,27 @@ Object.keys(UNITS).forEach(g => {
 });
 
 /* ---------- the task builder ---------- */
+/* Grade 7, Criterion C strand ii: Task 1 = the poster being made (5 annotated screenshots + the finished poster);
+   Task 2 = editing the video (5 annotated screenshots) + upload the finished video. Task 2 can be skipped (marks are lost). */
+function g7C2(gd){
+  const L = gd.lab || { tools: [] }, W = 15;
+  const P = ["setting up your page: size, background and layout grid", "adding and editing your images (crop, remove background, adjust)", "adding your headline and text: fonts, sizes and colours", "building the visual hierarchy: what is seen first, second and third", "final details: call to action, facts, logo, checking alignment"];
+  const V = ["importing your clips, images and audio into the editor", "cutting, trimming and putting your clips in order on the timeline", "adding transitions between scenes", "adding text and title overlays", "adding music or voice-over, then exporting the finished video"];
+  return [
+    CH("c2tool", "Task 1 · Which software did you use to make your poster?", L.tools.map(t => t.name).concat(["Other"])),
+    ...P.flatMap((h, k) => [SK(`c2p${k + 1}`, `Task 1 · Poster evidence ${k + 1} of 5: a screenshot of you making your poster: ${h}`, true),
+      T(`c2pa${k + 1}`, `Annotation ${k + 1}: what did you do at this step, and which technical skill or tool did you use? Which step of your logical plan (C.i) is this?`, W)]),
+    SK("c2pf", "Task 1 · Your finished poster", true),
+    ...V.flatMap((h, k) => [Object.assign(SK(`c2v${k + 1}`, `Task 2 · Video evidence ${k + 1} of 5: a screenshot of you editing your video: ${h}`, true), { grp: "video" }),
+      Object.assign(T(`c2va${k + 1}`, `Annotation ${k + 1}: what did you do at this step, and which editing skill or tool did you use?`, W), { grp: "video" })]),
+    { t: "video", id: "c2vid", label: "Task 2 · Drag and drop your finished 30-second video here for assessment", grp: "video" }
+  ];
+}
 COURSE.buildTasks = function(c, gd){
+  if (c === "C" && gd === COURSE.grades["7"]){ const r = COURSE.buildTasks0(c, gd); r[1] = g7C2(gd); return r; }
+  return COURSE.buildTasks0(c, gd);
+};
+COURSE.buildTasks0 = function(c, gd){
   const Y = Yk(gd.myp), n = NUM[Y], W = x => Math.max(5, Math.round(x * n.w / 2)), u = gd.u, L = gd.lab || { tools: [], milestones: ["Early stage", "Middle stage", "Final stage"], skills: [] };
   if (c === "A") return [
     [ T("a1what", u.q1, W(40)),
@@ -3065,7 +3085,7 @@ function workPayload(ctx, kind){
     strands: F.map((fs, i) => ({ n: ROMAN[i], strand: cd.strands[Y][i], done: !!p.done[i], self: p.bands[i] || "",
       fields: fs.map(f => { const v = p.fields[f.id];
         return { id: f.id, t: f.t, label: fill(f.label, g, sc), cols: f.cols, rowLabels: f.rowLabels, min: f.min,
-          value: f.t === "sketch" ? (v ? "IMAGE" : "") : (v ?? "") }; }) })) };
+          value: f.t === "sketch" ? (v ? "IMAGE" : "") : f.t === "video" ? (v && v.url ? "Video: " + v.url : f.grp === "video" && p.fields.__skipVideo ? "SKIPPED (lose marks)" : "") : f.grp === "video" && p.fields.__skipVideo && !v ? "SKIPPED" : (v ?? "") }; }) })) };
 }
 function queueChunks(ctx, tag, id, text, extra){
   const u = ctx.u, n = Math.max(1, Math.ceil(text.length / CHUNK));
@@ -3829,8 +3849,11 @@ function fieldValid(f, val){
   if (f.t === "sketch") return !!val;
   if (f.t === "choice") return !!val;
   if (f.t === "checklist") return (val||[]).length >= f.min;
+  if (f.t === "video") return !!(val && val.url);
 }
-function strandValid(ctx, i){ const fs = fieldsFor(ctx.c, ctx.gd)[i]; return fs.every(f => fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
+/* a field the student still has to do (the Grade 7 video task can be skipped) */
+const needed = (f, p) => !(f.grp === "video" && p.fields.__skipVideo);
+function strandValid(ctx, i){ const fs = fieldsFor(ctx.c, ctx.gd)[i]; return fs.every(f => !needed(f, ctx.p) || fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
 function paneTask(pane, ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
   const reach = i => i === 0 || p.done.slice(0, i).every(Boolean);
@@ -3861,7 +3884,8 @@ function paneTask(pane, ctx){
       </div></div></div>`;
   pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
-  F[si].forEach(f => box.appendChild(buildField(f, ctx)));
+  let vg = null;
+  F[si].forEach(f => { if (f.grp === "video"){ if (!vg) vg = videoGroup(box, ctx, () => render()); vg.appendChild(buildField(f, ctx)); } else box.appendChild(buildField(f, ctx)); });
   strandVoice($("#strandVoice"), g, c, si);
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
@@ -3869,7 +3893,7 @@ function paneTask(pane, ctx){
   $("#spellBtn").onclick = () => spellPanel($("#spellBox"), $("#fields"));
   $("#doneS").onclick = async () => {
     if (!LIT.ready()) await Promise.race([LIT.load(), new Promise(r => setTimeout(r, 6000))]);
-    const missing = F[si].filter(f => !fieldValid(f, p.fields[f.id])).map(f => { const v = p.fields[f.id], why = f.t === "text" && !f.fmt ? (LIT.problem(v) || (LIT.count(v) < f.min ? `only ${LIT.count(v)} of ${f.min} real words` : "")) : ""; return fill(f.label, g, sc) + (why ? " (" + why + ")" : ""); });
+    const missing = F[si].filter(f => needed(f, p) && !fieldValid(f, p.fields[f.id])).map(f => { const v = p.fields[f.id], why = f.t === "text" && !f.fmt ? (LIT.problem(v) || (LIT.count(v) < f.min ? `only ${LIT.count(v)} of ${f.min} real words` : "")) : ""; return fill(f.label, g, sc) + (why ? " (" + why + ")" : ""); });
     if (!p.bands[si]) missing.push("Your self-rating for this strand");
     if (missing.length){ $("#sMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b> Complete:<ul style="margin:6px 0 0;padding-left:18px">${missing.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></div>`; speak(P().nearly); return; }
     const was = p.done[si]; p.done[si] = true; try { if (window.SDC && SDC.slow) SDC.slow.stop(); } catch(e){} if (was && p.finished){ p.finished = false; p.edited = true; } save();
@@ -3903,9 +3927,95 @@ function planFrom(ctx, si){
       ${img ? "" : `<p class="muted" style="margin:6px 0 0;font-size:13px">Your B.iv poster layout isn't saved yet. Go back to Criterion B, strand iv, and finish it first so you know exactly what you are planning.</p>`}</div>
     ${img ? `<figure style="margin:0;text-align:center"><img src="${img}" alt="Your final poster layout from B.iv" style="max-width:200px;max-height:220px;border:1px solid var(--line);border-radius:8px;background:#fff"><figcaption class="muted" style="font-size:12px;margin-top:4px">Your B.iv poster layout</figcaption></figure>` : ""}</div>`;
 }
+/* Grade 7 C.ii, Task 2: the video. Students can skip it, after a warning that they will lose marks. */
+function videoGroup(box, ctx, redraw){
+  const { p, c } = ctx, wrap = document.createElement("div"); wrap.className = "card stack"; wrap.style.cssText = "border:2px solid var(--line);gap:12px";
+  const head = document.createElement("div"), body = document.createElement("div"); body.className = "stack";
+  wrap.append(head, body); box.appendChild(wrap);
+  const paint = () => { const sk = !!p.fields.__skipVideo;
+    head.innerHTML = sk ? `<div class="notice warn"><b>You skipped Task 2 (the video).</b> You will lose some marks towards your overall grade for this criterion. Changed your mind? <button class="btn sm sec" type="button" id="vidUndo">Do the video task</button></div>`
+      : `<div class="row" style="justify-content:space-between;gap:10px"><div><div class="eyebrow">Task 2</div><h3 style="margin:2px 0 0">Editing your 30-second video</h3><p class="muted" style="margin:4px 0 0;font-size:13.5px">Add 5 screenshots of you editing your video, each with an annotation, then upload your finished video.</p></div><button class="btn ghost sm" type="button" id="vidSkip">Skip the video task</button></div>`;
+    body.hidden = sk;
+    const sb = head.querySelector("#vidSkip"), ub = head.querySelector("#vidUndo");
+    if (sb) sb.onclick = () => skipDialog(() => { p.fields.__skipVideo = true; save(); logEvent(c, "Skipped the video task", ""); scheduleSnapshot(c); paint(); });
+    if (ub) ub.onclick = () => { p.fields.__skipVideo = false; save(); scheduleSnapshot(c); paint(); };
+  };
+  paint(); return body;
+}
+function skipDialog(yes){
+  const bg = document.createElement("div"); bg.style.cssText = "position:fixed;inset:0;background:rgba(14,26,48,.55);display:flex;align-items:center;justify-content:center;z-index:2147483600;padding:16px";
+  bg.innerHTML = `<div role="alertdialog" aria-modal="true" style="background:#fff;color:#16223A;border-radius:16px;max-width:440px;width:100%;padding:22px 24px;border-top:8px solid #DC2B3E;box-shadow:0 10px 40px rgba(0,0,0,.3);font:16px/1.5 Arial,Helvetica,sans-serif">
+    <div style="font-size:2rem">⚠️</div><h2 style="margin:6px 0 8px;font-size:1.25rem">Are you sure you want to skip?</h2>
+    <p style="margin:0">By skipping this task, you are going to <b>lose some marks towards your overall grade</b>.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px"><button type="button" id="skNo" style="flex:1;border:none;border-radius:10px;padding:11px;font:inherit;font-weight:800;background:#1E8A55;color:#fff;cursor:pointer">Go back and do it</button>
+    <button type="button" id="skYes" style="flex:1;border:2px solid #DC2B3E;border-radius:10px;padding:9px;font:inherit;font-weight:800;background:#fff;color:#DC2B3E;cursor:pointer">Skip and lose marks</button></div></div>`;
+  document.body.appendChild(bg); bg.querySelector("#skNo").focus();
+  bg.querySelector("#skNo").onclick = () => bg.remove();
+  bg.querySelector("#skYes").onclick = () => { bg.remove(); yes(); };
+}
+/* drag-and-drop video upload: sent in 4 MB pieces to the school's upload script, which saves it in Google Drive */
+const VCHUNK = 4 * 1024 * 1024;
+function vJsonp(params){ return new Promise((res, rej) => { const url = window.SDC && SDC.VERIFY && SDC.VERIFY.url; if (!url) return rej(new Error("not set up"));
+  const cb = "__dsv" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), sc = document.createElement("script");
+  const t = setTimeout(() => { done(); rej(new Error("timeout")); }, 25000), done = () => { clearTimeout(t); try { delete window[cb]; } catch(e){} sc.remove(); };
+  window[cb] = r => { done(); res(r); }; sc.onerror = () => { done(); rej(new Error("reach")); };
+  sc.src = url + "?" + new URLSearchParams(Object.assign({}, params, { cb, _: Date.now() })).toString(); document.head.appendChild(sc); }); }
+async function uploadVideo(file, meta, onProgress){
+  const url = window.SDC && SDC.VERIFY && SDC.VERIFY.url; if (!url) throw new Error("Video upload isn't set up yet. Tell your teacher.");
+  const id = "v" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10), n = Math.max(1, Math.ceil(file.size / VCHUNK));
+  const b64 = async blob => { const u8 = new Uint8Array(await blob.arrayBuffer()); let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  for (let i = 0; i < n; i++){
+    const data = await b64(file.slice(i * VCHUNK, (i + 1) * VCHUNK));
+    let ok = false;
+    for (let attempt = 0; attempt < 4 && !ok; attempt++){
+      try { await fetch(url, { method:"POST", mode:"no-cors", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(Object.assign({ a:"vchunk", id, i, n, size:file.size, type:file.type || "video/mp4", name:file.name, data }, meta)) }); } catch(e){}
+      for (let w = 0; w < 30; w++){   // the answer comes back through the status check
+        let st = null; try { st = await vJsonp({ a:"vstatus", id }); } catch(e){}
+        if (st && st.next > i){ ok = true; if (st.done) return st.url; break; }
+        if (st && st.err) break;
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+    if (!ok) throw new Error("The upload stopped. Check the internet connection and try again.");
+    onProgress((i + 1) / n);
+  }
+  for (let w = 0; w < 20; w++){ let st = null; try { st = await vJsonp({ a:"vstatus", id }); } catch(e){} if (st && st.done && st.url) return st.url; await new Promise(r => setTimeout(r, 1500)); }
+  throw new Error("The video was sent, but the link didn't come back. Try again.");
+}
+function videoBox(el, f, ctx, label){
+  const { p, c, u } = ctx, MAX = 300 * 1024 * 1024;
+  const paint = (msg) => { const v = p.fields[f.id];
+    el.innerHTML = `<span class="lbl">${esc(label)}</span>
+      <div class="vdrop" tabindex="0" role="button" aria-label="Choose your video file" style="border:2px dashed var(--line);border-radius:14px;padding:20px;text-align:center;cursor:pointer;background:var(--soft)">
+        ${v && v.url ? `<div style="font-size:1.6rem">✅</div><b>Uploaded: ${esc(v.name || "your video")}</b><div class="muted" style="font-size:13px">${esc(new Date(v.at).toLocaleString())}${v.size ? " · " + (v.size / 1048576).toFixed(1) + " MB" : ""}</div><div style="margin-top:8px"><a href="${esc(v.url)}" target="_blank" rel="noopener">Open my video</a> · <span class="muted">drop a new file here to replace it</span></div>`
+          : `<div style="font-size:2rem">🎬</div><b>Drag and drop your finished video here</b><div class="muted" style="font-size:13px">or click to choose the file (MP4 or MOV, up to 300 MB)</div>`}
+        <input type="file" accept="video/*" hidden></div><div class="vmsg" style="margin-top:6px">${msg || ""}</div>`;
+    const drop = el.querySelector(".vdrop"), inp = el.querySelector("input");
+    drop.onclick = () => inp.click(); drop.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); inp.click(); } };
+    drop.ondragover = e => { e.preventDefault(); drop.style.borderColor = "var(--accent,#DC2B3E)"; };
+    drop.ondragleave = () => { drop.style.borderColor = ""; };
+    drop.ondrop = e => { e.preventDefault(); drop.style.borderColor = ""; const fl = e.dataTransfer.files && e.dataTransfer.files[0]; if (fl) go(fl); };
+    inp.onchange = () => { if (inp.files[0]) go(inp.files[0]); };
+  };
+  const go = async file => {
+    if (!/^video\//.test(file.type || "") && !/\.(mp4|mov|m4v|webm|avi)$/i.test(file.name)) return paint(`<div class="notice bad">That isn't a video file. Choose your finished MP4 or MOV video.</div>`);
+    if (file.size > MAX) return paint(`<div class="notice bad">That video is too big (${(file.size / 1048576).toFixed(0)} MB). Export it again at 720p or 1080p so it is under 300 MB.</div>`);
+    el.innerHTML = `<span class="lbl">${esc(label)}</span><div style="border:2px solid var(--line);border-radius:14px;padding:16px"><b>Uploading ${esc(file.name)}…</b> <span class="vpct">0%</span>
+      <div style="height:10px;border-radius:99px;background:var(--soft);overflow:hidden;margin-top:8px"><i class="vbar" style="display:block;height:100%;width:0;background:var(--ok,#1E8A55);transition:width .3s"></i></div>
+      <div class="muted" style="font-size:13px;margin-top:6px">Keep this page open until it says Uploaded. A big video can take a few minutes.</div></div>`;
+    try {
+      const url = await uploadVideo(file, { who: u.name, w: uLabel(ctx.g) + " · Criterion " + c, cls: uLabel(ctx.g) + (classLabel(u) ? " " + classLabel(u) : "") + " · " + (u.teacher || "") },
+        fr => { const pc = Math.round(fr * 100); const b = el.querySelector(".vbar"), t = el.querySelector(".vpct"); if (b) b.style.width = pc + "%"; if (t) t.textContent = pc + "%"; });
+      p.fields[f.id] = { url, name: file.name, size: file.size, at: Date.now() }; save(); scheduleSnapshot(c); logEvent(c, "Uploaded video", url);
+      paint(`<div class="notice ok">Uploaded. Your teacher can now watch your video.</div>`);
+    } catch(e){ paint(`<div class="notice bad">${esc(e.message)}</div>`); }
+  };
+  paint();
+}
 function buildField(f, ctx){
   const { p, g, sc } = ctx, el = document.createElement("div"); el.className = "field";
   const label = fill(f.label, g, sc);
+  if (f.t === "video"){ videoBox(el, f, ctx, label); return el; }
   if (f.t === "text" && f.fmt){
     const v = p.fields[f.id] || "";
     el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><input type="text" id="f_${f.id}" class="notranslate" inputmode="url" placeholder="https://… or not online" value="${esc(v)}"><span class="counter"></span>`;
@@ -3997,7 +4107,7 @@ function answersText(ctx){
   let out = `Scenario: ${sc.title} | Practice: ${p.ex.correct} correct, ${p.ex.points} pts, ${p.ex.hints} hints\n`;
   F.forEach((fs,i) => { out += `\n== Strand ${ROMAN[i]} (self-rating ${p.bands[i]||"-"}) ==\n`;
     fs.forEach(f => { const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
-      if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
+      if (f.grp === "video" && p.fields.__skipVideo) out += "SKIPPED (video task)\n"; else if (f.t === "video") out += (v && v.url ? v.url : "") + "\n"; else if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
   return out;
 }
 function paneSubmit(pane, ctx){
@@ -4046,8 +4156,11 @@ function buildPDF(ctx){
     doc.text(`Strand ${ROMAN[i]}`, M+2, y+1.5); doc.setTextColor(...NAVY); doc.setFontSize(9.5);
     doc.text(`Self-rating: ${p.bands[i]||"-"}`, W-M-2, y+1.5, { align:"right" }); y += 10;
     para(cd.strands[Y][i], 9.5, "italic", [91,103,130]);
+    let skipNoted = false;
     fs.forEach(f => {
       const v = p.fields[f.id];
+      if (f.grp === "video" && p.fields.__skipVideo){ if (!skipNoted){ skipNoted = true; need(12); para("Task 2 (the video): SKIPPED by the student. Marks are lost for this task.", 10.5, "bold", RED); } return; }
+      if (f.t === "video"){ need(14); para(fill(f.label, g, sc), 10, "bold", NAVY); para(v && v.url ? "Finished video: " + v.url : "(no video uploaded)", 10.5); return; }
       if (f.t === "sketch" && v){ const pr = doc.getImageProperties(v); need(Math.min(120, (W-2*M) * pr.height / pr.width) + 12); }
       else if (f.t === "table") need(24); else need(12);
       para(fill(f.label, g, sc), 10, "bold", NAVY);
