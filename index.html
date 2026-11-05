@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261104b"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105a"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3842,6 +3842,7 @@ function paneTask(pane, ctx){
     <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3></div>
+      <div id="strandVoice" class="sdcNoRead"></div>
       <p class="muted" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
       ${c === "B" && si === 0 && COURSE.ACCESSFM ? `<div class="card stack" style="gap:8px;background:var(--soft)"><div class="eyebrow">ACCESS FM — use it to write your specification</div>
         <p style="margin:0;font-size:14px">ACCESS FM is a checklist of eight areas every design must consider. Write at least one specific, measurable requirement for each area in the table below.</p>
@@ -3861,6 +3862,7 @@ function paneTask(pane, ctx){
   pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
   F[si].forEach(f => box.appendChild(buildField(f, ctx)));
+  strandVoice($("#strandVoice"), g, c, si);
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
   if ($("#toSub")) $("#toSub").onclick = () => { view.step = 6; render(); window.scrollTo({ top:0, behavior:"smooth" }); };
@@ -3877,6 +3879,19 @@ function paneTask(pane, ctx){
     speak(pickOne(P().right));
     const next = p.done.findIndex(d=>!d); view.strand = next; render(); window.scrollTo({top:0, behavior:"smooth"});
   };
+}
+/* the teacher's own recorded explanation of a strand (voice/strand/<grade>-<criterion>-<strand>), when one has been uploaded */
+const SV_FOUND = {};
+function strandVoice(box, g, c, si){
+  if (!box) return; const base = `voice/strand/${g}-${c}-${si + 1}`, key = base;
+  const show = src => { if (!src || !box.isConnected) return;
+    box.innerHTML = `<div class="row" style="gap:10px;align-items:center;background:var(--soft);border-radius:12px;padding:10px 12px;margin:4px 0">
+      <b style="font-size:14px">🎧 Listen: your teacher explains this strand</b><audio controls preload="none" src="${src}" style="height:36px;max-width:100%;flex:1;min-width:220px"></audio></div>`;
+    const a = box.querySelector("audio"); a.onplay = () => { try { speechSynthesis.cancel(); if (window.SDC && SDC.stopNarrating) SDC.stopNarrating(); } catch(e){} }; };
+  if (SV_FOUND[key] !== undefined) return show(SV_FOUND[key]);
+  const exts = ["webm", "m4a", "mp3"], probe = new Audio(); let k = 0;
+  const next = () => { if (k >= exts.length){ SV_FOUND[key] = ""; return; } probe.src = `${base}.${exts[k++]}?v=${Date.now() >> 22}`; probe.load(); };
+  probe.preload = "metadata"; probe.onerror = next; probe.onloadedmetadata = () => { SV_FOUND[key] = probe.src; show(probe.src); }; next();
 }
 /* Grade 7, Criterion C strand i: the logical plan is for the poster (and video) they chose in Criterion B, strand iv */
 function planFrom(ctx, si){
