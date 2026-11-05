@@ -2142,7 +2142,10 @@ function g7C2(gd){
 COURSE.buildTasks = function(c, gd){
   if (c === "C" && gd === COURSE.grades["7"]){ const r = COURSE.buildTasks0(c, gd); r[1] = g7C2(gd); return r; }
   if (c === "D" && gd === COURSE.grades["10"]){ const r = COURSE.buildTasks0(c, gd);   // D.ii: one upload of evidence for every test in the D.i test plan
-    r[1] = r[1].map(f => f.id === "d2e" ? { t:"evlist", id:"d2ev", src:"d1t", label:"Evidence for every test in your test plan (D.i): upload a screenshot, photo or survey result for each test" } : f); return r; }
+    r[1] = r[1].map(f => f.id === "d2e" ? { t:"evlist", id:"d2ev", src:"d1t", label:"Evidence for every test in your test plan (D.i): upload a screenshot, photo or survey result for each test" } : f);
+    r[2] = r[2].map(f => f.id === "d3t" ? Object.assign({}, f, { label:"Suggested improvements: 10 improvements, each written in full sentences", rows:10, need:10, colTypes:["sent", "sent"] }) : f);
+    r[3] = r[3].map(f => f.id === "d4s" ? { t:"shots", id:"d4shots", label:"Your improved solution, with the improvements applied: add screenshots of it", min:1 } : f);
+    return r; }
   return COURSE.buildTasks0(c, gd);
 };
 COURSE.buildTasks0 = function(c, gd){
@@ -3101,7 +3104,7 @@ function workPayload(ctx, kind){
     strands: F.map((fs, i) => ({ n: ROMAN[i], strand: cd.strands[Y][i], done: !!p.done[i], self: p.bands[i] || "",
       fields: fs.map(f => { const v = p.fields[f.id];
         return { id: f.id, t: f.t, label: fill(f.label, g, sc), cols: f.cols, rowLabels: f.rowLabels, min: f.min,
-          value: f.t === "evlist" ? (v ? Array.from({ length: v.__n || 0 }, (_, i) => v[i] ? "IMAGE" : "") : []) : f.t === "sketch" ? (v ? "IMAGE" : "") : f.t === "video" ? (v && v.url ? "Video: " + v.url : f.grp === "video" && p.fields.__skipVideo ? "SKIPPED (lose marks)" : "") : f.grp === "video" && p.fields.__skipVideo && !v ? "SKIPPED" : (v ?? "") }; }) })) };
+          value: f.t === "shots" ? (v || []).map(() => "IMAGE") : f.t === "evlist" ? (v ? Array.from({ length: v.__n || 0 }, (_, i) => v[i] ? "IMAGE" : "") : []) : f.t === "sketch" ? (v ? "IMAGE" : "") : f.t === "video" ? (v && v.url ? "Video: " + v.url : f.grp === "video" && p.fields.__skipVideo ? "SKIPPED (lose marks)" : "") : f.grp === "video" && p.fields.__skipVideo && !v ? "SKIPPED" : (v ?? "") }; }) })) };
 }
 function queueChunks(ctx, tag, id, text, extra){
   const u = ctx.u, n = Math.max(1, Math.ceil(text.length / CHUNK));
@@ -3853,6 +3856,7 @@ function cellProblem(f, k, val){
   if (t && t.opts && !t.opts.includes(v)) return `choose an option for "${f.cols[k]}"`;
   if (t === "url" && !URL_RE.test(v)) return `"${f.cols[k]}" must be a full web address starting with https://`;
   if (t === "num" && !(/^\d+(\.\d+)?$/.test(v) && +v > 0)) return `"${f.cols[k]}" must be a number`;
+  if (t === "sent"){ const pr = LIT.problem(v); if (pr) return `"${f.cols[k]}": ${pr}`; if (LIT.count(v) < 5) return `"${f.cols[k]}": write a full sentence`; }
   return "";
 }
 function rowDone(f, r){ return r && f.cols.every((_,k) => (f.rowLabels && k === 0) || !cellProblem(f, k, r[k])); }
@@ -3866,6 +3870,7 @@ function fieldValid(f, val){
   if (f.t === "choice") return !!val;
   if (f.t === "checklist") return (val||[]).length >= f.min;
   if (f.t === "video") return !!(val && val.url);
+  if (f.t === "shots") return (val || []).filter(Boolean).length >= (f.min || 1);
   if (f.t === "evlist") return !!(val && val.__n > 0 && Array.from({ length: val.__n }, (_, i) => val[i]).every(Boolean));
 }
 /* the tests written in the D.i test plan (first column = test name) */
@@ -4063,6 +4068,25 @@ function buildField(f, ctx){
   const { p, g, sc } = ctx, el = document.createElement("div"); el.className = "field";
   const label = fill(f.label, g, sc);
   if (f.t === "video"){ videoBox(el, f, ctx, label); return el; }
+  if (f.t === "shots"){   // several screenshots, upload only
+    const list = p.fields[f.id] = (p.fields[f.id] || (f.id === "d4shots" && p.fields.d4s ? [p.fields.d4s] : [])).filter(Boolean);   // an earlier single picture comes along
+    const paint = () => {
+      el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="row" style="gap:10px;align-items:flex-start;flex-wrap:wrap" data-shots>
+        ${list.map((src, i) => `<div class="stack" style="gap:4px;align-items:center"><button type="button" class="sk-thumb" data-z="${i}" title="Click to see it full size"><img src="${src}" alt="Screenshot ${i + 1}"></button><div class="row" style="gap:4px"><span class="muted" style="font-size:12px">${i + 1}</span><button type="button" class="btn sm ghost" data-rm="${i}" title="Remove this screenshot">✕</button></div></div>`).join("")}
+        <div class="sk-drop" tabindex="0" role="button" style="min-width:220px;flex:1" aria-label="Add screenshots"><span style="font-size:1.3rem">＋</span><span><b>${list.length ? "Add another screenshot" : "Drop your screenshots here"}</b>, paste (Ctrl+V) or <u>click to upload</u> <span class="muted">(you can pick several)</span></span></div>
+        <input type="file" accept="image/*" multiple hidden></div><span class="counter ${list.length ? "ok" : ""}">${list.length} screenshot${list.length === 1 ? "" : "s"} added</span>`;
+      const d = el.querySelector(".sk-drop"), inp = el.querySelector("input[type=file]");
+      const take = files => [...files].filter(x => /^image\//.test(x.type || "")).forEach(file => { const rd = new FileReader(); rd.onload = () => { const im = new Image(); im.onload = () => { const c2 = document.createElement("canvas"), k = Math.min(1, 1100 / Math.max(im.width, im.height)); c2.width = im.width * k; c2.height = im.height * k; const x2 = c2.getContext("2d"); x2.fillStyle = "#fff"; x2.fillRect(0, 0, c2.width, c2.height); x2.drawImage(im, 0, 0, c2.width, c2.height); list.push(c2.toDataURL("image/jpeg", .72)); p.fields[f.id] = list; save(); scheduleSnapshot(ctx.c); paint(); }; im.src = rd.result; }; rd.readAsDataURL(file); });
+      d.onclick = () => inp.click(); d.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); inp.click(); } };
+      d.ondragover = e => { e.preventDefault(); d.classList.add("on"); }; d.ondragleave = () => d.classList.remove("on");
+      d.ondrop = e => { e.preventDefault(); d.classList.remove("on"); take(e.dataTransfer.files || []); };
+      d.onpaste = e => { const fs = [...(e.clipboardData && e.clipboardData.items || [])].filter(x => /^image\//.test(x.type)).map(x => x.getAsFile()); if (fs.length){ e.preventDefault(); take(fs); } };
+      inp.onchange = () => take(inp.files);
+      el.querySelectorAll("[data-z]").forEach(b => b.onclick = () => zoomImg(list[+b.dataset.z], label + " " + (+b.dataset.z + 1)));
+      el.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { if (!confirm("Remove this screenshot?")) return; list.splice(+b.dataset.rm, 1); p.fields[f.id] = list; save(); scheduleSnapshot(ctx.c); paint(); });
+    };
+    paint(); return el;
+  }
   if (f.t === "evlist"){
     const store = p.fields[f.id] = Object.assign({}, p.fields[f.id] || {}), tests = testsOf(p, f.src);
     p.fields[f.id] = store; store.__n = tests.length;
@@ -4204,7 +4228,7 @@ function answersText(ctx){
   let out = `Scenario: ${sc.title} | Practice: ${p.ex.correct} correct, ${p.ex.points} pts, ${p.ex.hints} hints\n`;
   F.forEach((fs,i) => { out += `\n== Strand ${ROMAN[i]} (self-rating ${p.bands[i]||"-"}) ==\n`;
     fs.forEach(f => { const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
-      if (f.t === "evlist") out += "Evidence for " + ((v && v.__n) || 0) + " tests\n"; else if (f.grp === "video" && p.fields.__skipVideo) out += "SKIPPED (video task)\n"; else if (f.t === "video") out += (v && v.url ? v.url : "") + "\n"; else if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
+      if (f.t === "shots") out += ((v || []).length) + " screenshots\n"; else if (f.t === "evlist") out += "Evidence for " + ((v && v.__n) || 0) + " tests\n"; else if (f.grp === "video" && p.fields.__skipVideo) out += "SKIPPED (video task)\n"; else if (f.t === "video") out += (v && v.url ? v.url : "") + "\n"; else if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
   return out;
 }
 /* ================= GRADE 10 PROJECT REPORT =================
@@ -4219,7 +4243,7 @@ const RH = { a1what:"The problem", a1why:"Why this is a problem", a1who:"Who is 
   b4s:"Final developed design", b4s2:"Developed design: second view", b4n:"The final design explained", b4r:"What is needed to create it",
   c1t:"Logical plan", c1tot:"Time plan", c2tool:"Software and tools", c2k:"Technical skills used", c2f1:"The finished solution", c2f2:"The finished solution: second view",
   c3t:"Following the plan", c3f:"Does the solution work as intended?", c4t:"Changes made", c4o:"Effect of the changes",
-  d1t:"Test plan", d2t:"Testing results", d2e:"Testing evidence", d3t:"Suggested improvements", d4s:"The improved solution", d4h:"How the improved solution works", d4i:"Impact on the client and users" };
+  d1t:"Test plan", d2t:"Testing results", d2e:"Testing evidence", d3t:"Suggested improvements", d4s:"The improved solution", d4shots:"The improved solution", d4h:"How the improved solution works", d4i:"Impact on the client and users" };
 const RH_UNDER = /^(b2n\d|c2q\d)$/;   // a description that belongs to the picture just before it: no heading of its own
 function rhOf(f, label){
   if (RH[f.id]) return RH[f.id];
@@ -4242,6 +4266,7 @@ function reportBlocks(u, only){
         const v = p.fields[f.id], label = fill(f.label, g, sc);
         if (f.t === "sketch"){ if (v){ sec.push({ k:"h3", t:rhOf(f, label) }); sec.push({ k:"img", src:v, cap:rhOf(f, label) }); lastImg = true; } return; }
         if (f.t === "video"){ if (v && v.url) sec.push({ k:"h3", t:"Finished video" }, { k:"p", t:v.url }); return; }
+        if (f.t === "shots"){ const l = (v || []).filter(Boolean); if (!l.length) return; sec.push({ k:"h3", t:rhOf(f, label) }); l.forEach((im, n) => sec.push({ k:"img", src:im, cap:`${rhOf(f, label)}: screenshot ${n + 1}` })); lastImg = true; return; }
         if (f.t === "evlist"){ const ts = testsOf(p, f.src); if (!ts.some((_, n) => v && v[n])) return; sec.push({ k:"h3", t:"Testing evidence" });
           ts.forEach((t, n) => { if (v && v[n]) sec.push({ k:"img", src:v[n], cap:`Test ${n + 1}${t.name ? ": " + t.name : ""}` }); }); lastImg = true; return; }
         if (f.t === "table"){ const rows = (v || []).filter(r => r && r.slice(f.rowLabels ? 1 : 0).some(x => String(x || "").trim())); if (!rows.length) return;
@@ -4433,6 +4458,7 @@ function buildPDF(ctx){
       const v = p.fields[f.id];
       if (f.grp === "video" && p.fields.__skipVideo){ if (!skipNoted){ skipNoted = true; need(12); para("Task 2 (the video): SKIPPED by the student. Marks are lost for this task.", 10.5, "bold", RED); } return; }
       if (f.t === "video"){ need(14); para(fill(f.label, g, sc), 10, "bold", NAVY); para(v && v.url ? "Finished video: " + v.url : "(no video uploaded)", 10.5); return; }
+      if (f.t === "shots"){ need(12); para(fill(f.label, g, sc), 10, "bold", NAVY); (v || []).forEach(im => { const pr = doc.getImageProperties(im), w = W-2*M, h = Math.min(100, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h+4); doc.addImage(im, "JPEG", M, y, ww, h); y += h + 5; }); if (!(v || []).length) para("(no screenshots)", 10, "italic"); return; }
       if (f.t === "evlist"){ need(12); para(fill(f.label, g, sc), 10, "bold", NAVY); const ts = testsOf(p, f.src);
         ts.forEach((t, n) => { const im = v && v[n]; para(`Test ${n + 1}${t.name ? ": " + t.name : ""}`, 10, "bold");
           if (im){ const pr = doc.getImageProperties(im), w = W-2*M, h = Math.min(100, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h+4); doc.addImage(im, "JPEG", M, y, ww, h); y += h + 5; } else para("(no evidence)", 10, "italic"); });
