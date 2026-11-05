@@ -2,8 +2,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105k"></script>
-<script src="/python-pathways/pp-sync.js?v=20261105k"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105l"></script>
+<script src="/python-pathways/pp-sync.js?v=20261105l"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4617,6 +4617,8 @@ function staffPanel(tab, who="admin"){
         if (cloud || u){ try { await escrowRaw(email, temp); if (u) u.pwEscFor = u.hash; } catch(e){} }
         save(true);
         m.innerHTML = cloud || u ? `<div class="notice ok">New password for <b>${esc(name || email)}</b>: <code style="font-size:15px">${esc(temp)}</code> — give it to the student. ${cloud ? "It works on every device and their work is kept." : "It works on this device only (no synced copy was found)."}</div>` : `<div class="notice bad">No account or saved work was found for ${esc(email)}.</div>`;
+        if ((cloud || u) && window.SDC && SDC.resetDone){ const sent = await SDC.resetDone({ email, name: name && name !== email ? name : (u && u.name) || "", course: (u && u.course) || "design", secret: temp });
+          m.insertAdjacentHTML("beforeend", sent ? `<div class="notice ok">📧 The new password has been emailed to ${esc(email)}.</div>` : `<div class="notice warn">The email to the student couldn't be sent, so please give them the password yourself.</div>`); }
       } catch(err){ m.innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; } };
     document.querySelectorAll("[data-rs]").forEach(b => b.onclick = () => doReset(b.dataset.rs, (DB.users[b.dataset.rs] || {}).name));
     const doView = async (email, name) => { const m = $("#rsMsg"); m.innerHTML = `<div class="notice">Looking up…</div>`;
