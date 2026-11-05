@@ -2817,7 +2817,7 @@ function renderMast(){
 
 /* ================= ROUTER ================= */
 let view = { name:"home", crit:null, step:0, strand:0 };
-function go(v){ try { if (window.SDC && SDC.slow && !(v && v.name === "crit")) SDC.slow.stop(); } catch(e){} view = Object.assign({ name:"home", crit:null, step:0, strand:0 }, v); try{speechSynthesis.cancel()}catch(e){} stopVideo(); stopReading(); render(); window.scrollTo({top:0}); }
+function go(v){ try { if (window.__sbAudio) window.__sbAudio.pause(); } catch(e){} try { if (window.SDC && SDC.slow && !(v && v.name === "crit")) SDC.slow.stop(); } catch(e){} view = Object.assign({ name:"home", crit:null, step:0, strand:0 }, v); try{speechSynthesis.cancel()}catch(e){} stopVideo(); stopReading(); render(); window.scrollTo({top:0}); }
 function render(){
   renderMast();
   $("#previewBanner").hidden = !session.preview;
@@ -3915,18 +3915,38 @@ function paneTask(pane, ctx){
     const next = p.done.findIndex(d=>!d); view.strand = next; render(); window.scrollTo({top:0, behavior:"smooth"});
   };
 }
-/* the teacher's own recorded explanation of a strand (voice/strand/<grade>-<criterion>-<strand>), when one has been uploaded */
+/* "🎧 Strand brief": the teacher's own recorded briefing for the strand (voice/strand/<grade>-<criterion>-<strand>).
+   Until a strand has been recorded, the same button reads the strand aloud with the narrator. */
 const SV_FOUND = {};
 function strandVoice(box, g, c, si){
+  try { if (window.__sbAudio) window.__sbAudio.pause(); } catch(e){}
   if (!box) return; const base = `voice/strand/${g}-${c}-${si + 1}`, key = base;
-  const show = src => { if (!src || !box.isConnected) return;
-    box.innerHTML = `<div class="row" style="gap:10px;align-items:center;background:var(--soft);border-radius:12px;padding:10px 12px;margin:4px 0">
-      <b style="font-size:14px">🎧 Listen: your teacher explains this strand</b><audio controls preload="none" src="${src}" style="height:36px;max-width:100%;flex:1;min-width:220px"></audio></div>`;
-    const a = box.querySelector("audio"); a.onplay = () => { try { speechSynthesis.cancel(); if (window.SDC && SDC.stopNarrating) SDC.stopNarrating(); } catch(e){} }; };
-  if (SV_FOUND[key] !== undefined) return show(SV_FOUND[key]);
+  let audio = null, reading = false;
+  const btn = () => box.querySelector("#sbBtn"), label = on => { const b = btn(); if (b){ b.innerHTML = on ? "⏸ Pause the strand brief" : (audio ? "🎧 Strand brief" : "🎧 Strand brief"); b.setAttribute("aria-pressed", on ? "true" : "false"); } };
+  const paint = () => { if (!box.isConnected) return;
+    box.innerHTML = `<div class="row" style="gap:10px;align-items:center;margin:2px 0 4px"><button class="btn" type="button" id="sbBtn" aria-pressed="false" title="Hear what you need to do in this strand">🎧 Strand brief</button>
+      <span class="muted" id="sbNote" style="font-size:13px">${audio ? "Your teacher explains what to do in this strand." : "Hear what to do in this strand."}</span>
+      ${audio ? `<span id="sbTime" class="muted" style="font-size:12.5px;font-variant-numeric:tabular-nums"></span>` : ""}</div>`;
+    btn().onclick = () => {
+      try { if (window.SDC && SDC.stopReading) SDC.stopReading(); } catch(e){}
+      if (audio){ if (audio.paused){ try { speechSynthesis.cancel(); } catch(e){} audio.play().catch(() => {}); } else audio.pause(); return; }
+      if (reading){ reading = false; try { if (SDC.stopNarrating) SDC.stopNarrating(); speechSynthesis.cancel(); } catch(e){} label(false); return; }
+      const card = document.getElementById("strandCard"); if (!card) return;
+      const text = [...card.querySelectorAll(".strand-h h3, .strand-h + div + p, #fields .lbl")].map(e => e.innerText.trim()).filter(Boolean).join(". ");
+      reading = true; label(true);
+      const done = () => { reading = false; label(false); };
+      try { if (!(window.SDC && SDC.narrate && SDC.narrate(text, { onend: done }))) { const u = new SpeechSynthesisUtterance(text); u.lang = "en-GB"; u.onend = done; speechSynthesis.cancel(); speechSynthesis.speak(u); } } catch(e){ done(); }
+    };
+    if (audio){ audio.onplay = () => label(true); audio.onpause = audio.onended = () => label(false);
+      audio.ontimeupdate = () => { const t = box.querySelector("#sbTime"); if (t && isFinite(audio.duration)) t.textContent = fmtT(audio.currentTime) + " / " + fmtT(audio.duration); }; }
+  };
+  const fmtT = x => Math.floor(x / 60) + ":" + String(Math.floor(x % 60)).padStart(2, "0");
+  const use = src => { if (src){ audio = new Audio(src); audio.preload = "metadata"; window.__sbAudio = audio; } paint(); };
+  if (SV_FOUND[key] !== undefined) return use(SV_FOUND[key]);
+  paint();
   const exts = ["webm", "m4a", "mp3"], probe = new Audio(); let k = 0;
   const next = () => { if (k >= exts.length){ SV_FOUND[key] = ""; return; } probe.src = `${base}.${exts[k++]}?v=${Date.now() >> 22}`; probe.load(); };
-  probe.preload = "metadata"; probe.onerror = next; probe.onloadedmetadata = () => { SV_FOUND[key] = probe.src; show(probe.src); }; next();
+  probe.preload = "metadata"; probe.onerror = next; probe.onloadedmetadata = () => { SV_FOUND[key] = probe.src; if (box.isConnected) use(probe.src); }; next();
 }
 /* Grade 7, Criterion C strand i: the logical plan is for the poster (and video) they chose in Criterion B, strand iv */
 function planFrom(ctx, si){
@@ -4603,7 +4623,7 @@ if (SDCG){
     () => { if (!user()) render(); const t = $("#tIn"); if (t) t.click(); const e = $("#lEmail"); if (e){ e.focus(); e.scrollIntoView({ block:"center" }); } }); } catch(e){}
   { const st = document.createElement("style"); st.textContent = "#mastRight #signOut{display:none!important}"; document.head.appendChild(st); }   // Sign out is in the platform bar
   window.SDC_beforeRead = () => stopReading();
-  try { if (SDC.listen) SDC.listen("#pane:not(:has(#player)):not(:has(#dlPdf))", "", "bar"); } catch(e){}   // Read to me only on the steps that explain or set work: example, method, rubric, practice, task
+  try { if (SDC.listen) SDC.listen("#pane:not(:has(#player)):not(:has(#dlPdf)):not(:has(#strandCard))", "", "bar"); } catch(e){}   // Read to me only on the steps that explain or set work: example, method, rubric, practice, task
   { const st = document.createElement("style"); st.textContent = ".listen{display:none!important}[data-read]:not(.brief)>*:nth-child(2){padding-right:0!important}.brief[data-read]{padding-right:22px!important}"; document.head.appendChild(st); }   // the page has one Read to me button instead
   { const st = document.createElement("style"); st.textContent = "#mastRight .chip.lang{display:none!important}"; document.head.appendChild(st); }   // one language menu: the one in the platform bar
   document.title = SDC.course(SDCG.course).name + " · SISD Design and Computing";
