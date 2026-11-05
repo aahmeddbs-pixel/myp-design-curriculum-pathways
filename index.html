@@ -2,8 +2,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105l"></script>
-<script src="/python-pathways/pp-sync.js?v=20261105l"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105m"></script>
+<script src="/python-pathways/pp-sync.js?v=20261105m"></script>
+<script src="keywords.js?v=20261105m"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -63,6 +64,25 @@ main{padding-block:22px 60px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:bold}
 input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 12px;width:100%;font-weight:normal}
 textarea{min-height:110px;resize:vertical;line-height:1.5}
+.kw{gap:0;padding:12px 14px;border-left:5px solid var(--accent,#DC2B3E)}
+.kw summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center;list-style:none;font-size:15px}
+.kw summary::-webkit-details-marker{display:none}
+.kw summary::after{content:"▾";margin-left:6px;color:var(--muted,#5B6782)}
+.kw[open] summary::after{content:"▴"}
+.kw-count{font-size:13px;font-weight:bold;color:var(--muted,#5B6782);margin-left:auto}
+.kw-wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.kw-grid{display:grid;gap:3px;width:min(100%,460px);touch-action:none;user-select:none;-webkit-user-select:none}
+.kw-cell{aspect-ratio:1;border:1px solid var(--line,#D6DCE8);background:var(--paper,#fff);border-radius:6px;font-weight:800;font-size:clamp(11px,2.4vw,17px);padding:0;color:var(--ink,#16223A);cursor:pointer;font-family:var(--f-display,inherit)}
+.kw-cell.got{background:hsl(var(--kh,140) 75% 86%);border-color:hsl(var(--kh,140) 55% 55%)}
+.kw-cell.sel{background:#FFE58F;border-color:#E0A100;transform:scale(1.06)}
+.kw-grid.kw-miss{animation:ackShake .35s}
+.kw-list{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:180px;align-content:flex-start}
+.kw-word{border:1.5px dashed var(--line,#C9D1E0);background:transparent;border-radius:999px;padding:5px 11px;font-weight:800;font-size:13px;color:var(--ink,#16223A);letter-spacing:.5px}
+.kw-word:disabled{opacity:1;cursor:default}
+.kw-word.got{border-style:solid;border-color:var(--ok,#1E8A55);background:#E7F6EE;color:#14633C;text-decoration:line-through;cursor:pointer}
+.kw-pop-bg{position:fixed;inset:0;background:rgba(16,24,40,.55);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px}
+.kw-pop{background:var(--paper,#fff);color:var(--ink,#16223A);border-radius:16px;max-width:460px;width:100%;padding:20px;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.3);border-top:6px solid var(--ok,#1E8A55)}
+.kw-pop h3{margin:0;font-size:26px;font-family:var(--f-display,inherit)}
 textarea.tcell{min-height:44px;min-width:150px;padding:6px 8px;font-size:14px;resize:vertical;overflow:hidden}
 textarea{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;overflow-x:hidden}
 input[type=text],input[type=url],input[type=email]{text-overflow:ellipsis}
@@ -3906,6 +3926,7 @@ function paneTask(pane, ctx){
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3></div>
       <div id="strandVoice" class="sdcNoRead"></div>
       <p class="muted" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
+      <div id="kwBox"></div>
       ${c === "B" && si === 0 && COURSE.ACCESSFM ? `<div class="card stack" style="gap:8px;background:var(--soft)"><div class="eyebrow">ACCESS FM — use it to write your specification</div>
         <p style="margin:0;font-size:14px">ACCESS FM is a checklist of eight areas every design must consider. Write at least one specific, measurable requirement for each area in the table below.</p>
         <div class="scroll"><table class="tbl"><tr><th>Letter</th><th>Stands for</th><th>What it means</th><th>Example requirement</th></tr>${COURSE.ACCESSFM.map(r => `<tr><td style="font-family:var(--f-display);color:var(--accent);font-size:18px;text-align:center">${r[0]}</td><td><b>${esc(r[1])}</b></td><td>${esc(r[2])}</td><td class="muted">${esc(r[3])}</td></tr>`).join("")}</table></div></div>` : ""}
@@ -3930,6 +3951,7 @@ function paneTask(pane, ctx){
     if (f.pair && fs[k + 1]){ const row = document.createElement("div"); row.className = "pairrow"; row.append(buildField(f, ctx), buildField(fs[k + 1], ctx)); host.appendChild(row); k++; }   // screenshot + its annotation side by side
     else host.appendChild(buildField(f, ctx)); }
   strandVoice($("#strandVoice"), g, c, si);
+  kwSearch($("#kwBox"), ctx, si);
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
   if ($("#toSub")) $("#toSub").onclick = () => { view.step = 6; render(); window.scrollTo({ top:0, behavior:"smooth" }); };
@@ -3947,6 +3969,108 @@ function paneTask(pane, ctx){
     speak(pickOne(P().right));
     const next = p.done.findIndex(d=>!d); view.strand = next; render(); window.scrollTo({top:0, behavior:"smooth"});
   };
+}
+/* ---------- Keyword search: find the strand's key words in a letter grid ----------
+   Every word found pops up with its meaning and an example of it in use. The grid is the same each time for each student
+   (made from their email + the strand), and the words found are saved with their work. Harder by grade:
+   Grade 6: 8 words, across and down. Grades 7–8: 10 words, plus diagonals. Grade 10: 10 words in any direction, backwards too. */
+function kwLevel(g){ const y = String(g).replace(/\D/g, "").slice(0, 2);
+  return y === "6" ? { n:8, size:10, dirs:[[0,1],[1,0]] } : y === "7" ? { n:10, size:12, dirs:[[0,1],[1,0],[1,1]] } : y === "8" ? { n:10, size:12, dirs:[[0,1],[1,0],[1,1],[-1,1]] }
+    : { n:10, size:13, dirs:[[0,1],[1,0],[1,1],[-1,1],[0,-1],[-1,0],[-1,-1],[1,-1]] }; }
+function kwRand(seed){ let h = 1779033703 ^ seed.length; for (let i = 0; i < seed.length; i++){ h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; }; }
+function kwBuild(words, L, seed){
+  for (let attempt = 0; attempt < 40; attempt++){
+    const R = kwRand(seed + "|" + attempt), N = L.size, grid = Array.from({ length:N }, () => Array(N).fill("")), placed = [];
+    const list = words.slice().sort((a, b) => b.length - a.length);
+    for (const w of list){ let ok = false;
+      for (let t = 0; t < 300 && !ok; t++){
+        const [dr, dc] = L.dirs[Math.floor(R() * L.dirs.length)], r0 = Math.floor(R() * N), c0 = Math.floor(R() * N), r1 = r0 + dr * (w.length - 1), c1 = c0 + dc * (w.length - 1);
+        if (r1 < 0 || r1 >= N || c1 < 0 || c1 >= N) continue;
+        let fits = true; for (let k = 0; k < w.length; k++){ const x = grid[r0 + dr * k][c0 + dc * k]; if (x && x !== w[k]){ fits = false; break; } }
+        if (!fits) continue;
+        for (let k = 0; k < w.length; k++) grid[r0 + dr * k][c0 + dc * k] = w[k];
+        placed.push({ w, r0, c0, dr, dc }); ok = true; }
+      if (!ok) break; }
+    if (placed.length !== list.length) continue;
+    const AZ = "ABCDEFGHIJKLMNOPRSTUW";   // filler letters (no Q, V, X, Y, Z: fewer false words)
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!grid[r][c]) grid[r][c] = AZ[Math.floor(R() * AZ.length)];
+    return { grid, placed };
+  }
+  return null;
+}
+function kwPopup(entry, extra){
+  const [w, meaning, example] = entry, bg = document.createElement("div");
+  bg.className = "kw-pop-bg";
+  bg.innerHTML = `<div class="kw-pop" role="dialog" aria-label="${esc(w)}">
+    <div class="eyebrow">${extra && extra.all ? "🎉 All keywords found!" : "✓ Keyword found"}</div>
+    <h3 class="notranslate">${esc(w.charAt(0) + w.slice(1).toLowerCase())}</h3>
+    <p style="margin:0"><b>Meaning:</b> ${esc(meaning)}</p>
+    <p style="margin:0;background:var(--soft,#EEF1F7);border-radius:10px;padding:10px 12px"><b>Example:</b> <i>${esc(example)}</i></p>
+    ${extra && extra.all ? `<p style="margin:0;font-weight:bold;color:var(--ok,#1E8A55)">You found every keyword for this strand. Try using some of them in your writing below.</p>` : ""}
+    <div class="row" style="gap:8px"><button class="btn ghost" type="button" data-say>🔊 Hear it</button><button class="btn" type="button" data-close>${extra && extra.all ? "Done" : "Keep searching"}</button></div></div>`;
+  document.body.appendChild(bg);
+  const close = () => { try { speechSynthesis.cancel(); } catch(e){} bg.remove(); };
+  bg.querySelector("[data-close]").onclick = close; bg.onclick = e => { if (e.target === bg) close(); };
+  document.addEventListener("keydown", function k(e){ if (e.key === "Escape"){ close(); document.removeEventListener("keydown", k); } });
+  bg.querySelector("[data-say]").onclick = () => { try { const u = new SpeechSynthesisUtterance(w.toLowerCase() + ". " + meaning + " For example: " + example); u.lang = "en-GB"; u.rate = 0.95; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch(e){} };
+  setTimeout(() => bg.querySelector("[data-close]").focus(), 30);
+}
+function kwSearch(box, ctx, si){
+  if (!box) return; const bank = (window.DS_KEYWORDS || {})[ctx.c + (si + 1)]; if (!bank || !bank.length){ box.innerHTML = ""; return; }
+  const L = kwLevel(ctx.g), entries = bank.filter(e => e[0].length <= L.size).slice(0, L.n), words = entries.map(e => e[0]);
+  const who = (session && session.email) || "", built = kwBuild(words, L, who + "|" + ctx.g + "|" + ctx.c + "|" + si);
+  if (!built){ box.innerHTML = ""; return; }
+  const p = ctx.p; p.kw = p.kw || {}; const found = p.kw[si] = (p.kw[si] || []).filter(w => words.includes(w));
+  const N = L.size, cellAt = (r, c) => box.querySelector(`.kw-cell[data-r="${r}"][data-c="${c}"]`);
+  const hues = [350, 210, 140, 35, 275, 185, 15, 95, 315, 240];
+  const all = () => found.length === words.length;
+  const paint = open => {
+    box.innerHTML = `<details class="kw card" ${open ? "open" : ""}><summary><span>🔎 <b>Keyword search</b></span> <span class="kw-count">${found.length} of ${words.length} found${all() ? " ✓" : ""}</span></summary>
+      <p class="muted" style="margin:8px 0 10px;font-size:13.5px">Find the ${words.length} key words for this strand. ${L.dirs.length <= 2 ? "Words go across or down." : L.dirs.length <= 4 ? "Words go across, down or diagonally." : "Words can go in any direction, even backwards."} Drag across a word, or tap its first letter and then its last letter. Each word you find shows its meaning.</p>
+      <div class="kw-wrap"><div class="kw-grid notranslate" style="grid-template-columns:repeat(${N},1fr)" role="grid" aria-label="Keyword search grid">${built.grid.map((row, r) => row.map((ch, c) => `<button type="button" class="kw-cell" data-r="${r}" data-c="${c}" tabindex="-1">${ch}</button>`).join("")).join("")}</div>
+      <div class="kw-list notranslate">${words.map(w => `<button type="button" class="kw-word ${found.includes(w) ? "got" : ""}" data-w="${w}" ${found.includes(w) ? "" : "disabled"} title="${found.includes(w) ? "See its meaning" : "Not found yet"}">${w}</button>`).join("")}</div></div></details>`;
+    found.forEach(w => mark(w));
+    const det = box.querySelector("details"); det.addEventListener("toggle", () => { box._open = det.open; });
+    box.querySelectorAll(".kw-word.got").forEach(b => b.onclick = () => kwPopup(entries.find(e => e[0] === b.dataset.w)));
+    bindGrid();
+  };
+  function cellsOf(pl){ return Array.from({ length: pl.w.length }, (_, k) => [pl.r0 + pl.dr * k, pl.c0 + pl.dc * k]); }
+  function mark(w){ const pl = built.placed.find(x => x.w === w); if (!pl) return; const h = hues[words.indexOf(w) % hues.length];
+    cellsOf(pl).forEach(([r, c]) => { const el = cellAt(r, c); if (el){ el.classList.add("got"); el.style.setProperty("--kh", h); } }); }
+  function line(a, b){ const dr = Math.sign(b[0] - a[0]), dc = Math.sign(b[1] - a[1]), lr = Math.abs(b[0] - a[0]), lc = Math.abs(b[1] - a[1]);
+    if (!(lr === 0 || lc === 0 || lr === lc)) return null; const n = Math.max(lr, lc) + 1; return Array.from({ length:n }, (_, k) => [a[0] + dr * k, a[1] + dc * k]); }
+  function bindGrid(){
+    const grid = box.querySelector(".kw-grid"); let start = null, sel = [], dragging = false, moved = false, tapStart = null;
+    const clear = () => box.querySelectorAll(".kw-cell.sel").forEach(x => x.classList.remove("sel"));
+    const show = cells => { clear(); (cells || []).forEach(([r, c]) => { const el = cellAt(r, c); if (el) el.classList.add("sel"); }); };
+    const pos = el => el && el.classList && el.classList.contains("kw-cell") ? [+el.dataset.r, +el.dataset.c] : null;
+    const check = cells => {
+      if (!cells || cells.length < 2) return false;
+      const txt = cells.map(([r, c]) => built.grid[r][c]).join(""), rev = txt.split("").reverse().join("");
+      const pl = built.placed.find(x => (x.w === txt || x.w === rev) && cellsOf(x).length === cells.length &&
+        cellsOf(x).every(([r, c], k) => (r === cells[k][0] && c === cells[k][1]) || (r === cells[cells.length - 1 - k][0] && c === cells[cells.length - 1 - k][1])));
+      if (!pl) return false;
+      if (found.includes(pl.w)){ kwPopup(entries.find(e => e[0] === pl.w)); return true; }
+      found.push(pl.w); save();
+      try { if (typeof logEvent === "function" && found.length === words.length) logEvent(ctx.c, `Keyword search complete (strand ${ROMAN[si]})`, `${words.length} words`); } catch(e){}
+      paint(true); kwPopup(entries.find(e => e[0] === pl.w), { all: all() });
+      return true;
+    };
+    grid.addEventListener("pointerdown", e => { const a = pos(e.target); if (!a) return; e.preventDefault();
+      dragging = true; moved = false; start = a; sel = [a]; show(tapStart ? (line(tapStart, a) || [a]) : sel); try { grid.setPointerCapture(e.pointerId); } catch(err){} });
+    grid.addEventListener("pointermove", e => { if (!dragging) return; const a = pos(document.elementFromPoint(e.clientX, e.clientY)); if (!a) return;
+      if (a[0] !== start[0] || a[1] !== start[1]) moved = true; const l = line(start, a); if (l){ sel = l; show(sel); } });
+    const up = () => { if (!dragging) return; dragging = false;
+      if (moved){ tapStart = null; if (!check(sel)) { grid.classList.add("kw-miss"); setTimeout(() => grid.classList.remove("kw-miss"), 350); } clear(); return; }
+      // a tap: first tap picks the first letter, second tap the last letter
+      if (!tapStart){ tapStart = start; show([start]); return; }
+      const l = line(tapStart, start); tapStart = null;
+      if (!l || !check(l)){ grid.classList.add("kw-miss"); setTimeout(() => grid.classList.remove("kw-miss"), 350); }
+      clear(); };
+    grid.addEventListener("pointerup", up); grid.addEventListener("pointercancel", () => { dragging = false; clear(); });
+  }
+  paint(box._open !== undefined ? box._open : !all());
 }
 /* "🎧 Strand brief": the teacher's own recorded briefing for the strand (voice/strand/<grade>-<criterion>-<strand>).
    Until a strand has been recorded, the same button reads the strand aloud with the narrator. */
