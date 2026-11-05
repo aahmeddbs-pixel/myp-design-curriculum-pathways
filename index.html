@@ -176,6 +176,13 @@ textarea{min-height:110px;resize:vertical;line-height:1.5}
 .sk{border:1px solid var(--line);border-radius:9px;background:var(--paper);padding:10px;display:flex;flex-direction:column;gap:8px}
 .sk canvas{width:100%;max-width:100%;aspect-ratio:4/3;background:#fff;border-radius:6px;border:1px solid var(--line);touch-action:none}
 .sk img{border-radius:6px;border:1px solid var(--line);max-height:420px;object-fit:contain;background:#fff}
+.sk-small{padding:8px 10px;gap:6px}
+.sk-drop{display:flex;gap:10px;align-items:center;border:2px dashed var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--soft,#F3F5F9);font-size:13.5px;min-height:56px}
+.sk-drop.on,.sk-drop:focus{border-color:var(--accent,#DC2B3E);outline:none}
+.sk-thumb{border:none;padding:0;background:none;cursor:zoom-in;flex:none}
+.sk-thumb img{width:140px;height:96px;object-fit:cover;max-height:none;display:block}
+.pairrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;align-items:start}
+@media(max-width:760px){.pairrow{grid-template-columns:1fr}}
 .tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .sw{width:24px;height:24px;border-radius:50%;border:2px solid var(--line)}
 .sw[aria-pressed=true]{outline:3px solid var(--accent);outline-offset:1px}
@@ -2122,10 +2129,10 @@ function g7C2(gd){
   const V = ["importing your clips, images and audio into the editor", "cutting, trimming and putting your clips in order on the timeline", "adding transitions between scenes", "adding text and title overlays", "adding music or voice-over, then exporting the finished video"];
   return [
     CH("c2tool", "Task 1 · Which software did you use to make your poster?", L.tools.map(t => t.name).concat(["Other"])),
-    ...P.flatMap((h, k) => [SK(`c2p${k + 1}`, `Task 1 · Poster evidence ${k + 1} of 5: a screenshot of you making your poster: ${h}`, true),
+    ...P.flatMap((h, k) => [Object.assign(SK(`c2p${k + 1}`, `Task 1 · Poster evidence ${k + 1} of 5: a screenshot of you making your poster: ${h}`, true), { pair: true }),
       T(`c2pa${k + 1}`, `Annotation ${k + 1}: what did you do at this step, and which technical skill or tool did you use? Which step of your logical plan (C.i) is this?`, W)]),
     SK("c2pf", "Task 1 · Your finished poster", true),
-    ...V.flatMap((h, k) => [Object.assign(SK(`c2v${k + 1}`, `Task 2 · Video evidence ${k + 1} of 5: a screenshot of you editing your video: ${h}`, true), { grp: "video" }),
+    ...V.flatMap((h, k) => [Object.assign(SK(`c2v${k + 1}`, `Task 2 · Video evidence ${k + 1} of 5: a screenshot of you editing your video: ${h}`, true), { grp: "video", pair: true }),
       Object.assign(T(`c2va${k + 1}`, `Annotation ${k + 1}: what did you do at this step, and which editing skill or tool did you use?`, W), { grp: "video" })]),
     { t: "video", id: "c2vid", label: "Task 2 · Drag and drop your finished 30-second video here for assessment", grp: "video" }
   ];
@@ -3885,7 +3892,11 @@ function paneTask(pane, ctx){
   pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
   let vg = null;
-  F[si].forEach(f => { if (f.grp === "video"){ if (!vg) vg = videoGroup(box, ctx, () => render()); vg.appendChild(buildField(f, ctx)); } else box.appendChild(buildField(f, ctx)); });
+  const fs = F[si];
+  for (let k = 0; k < fs.length; k++){ const f = fs[k];
+    const host = f.grp === "video" ? (vg = vg || videoGroup(box, ctx, () => render())) : box;
+    if (f.pair && fs[k + 1]){ const row = document.createElement("div"); row.className = "pairrow"; row.append(buildField(f, ctx), buildField(fs[k + 1], ctx)); host.appendChild(row); k++; }   // screenshot + its annotation side by side
+    else host.appendChild(buildField(f, ctx)); }
   strandVoice($("#strandVoice"), g, c, si);
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
@@ -3986,9 +3997,9 @@ function videoBox(el, f, ctx, label){
   const { p, c, u } = ctx, MAX = 300 * 1024 * 1024;
   const paint = (msg) => { const v = p.fields[f.id];
     el.innerHTML = `<span class="lbl">${esc(label)}</span>
-      <div class="vdrop" tabindex="0" role="button" aria-label="Choose your video file" style="border:2px dashed var(--line);border-radius:14px;padding:20px;text-align:center;cursor:pointer;background:var(--soft)">
-        ${v && v.url ? `<div style="font-size:1.6rem">✅</div><b>Uploaded: ${esc(v.name || "your video")}</b><div class="muted" style="font-size:13px">${esc(new Date(v.at).toLocaleString())}${v.size ? " · " + (v.size / 1048576).toFixed(1) + " MB" : ""}</div><div style="margin-top:8px"><a href="${esc(v.url)}" target="_blank" rel="noopener">Open my video</a> · <span class="muted">drop a new file here to replace it</span></div>`
-          : `<div style="font-size:2rem">🎬</div><b>Drag and drop your finished video here</b><div class="muted" style="font-size:13px">or click to choose the file (MP4 or MOV, up to 300 MB)</div>`}
+      <div class="vdrop sk-drop" tabindex="0" role="button" aria-label="Choose your video file">
+        ${v && v.url ? `<span style="font-size:1.3rem">✅</span><span><b>Uploaded: ${esc(v.name || "your video")}</b> <span class="muted">${esc(new Date(v.at).toLocaleString())}${v.size ? " · " + (v.size / 1048576).toFixed(1) + " MB" : ""}</span><br><a href="${esc(v.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">▶ Open my video</a> <span class="muted">· drop a new file here to replace it</span></span>`
+          : `<span style="font-size:1.3rem">🎬</span><span><b>Drop your finished video here</b> or <u>click to choose it</u> <span class="muted">(MP4 or MOV, up to 300 MB)</span></span>`}
         <input type="file" accept="video/*" hidden></div><div class="vmsg" style="margin-top:6px">${msg || ""}</div>`;
     const drop = el.querySelector(".vdrop"), inp = el.querySelector("input");
     drop.onclick = () => inp.click(); drop.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); inp.click(); } };
@@ -4063,19 +4074,54 @@ function buildField(f, ctx){
   }
   return el;
 }
+/* an image the student added, shown full size over the page (click a thumbnail) */
+function zoomImg(src, label){
+  const bg = document.createElement("div"); bg.style.cssText = "position:fixed;inset:0;background:rgba(10,16,30,.85);display:flex;align-items:center;justify-content:center;z-index:2147483600;padding:20px;cursor:zoom-out";
+  bg.innerHTML = `<figure style="margin:0;max-width:96vw;max-height:92vh;text-align:center"><img src="${src}" alt="${esc(label)}" style="max-width:96vw;max-height:84vh;border-radius:10px;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.4)"><figcaption style="color:#fff;margin-top:8px;font:14px Arial,Helvetica,sans-serif">${esc(label)} · click anywhere to close</figcaption></figure>`;
+  bg.onclick = () => bg.remove(); document.addEventListener("keydown", function k(e){ if (e.key === "Escape"){ bg.remove(); document.removeEventListener("keydown", k); } });
+  document.body.appendChild(bg);
+}
+const skLabel = label => { const i = label.indexOf(": "); return i > 0 && i < 70 ? `<span class="lbl" style="font-weight:bold;margin:0">${esc(label.slice(0, i))}<span class="muted" style="display:block;font-weight:400;font-size:13px">${esc(label.slice(i + 2))}</span></span>` : `<span class="lbl" style="font-weight:bold">${esc(label)}</span>`; };
+/* a sketch or screenshot box. Small by default: drop / paste / upload a picture, or press "Sketch here" to open the drawing area. */
 function sketchBox(f, label, p){
   const wrap = document.createElement("div"); wrap.className = "sk";
+  let mode = "small";
+  const takeFile = file => { if (!file || !/^image\//.test(file.type || "")) return toast("That isn't a picture. Use a screenshot or photo (PNG or JPG).");
+    const rd = new FileReader(); rd.onload = () => { const im = new Image(); im.onload = () => { const c2 = document.createElement("canvas"); const sc = Math.min(1, 1100/Math.max(im.width, im.height)); c2.width = im.width*sc; c2.height = im.height*sc; const x2 = c2.getContext("2d"); x2.fillStyle="#fff"; x2.fillRect(0,0,c2.width,c2.height); x2.drawImage(im,0,0,c2.width,c2.height); p.fields[f.id] = c2.toDataURL("image/jpeg", .72); save(); mode = "small"; drawUI(); }; im.src = rd.result; }; rd.readAsDataURL(file); };
   const drawUI = () => {
     const has = p.fields[f.id];
-    wrap.innerHTML = `<span class="lbl" style="font-weight:bold">${esc(label)}</span>
-      ${has ? `<img src="${has}" alt="${esc(label)}"><div class="tools"><button class="btn sm sec" data-a="redo">Draw again</button><span class="counter ok">Sketch saved ✓</span></div>`
-      : `<div class="tools" role="toolbar" aria-label="Drawing tools">
+    if (has){
+      wrap.className = "sk sk-small";
+      wrap.innerHTML = `${skLabel(label)}
+        <div class="row" style="gap:12px;align-items:center"><button type="button" class="sk-thumb" title="Click to see it full size" aria-label="See ${esc(label)} full size"><img src="${has}" alt="${esc(label)}"></button>
+        <div class="stack" style="gap:6px"><span class="counter ok">Added ✓</span><div class="row" style="gap:6px"><button class="btn sm ghost" type="button" data-a="zoom">🔍 View</button><button class="btn sm sec" type="button" data-a="redo">Replace</button></div></div></div>`;
+      wrap.querySelector(".sk-thumb").onclick = () => zoomImg(has, label); wrap.querySelector('[data-a="zoom"]').onclick = () => zoomImg(has, label);
+      wrap.querySelector('[data-a="redo"]').onclick = () => { if (!confirm("Remove this picture so you can add a new one?")) return; p.fields[f.id] = null; save(); mode = "small"; drawUI(); };
+      return;
+    }
+    if (mode === "small"){
+      wrap.className = "sk sk-small";
+      wrap.innerHTML = `${skLabel(label)}
+        <div class="sk-drop" tabindex="0" role="button" aria-label="Add a screenshot or photo for: ${esc(label)}"><span style="font-size:1.3rem">🖼️</span><span><b>Drop ${f.evidence ? "a screenshot" : "a picture"} here</b>, paste it (Ctrl+V) or <u>click to upload</u></span></div>
+        <div class="row" style="gap:6px"><span class="muted" style="font-size:12.5px">or</span><button class="btn sm sec" type="button" data-a="draw">✏️ Sketch here</button></div>
+        <input type="file" accept="image/*" hidden>`;
+      const d = wrap.querySelector(".sk-drop"), inp = wrap.querySelector("input[type=file]");
+      d.onclick = () => inp.click(); d.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); inp.click(); } };
+      d.ondragover = e => { e.preventDefault(); d.classList.add("on"); }; d.ondragleave = () => d.classList.remove("on");
+      d.ondrop = e => { e.preventDefault(); d.classList.remove("on"); takeFile(e.dataTransfer.files && e.dataTransfer.files[0]); };
+      d.onpaste = e => { const it = [...(e.clipboardData && e.clipboardData.items || [])].find(x => /^image\//.test(x.type)); if (it){ e.preventDefault(); takeFile(it.getAsFile()); } };
+      inp.onchange = () => takeFile(inp.files[0]);
+      wrap.querySelector('[data-a="draw"]').onclick = () => { mode = "draw"; drawUI(); };
+      return;
+    }
+    wrap.className = "sk";
+    wrap.innerHTML = `${skLabel(label)}
+      ${has ? `` : `<div class="tools" role="toolbar" aria-label="Drawing tools">
           ${["#16223A","#DC2B3E","#1B6FD1","#1E8A55","#E39B00"].map((c,i)=>`<button class="sw" data-col="${c}" style="background:${c}" aria-label="Colour ${i+1}" aria-pressed="${i===0}"></button>`).join("")}
           <button class="btn sm sec" data-a="thin">Thin</button><button class="btn sm sec" data-a="thick">Thick</button><button class="btn sm sec" data-a="erase">Eraser</button><button class="btn sm sec" data-a="text">Add label</button><button class="btn sm ghost" data-a="clear">Clear</button></div>
         <canvas width="1200" height="900" aria-label="Sketch area"></canvas>
-        <div class="tools"><button class="btn sm ok" data-a="save">Save sketch</button><label class="btn sm ${f.evidence?"":"sec"}" style="cursor:pointer">${f.evidence?"Upload screenshot or photo":"Upload a photo instead"}<input type="file" accept="image/*" hidden></label><span class="muted" style="font-size:12px">${f.evidence?"Upload a screenshot or photo of your work, or draw it here.":"Draw on paper? Take a photo and upload it."}</span></div>
+        <div class="tools"><button class="btn sm ok" data-a="save">Save sketch</button><button class="btn sm ghost" type="button" data-a="small">Close the sketch area</button><label class="btn sm ${f.evidence?"":"sec"}" style="cursor:pointer">${f.evidence?"Upload screenshot or photo":"Upload a photo instead"}<input type="file" accept="image/*" hidden></label><span class="muted" style="font-size:12px">${f.evidence?"Upload a screenshot or photo of your work, or draw it here.":"Draw on paper? Take a photo and upload it."}</span></div>
         <div class="tools" data-labelbox hidden><input type="text" placeholder="Type a label, then tap the sketch to place it" style="flex:1;min-width:180px"></div>`}`;
-    if (has){ wrap.querySelector('[data-a="redo"]').onclick = () => { p.fields[f.id] = null; save(); drawUI(); }; return; }
     const cv = wrap.querySelector("canvas"), cx = cv.getContext("2d");
     cx.fillStyle = "#fff"; cx.fillRect(0,0,cv.width,cv.height);
     cx.strokeStyle = "#E4E8F0"; cx.lineWidth = 1; for (let x=0;x<cv.width;x+=40){ cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x,cv.height); cx.stroke(); } for (let y=0;y<cv.height;y+=40){ cx.beginPath(); cx.moveTo(0,y); cx.lineTo(cv.width,y); cx.stroke(); }
@@ -4089,13 +4135,10 @@ function sketchBox(f, label, p){
     cv.onpointermove = e => { if (!drawing) return; const [x,y] = pos(e); cx.lineCap = "round"; cx.lineJoin = "round"; cx.strokeStyle = erase ? "#fff" : col; cx.lineWidth = erase ? 28 : w; cx.lineTo(x,y); cx.stroke(); dirty = true; };
     cv.onpointerup = cv.onpointercancel = () => { drawing = false; };
     wrap.querySelectorAll(".sw").forEach(b => b.onclick = () => { col = b.dataset.col; erase = false; wrap.querySelectorAll(".sw").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
-    const act = a => ({ thin:()=>{w=4;erase=false}, thick:()=>{w=10;erase=false}, erase:()=>{erase=true}, clear:()=>{ drawUI(); }, text:()=>{ textMode = true; const lb = wrap.querySelector("[data-labelbox]"); lb.hidden = false; lb.querySelector("input").focus(); },
-      save:()=>{ if (!dirty) return toast("Draw your idea first, or upload a photo."); p.fields[f.id] = shrink(cv); save(); speak(P().sketch); drawUI(); } })[a]?.();
+    const act = a => ({ small:()=>{ if (dirty && !confirm("Close without saving your sketch?")) return; mode = "small"; drawUI(); }, thin:()=>{w=4;erase=false}, thick:()=>{w=10;erase=false}, erase:()=>{erase=true}, clear:()=>{ drawUI(); }, text:()=>{ textMode = true; const lb = wrap.querySelector("[data-labelbox]"); lb.hidden = false; lb.querySelector("input").focus(); },
+      save:()=>{ if (!dirty) return toast("Draw your idea first, or upload a photo."); p.fields[f.id] = shrink(cv); save(); speak(P().sketch); mode = "small"; drawUI(); } })[a]?.();
     wrap.querySelectorAll("[data-a]").forEach(b => b.onclick = () => act(b.dataset.a));
-    wrap.querySelector('input[type=file]').onchange = ev => {
-      const file = ev.target.files[0]; if (!file) return;
-      const rd = new FileReader(); rd.onload = () => { const im = new Image(); im.onload = () => { const c2 = document.createElement("canvas"); const sc = Math.min(1, 1100/Math.max(im.width, im.height)); c2.width = im.width*sc; c2.height = im.height*sc; const x2 = c2.getContext("2d"); x2.fillStyle="#fff"; x2.fillRect(0,0,c2.width,c2.height); x2.drawImage(im,0,0,c2.width,c2.height); p.fields[f.id] = c2.toDataURL("image/jpeg", .72); save(); drawUI(); }; im.src = rd.result; }; rd.readAsDataURL(file);
-    };
+    wrap.querySelector('input[type=file]').onchange = ev => takeFile(ev.target.files[0]);
   };
   drawUI(); return wrap;
 }
