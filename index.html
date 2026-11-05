@@ -2,8 +2,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105i"></script>
-<script src="/python-pathways/pp-sync.js?v=20261105i"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261105j"></script>
+<script src="/python-pathways/pp-sync.js?v=20261105j"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2876,6 +2876,7 @@ function renderLogin(app){
         <p class="muted" id="pwRule" style="font-size:12px;margin:-6px 0 0" hidden>At least 8 characters, with at least one letter and one number. Don't use your school email password.</p>
         <div id="lMsg"></div>
         <button class="btn" type="submit" id="lGo">Sign in</button>
+        <p id="fgRow" style="margin:-4px 0 0;text-align:center"><button type="button" class="btn ghost" id="fgBtn" style="font-weight:800">Forgot your password?</button></p>
         <p class="muted" id="lFoot" style="font-size:12px;margin:0">Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion.</p>
       </form>
     </section></div>`;
@@ -2884,6 +2885,7 @@ function renderLogin(app){
     $("#lFoot").textContent = r === "teacher" && mode === "up" ? "Teacher accounts are checked by the course admin. You can sign in once your request is approved." : "Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion."; };
   const setMode = m => { mode = m; $("#tIn").setAttribute("aria-selected", m==="in"); $("#tUp").setAttribute("aria-selected", m==="up");
     $("#upOnly").hidden = $("#roleRow").hidden = $("#pw2Row").hidden = $("#pwRule").hidden = m !== "up";
+    { const fr = $("#fgRow"); if (fr) fr.hidden = m !== "in" || (SDCG && SDCG.mode === "staff"); }
     $("#pwLbl").textContent = m === "in" ? "Password" : "Create a password"; $("#lPw").autocomplete = m === "in" ? "current-password" : "new-password"; $("#lMsg").innerHTML = "";
     if (SDCG && SDCG.mode === "staff"){ role = "teacher"; $("#roleRow").hidden = true; }   // staff door: teacher accounts only
     setRole(role); };
@@ -2905,6 +2907,9 @@ function renderLogin(app){
       note(`Signing into <b>${esc(C.name)}</b>. Your teacher can see which course you sign into. Taking Computer Science too? Type your school email and your Computer Science PIN. New here? Open <b>Change course</b> at the top and choose <b>＋ Sign up for a course</b>.`);
     }
   }
+  { const fb = $("#fgBtn"); if (fb) fb.onclick = () => { const em = $("#lEmail").value.trim().toLowerCase(), u = DB.users[em];
+      if (window.SDC && SDC.forgotDialog) SDC.forgotDialog({ course: (SDCG && SDCG.course) || "design", email: em, name: (u && u.name) || (($("#lCsName") || {}).value || ""), teacher: (u && u.teacher) || "" });
+      else msg("Ask your teacher to reset your password."); }; }
   $("#lf").onsubmit = async e => {
     e.preventDefault();
     const email = $("#lEmail").value.trim().toLowerCase(), pw = $("#lPw").value;
