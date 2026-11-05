@@ -181,6 +181,7 @@ textarea{min-height:110px;resize:vertical;line-height:1.5}
 .sk-drop.on,.sk-drop:focus{border-color:var(--accent,#DC2B3E);outline:none}
 .sk-thumb{border:none;padding:0;background:none;cursor:zoom-in;flex:none}
 .sk-thumb img{width:140px;height:96px;object-fit:cover;max-height:none;display:block}
+.rpt h1{font-size:1.6rem;margin:4px 0}.rpt .rpt-title{border-bottom:3px solid var(--accent,#DC2B3E);padding-bottom:10px;margin-bottom:6px}.rpt-h1{margin:22px 0 6px;color:var(--navy,#1B2D4E);border-bottom:2px solid var(--line);padding-bottom:4px}.rpt-h2{margin:16px 0 4px}.rpt-h3{margin:12px 0 2px;font-size:1rem}.rpt p{margin:0 0 8px;line-height:1.55}.rpt figure{margin:8px 0;text-align:center}.rpt figure img{max-width:100%;max-height:420px;border:1px solid var(--line);border-radius:8px}.rpt figcaption{font-size:12.5px;color:var(--muted)}
 .pairrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;align-items:start}
 @media(max-width:760px){.pairrow{grid-template-columns:1fr}}
 .tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -3242,7 +3243,7 @@ async function publishWrap(u, email, A){
   const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
   u.wrapFor = A.lookup; return ver;
 }
-const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk"];
+const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk","reportAdded"];
 function syncPayload(u){
   const imgs = {};
   const walk = v => {
@@ -4179,6 +4180,177 @@ function answersText(ctx){
       if (f.grp === "video" && p.fields.__skipVideo) out += "SKIPPED (video task)\n"; else if (f.t === "video") out += (v && v.url ? v.url : "") + "\n"; else if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
   return out;
 }
+/* ================= GRADE 10 PROJECT REPORT =================
+   The student's own answers from Criteria A to D, put into report order with plain section headings.
+   Nothing is written for them: headings, then their words, tables and images exactly as they gave them.
+   "Add to report" marks a criterion as included; the report is always built from their latest answers. */
+const isReportUnit = g => String(g) === "10";
+const RH = { a1what:"The problem", a1why:"Why this is a problem", a1who:"Who is affected", a1none:"Why it has not been solved", a1if:"If nothing is done", a1src:"Sources",
+  a2q:"Research questions", a3t:"Justification and priorities", a3top:"Top priority", a4f:"Research findings", a4client:"Client and target audience", a4product:"The everyday product",
+  a4what:"Type of solution", a4own:"My own idea", a4brief:"Design brief", a4acc:"ACCESS FM analysis", a4look:"Product overview",
+  b1t:"Design specification", b2s1:"Design 1", b2s2:"Design 2", b2s3:"Design 3", b3t:"Client feedback on the design principles", b3c:"Client feedback", b3s:"Principles chosen for the final design",
+  b4s:"Final developed design", b4s2:"Developed design: second view", b4n:"The final design explained", b4r:"What is needed to create it",
+  c1t:"Logical plan", c1tot:"Time plan", c2tool:"Software and tools", c2k:"Technical skills used", c2f1:"The finished solution", c2f2:"The finished solution: second view",
+  c3t:"Following the plan", c3f:"Does the solution work as intended?", c4t:"Changes made", c4o:"Effect of the changes",
+  d1t:"Test plan", d2t:"Testing results", d2e:"Testing evidence", d3t:"Suggested improvements", d4s:"The improved solution", d4h:"How the improved solution works", d4i:"Impact on the client and users" };
+const RH_UNDER = /^(b2n\d|c2q\d)$/;   // a description that belongs to the picture just before it: no heading of its own
+function rhOf(f, label){
+  if (RH[f.id]) return RH[f.id];
+  const m = /^c2m(\d)$/.exec(f.id); if (m) return "Making evidence " + (+m[1] + 1) + (label.includes(":") ? ": " + label.split(":").slice(1).join(":").trim() : "");
+  let t = String(label).replace(/^(Task|Question)\s*\d+\s*[·:.-]\s*/i, "").split(/[?:]|\s—\s|\.\s/)[0].trim();
+  return t.length > 70 ? t.slice(0, 67).replace(/\s+\S*$/, "") + "…" : t;
+}
+/* the report as a list of blocks: { k:"h1"|"h2"|"h3"|"p"|"table"|"img"|"meta", ... } */
+function reportBlocks(u, only){
+  const g = u.grade, gd = gradeData(g), sc = scenarioFor(session.email, g), Y = yearKey(gd.myp), added = u.reportAdded || {};
+  const crits = (only ? [only] : ["A","B","C","D"].filter(c => added[c]));
+  const out = [];
+  crits.forEach(c => {
+    const cd = COURSE.criteria[c], p = (u.progress || {})[c]; if (!p) return;
+    out.push({ k:"h1", t:`Criterion ${c}: ${cd.name}` });
+    fieldsFor(c, gd).forEach((fs, i) => {
+      const sec = []; let lastImg = false;
+      fs.forEach(f => {
+        if (f.grp === "video" && p.fields.__skipVideo) return;
+        const v = p.fields[f.id], label = fill(f.label, g, sc);
+        if (f.t === "sketch"){ if (v){ sec.push({ k:"h3", t:rhOf(f, label) }); sec.push({ k:"img", src:v, cap:rhOf(f, label) }); lastImg = true; } return; }
+        if (f.t === "video"){ if (v && v.url) sec.push({ k:"h3", t:"Finished video" }, { k:"p", t:v.url }); return; }
+        if (f.t === "table"){ const rows = (v || []).filter(r => r && r.slice(f.rowLabels ? 1 : 0).some(x => String(x || "").trim())); if (!rows.length) return;
+          sec.push({ k:"h3", t:rhOf(f, label) }, { k:"table", head:f.cols, rows }); lastImg = false; return; }
+        let txt = f.t === "checklist" ? (v || []).join(", ") : String(v || "").trim(); if (!txt || /^n\/?a$/i.test(txt)) return;
+        if (!(RH_UNDER.test(f.id) && lastImg)) sec.push({ k:"h3", t:rhOf(f, label) });
+        txt.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(x => sec.push({ k:"p", t:x })); lastImg = false;
+      });
+      if (sec.length) out.push({ k:"h2", t:`${ROMAN[i]}. ${cd.strands[Y][i]}` }, ...sec);
+    });
+  });
+  return { title: sc && sc.chosen && sc.title ? sc.title : gd.unit, unit: gd.unit, name: u.name, teacher: u.teacher || "", year: `MYP Design · Year ${gd.myp}`, blocks: out, crits };
+}
+function reportHTML(R){
+  const e = esc;
+  return `<div class="rpt"><div class="rpt-title"><div class="eyebrow">${e(R.year)}</div><h1>${e(R.title)}</h1><p class="muted">${e(R.name)}${R.teacher ? " · " + e(R.teacher) : ""}${R.unit !== R.title ? " · " + e(R.unit) : ""}</p></div>` +
+    R.blocks.map(b => b.k === "h1" ? `<h2 class="rpt-h1">${e(b.t)}</h2>` : b.k === "h2" ? `<h3 class="rpt-h2">${e(b.t)}</h3>` : b.k === "h3" ? `<h4 class="rpt-h3">${e(b.t)}</h4>` : b.k === "p" ? `<p>${e(b.t)}</p>`
+      : b.k === "img" ? `<figure><img src="${b.src}" alt="${e(b.cap)}"><figcaption>${e(b.cap)}</figcaption></figure>`
+      : `<div class="scroll"><table class="tbl"><tr>${b.head.map(h => `<th>${e(h)}</th>`).join("")}</tr>${b.rows.map(r => `<tr>${b.head.map((_, k) => `<td>${e(r[k] || "")}</td>`).join("")}</tr>`).join("")}</table></div>`).join("") + `</div>`;
+}
+function reportModal(u, only){
+  const R = reportBlocks(u, only), bg = document.createElement("div");
+  bg.style.cssText = "position:fixed;inset:0;background:rgba(14,26,48,.6);z-index:2147483500;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto";
+  bg.innerHTML = `<div class="card" style="max-width:860px;width:100%;background:var(--paper,#fff)"><div class="row" style="justify-content:space-between;margin-bottom:8px"><b>${only ? "Criterion " + esc(only) + " in your report" : "Your report so far"}</b><button class="btn sm ghost" type="button" id="rpX">Close</button></div>
+    ${R.blocks.length ? reportHTML(R) : `<p class="muted">Nothing to show yet. Answer the strands first.</p>`}</div>`;
+  document.body.appendChild(bg); bg.querySelector("#rpX").onclick = () => bg.remove(); bg.onclick = e => { if (e.target === bg) bg.remove(); };
+}
+/* ---------- PDF ---------- */
+async function reportPDF(R){
+  if (!window.jspdf) throw new Error("PDF tool not loaded — check the internet connection");
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4" }), W = 210, H = 297, M = 20, NAVY = [27,45,78], RED = [220,43,62];
+  const clean = t => String(t||"").replace(/[–—]/g,"-").replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,"...").replace(/·/g,"-").replace(/[^\x00-\xFF]/g,"");
+  let y = M; const need = h => { if (y + h > H - 18){ doc.addPage(); y = M; } };
+  const text = (t, size, style, color, gap) => { doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color); const lines = doc.splitTextToSize(clean(t), W - 2*M);
+    lines.forEach(l => { need(size * 0.45); doc.text(l, M, y); y += size * 0.45; }); y += gap; };
+  // title page
+  doc.setFillColor(...NAVY); doc.rect(0, 0, W, 6, "F"); doc.setFillColor(...RED); doc.rect(0, 6, W, 1.5, "F");
+  y = 95; text(R.year, 11, "normal", [91,103,130], 4); text(R.title, 24, "bold", NAVY, 6); text(R.name + (R.teacher ? "  ·  " + R.teacher : ""), 12, "normal", [22,34,58], 2);
+  if (R.unit !== R.title) text(R.unit, 11, "italic", [91,103,130], 2);
+  text(new Date().toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" }), 10, "normal", [91,103,130], 0);
+  for (const b of R.blocks){
+    if (b.k === "h1"){ doc.addPage(); y = M; text(b.t, 18, "bold", NAVY, 2); doc.setDrawColor(...RED); doc.setLineWidth(0.6); doc.line(M, y, M + 40, y); y += 6; }
+    else if (b.k === "h2"){ need(16); y += 2; text(b.t, 13, "bold", NAVY, 2); }
+    else if (b.k === "h3"){ need(12); y += 1; text(b.t, 11, "bold", [22,34,58], 1); }
+    else if (b.k === "p") text(b.t, 10.5, "normal", [22,34,58], 2.5);
+    else if (b.k === "table"){ need(20); doc.autoTable({ startY:y, head:[b.head.map(clean)], body:b.rows.map(r => b.head.map((_, k) => clean(r[k] || ""))), margin:{ left:M, right:M, top:M }, styles:{ fontSize:9, cellPadding:2, lineColor:[216,222,234], lineWidth:0.2 }, headStyles:{ fillColor:NAVY } }); y = doc.lastAutoTable.finalY + 5; }
+    else if (b.k === "img"){ try { const pr = doc.getImageProperties(b.src), w = W - 2*M, h = Math.min(110, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h + 8); doc.addImage(b.src, "JPEG", M, y, ww, h); y += h + 2; text(b.cap, 9, "italic", [91,103,130], 3); } catch(e){} }
+  }
+  const n = doc.getNumberOfPages(); for (let i = 2; i <= n; i++){ doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(120); doc.text(clean(R.name + " - " + R.title), M, H - 9); doc.text(String(i - 1), W - M, H - 9, { align:"right" }); }
+  return doc.output("blob");
+}
+/* ---------- Word (.docx), built here: a small zip with the document, its styles and the pictures ---------- */
+const XE = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+const CRC32 = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = t[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }; })();
+function zipStore(files){   // [{name, data:Uint8Array}] → Blob (no compression)
+  const te = new TextEncoder(), parts = [], central = []; let off = 0;
+  for (const f of files){ const name = te.encode(f.name), d = f.data, crc = CRC32(d);
+    const h = new DataView(new ArrayBuffer(30)); h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint32(14, crc, true); h.setUint32(18, d.length, true); h.setUint32(22, d.length, true); h.setUint16(26, name.length, true);
+    parts.push(h.buffer, name, d);
+    const c = new DataView(new ArrayBuffer(46)); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, d.length, true); c.setUint32(24, d.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    central.push(c.buffer, name); off += 30 + name.length + d.length; }
+  const cs = central.reduce((a, b) => a + (b.byteLength || b.length), 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, e.buffer], { type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+}
+const imgSize = src => new Promise(res => { const im = new Image(); im.onload = () => res([im.naturalWidth || 800, im.naturalHeight || 600]); im.onerror = () => res([800, 600]); im.src = src; });
+async function reportDOCX(R){
+  const te = new TextEncoder(), media = [], rels = [];
+  const run = (t, o) => `<w:r>${o ? `<w:rPr>${o}</w:rPr>` : ""}<w:t xml:space="preserve">${XE(t)}</w:t></w:r>`;
+  const par = (t, style, o) => `<w:p>${style ? `<w:pPr><w:pStyle w:val="${style}"/></w:pPr>` : ""}${run(t, o)}</w:p>`;
+  let body = "";
+  body += `<w:p><w:pPr><w:spacing w:before="3600"/></w:pPr></w:p>` + par(R.year, "Subtitle") + par(R.title, "Title") + par(R.name + (R.teacher ? "  ·  " + R.teacher : ""), null, `<w:sz w:val="26"/>`) + (R.unit !== R.title ? par(R.unit, null, `<w:i/>`) : "") + par(new Date().toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" }), null, `<w:color w:val="5B6782"/>`);
+  let id = 1;
+  for (const b of R.blocks){
+    if (b.k === "h1") body += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>` + par(b.t, "Heading1");
+    else if (b.k === "h2") body += par(b.t, "Heading2");
+    else if (b.k === "h3") body += par(b.t, "Heading3");
+    else if (b.k === "p") body += par(b.t);
+    else if (b.k === "table"){
+      const cell = (t, head) => `<w:tc><w:tcPr>${head ? `<w:shd w:val="clear" w:color="auto" w:fill="1B2D4E"/>` : ""}</w:tcPr><w:p>${run(t, head ? `<w:b/><w:color w:val="FFFFFF"/>` : "")}</w:p></w:tc>`;
+      body += `<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>${["top","left","bottom","right","insideH","insideV"].map(s => `<w:${s} w:val="single" w:sz="4" w:space="0" w:color="BFC7D5"/>`).join("")}</w:tblBorders><w:tblCellMar><w:left w:w="80" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr>` +
+        `<w:tr><w:trPr><w:tblHeader/></w:trPr>${b.head.map(h => cell(h, true)).join("")}</w:tr>` + b.rows.map(r => `<w:tr>${b.head.map((_, k) => cell(r[k] || "", false)).join("")}</w:tr>`).join("") + `</w:tbl>` + par("");
+    } else if (b.k === "img"){
+      const m = /^data:image\/(\w+);base64,(.*)$/.exec(b.src || ""); if (!m) continue;
+      const ext = m[1] === "png" ? "png" : "jpeg", bin = atob(m[2]), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const n = media.length + 1, rid = "rIdImg" + n; media.push({ name:`word/media/image${n}.${ext}`, data:u8 }); rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${n}.${ext}"/>`);
+      const [w, h] = await imgSize(b.src), maxW = 6000000, cx = Math.min(maxW, w * 9525), cy = Math.round(cx * h / w), cyMax = 4800000, sc = cy > cyMax ? cyMax / cy : 1, X = Math.round(cx * sc), Yy = Math.round(cy * sc);
+      body += `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${X}" cy="${Yy}"/><wp:docPr id="${id}" name="Picture ${id}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="image${n}.${ext}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${X}" cy="${Yy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>` + par(b.cap, "Caption");
+      id++;
+    }
+  }
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const st = (id, name, o, p, based) => `<w:style w:type="paragraph"${id === "Normal" ? ' w:default="1"' : ""} w:styleId="${id}"><w:name w:val="${name}"/>${based ? `<w:basedOn w:val="${based}"/>` : ""}<w:qFormat/>${p ? `<w:pPr>${p}</w:pPr>` : ""}<w:rPr>${o}</w:rPr></w:style>`;
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="22"/><w:color w:val="16223A"/><w:lang w:val="en-GB"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>` +
+    st("Normal", "Normal", "") + st("Title", "Title", `<w:b/><w:sz w:val="52"/><w:color w:val="1B2D4E"/>`, `<w:spacing w:after="240"/>`) + st("Subtitle", "Subtitle", `<w:caps/><w:sz w:val="22"/><w:color w:val="DC2B3E"/>`) +
+    st("Heading1", "heading 1", `<w:b/><w:sz w:val="36"/><w:color w:val="1B2D4E"/>`, `<w:keepNext/><w:spacing w:before="240" w:after="160"/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="DC2B3E"/></w:pBdr><w:outlineLvl w:val="0"/>`) +
+    st("Heading2", "heading 2", `<w:b/><w:sz w:val="28"/><w:color w:val="1B2D4E"/>`, `<w:keepNext/><w:spacing w:before="280" w:after="100"/><w:outlineLvl w:val="1"/>`) +
+    st("Heading3", "heading 3", `<w:b/><w:sz w:val="23"/>`, `<w:keepNext/><w:spacing w:before="180" w:after="60"/><w:outlineLvl w:val="2"/>`) +
+    st("Caption", "caption", `<w:i/><w:sz w:val="18"/><w:color w:val="5B6782"/>`, `<w:jc w:val="center"/>`) +
+    `<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style><w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:basedOn w:val="TableNormal"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tblBorders></w:tblPr></w:style></w:styles>`;
+  const files = [
+    { name:"[Content_Types].xml", data: te.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`) },
+    { name:"_rels/.rels", data: te.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`) },
+    { name:"docProps/core.xml", data: te.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${XE(R.title)}</dc:title><dc:creator>${XE(R.name)}</dc:creator></cp:coreProperties>`) },
+    { name:"word/_rels/document.xml.rels", data: te.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${rels.join("")}</Relationships>`) },
+    { name:"word/styles.xml", data: te.encode(styles) },
+    { name:"word/document.xml", data: te.encode(doc) },
+    ...media
+  ];
+  return zipStore(files);
+}
+function saveBlob(blob, name){ const u = URL.createObjectURL(blob), a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 2000); }
+/* the report card on the "Download & hand in" step (Grade 10 Design) */
+function reportCard(ctx){
+  const { u, c } = ctx, added = u.reportAdded || {};
+  return `<div class="card stack" id="rptCard" style="border-left:6px solid var(--accent,#DC2B3E);gap:10px">
+    <div><div class="eyebrow">Your project report</div><h3 style="margin:2px 0 0">Build your report, one criterion at a time</h3>
+      <p class="muted" style="margin:4px 0 0;font-size:13.5px">Your answers are put in report order with section headings. Add each criterion when you finish it, then download the full report.</p></div>
+    <div class="row" style="gap:6px">${["A","B","C","D"].map(k => `<span class="pill" style="${added[k] ? "background:#E3F4EA;color:#1E6B45;font-weight:800" : ""}">${added[k] ? "✓" : "○"} Criterion ${k}</span>`).join("")}</div>
+    <div class="row" style="gap:8px"><button class="btn ghost" type="button" id="rpView">👁 View report</button>
+      <button class="btn ${added[c] ? "sec" : ""}" type="button" id="rpAdd">${added[c] ? "✓ Criterion " + c + " is in your report (update it)" : "＋ Add Criterion " + c + " to my report"}</button></div>
+    <div class="row" style="gap:8px;align-items:center"><label for="rpFmt" class="muted" style="font-size:13.5px">Format</label><select id="rpFmt" style="max-width:200px"><option value="pdf">PDF</option><option value="docx">Word document (.docx)</option></select>
+      <button class="btn ok" type="button" id="rpDl" ${Object.keys(added).length ? "" : "disabled"}>⬇ ${["A","B","C","D"].every(k => added[k]) ? "Download full report" : "Download report so far"}</button></div>
+    <div id="rpMsg"></div></div>`;
+}
+function bindReportCard(ctx){
+  const { u, c } = ctx; if (!$("#rptCard")) return;
+  $("#rpView").onclick = () => reportModal(u, u.reportAdded && Object.keys(u.reportAdded).length ? null : c);
+  $("#rpAdd").onclick = () => { u.reportAdded = Object.assign({}, u.reportAdded || {}, { [c]: Date.now() }); save(); logEvent(c, "Added to report", ""); render(); toast("Criterion " + c + " is in your report."); };
+  $("#rpDl").onclick = async () => {
+    const fmt = $("#rpFmt").value, R = reportBlocks(u); if (!R.blocks.length) return;
+    const base = (u.name + " - " + R.title + " - Report").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+    $("#rpDl").disabled = true; $("#rpMsg").innerHTML = `<div class="notice">Making your report…</div>`;
+    try { const blob = fmt === "docx" ? await reportDOCX(R) : await reportPDF(R); saveBlob(blob, base + (fmt === "docx" ? ".docx" : ".pdf")); $("#rpMsg").innerHTML = `<div class="notice ok">Downloaded (Criteria ${R.crits.join(", ")}).</div>`; }
+    catch(e){ $("#rpMsg").innerHTML = `<div class="notice bad">The report could not be made: ${esc(e.message)}</div>`; }
+    $("#rpDl").disabled = false;
+  };
+}
 function paneSubmit(pane, ctx){
   const { c, p } = ctx, s = settings();
   pane.innerHTML = `<div class="card stack">
@@ -4188,7 +4360,9 @@ function paneSubmit(pane, ctx){
     <p style="margin:0">Your PDF includes all your answers, tables and sketches. Upload it wherever your teacher asks (for example ManageBac or Teams). A copy is also saved for your teacher automatically.</p>
     <div class="row"><button class="btn" id="dlPdf">${ICON.dl} Download my work (PDF)</button><button class="btn sec" id="saveCopy">Save a copy for my teacher</button><button class="btn ghost" id="edit">Edit my answers</button></div>
     <div id="subMsg">${p.finished?`<div class="notice ok">Copy saved for your teacher on ${new Date(p.savedAt).toLocaleString()}.</div>`:""}</div>
-    ${!s.logForm?`<p class="muted" style="font-size:12px;margin:0">Teacher copy: this course has not been connected to a teacher log yet, so the copy stays on this device.</p>`:""}</div>`;
+    ${!s.logForm?`<p class="muted" style="font-size:12px;margin:0">Teacher copy: this course has not been connected to a teacher log yet, so the copy stays on this device.</p>`:""}</div>
+    ${isReportUnit(ctx.g) ? reportCard(ctx) : ""}`;
+  if (isReportUnit(ctx.g)) bindReportCard(ctx);
   const saveCopy = () => {
     logEvent(c, "Criterion submitted", answersText(ctx).slice(0, 45000));
     sendWork(c, "submission");
