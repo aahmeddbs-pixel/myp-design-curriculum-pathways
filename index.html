@@ -2132,7 +2132,7 @@ function g7C2(gd){
     ...P.flatMap((h, k) => [Object.assign(SK(`c2p${k + 1}`, `Task 1 · Poster evidence ${k + 1} of 5: a screenshot of you making your poster: ${h}`, true), { pair: true }),
       T(`c2pa${k + 1}`, `Annotation ${k + 1}: what did you do at this step, and which technical skill or tool did you use? Which step of your logical plan (C.i) is this?`, W)]),
     SK("c2pf", "Task 1 · Your finished poster", true),
-    ...V.flatMap((h, k) => [Object.assign(SK(`c2v${k + 1}`, `Task 2 · Video evidence ${k + 1} of 5: a screenshot of you editing your video: ${h}`, true), { grp: "video", pair: true }),
+    ...V.flatMap((h, k) => [Object.assign(SK(`c2v${k + 1}`, `Task 2 · Video evidence ${k + 1} of 5: a screenshot of you editing your video: ${h}`, true), { grp: "video", pair: true, noSketch: true }),
       Object.assign(T(`c2va${k + 1}`, `Annotation ${k + 1}: what did you do at this step, and which editing skill or tool did you use?`, W), { grp: "video" })]),
     { t: "video", id: "c2vid", label: "Task 2 · Drag and drop your finished 30-second video here for assessment", grp: "video" }
   ];
@@ -4103,7 +4103,7 @@ function sketchBox(f, label, p){
       wrap.className = "sk sk-small";
       wrap.innerHTML = `${skLabel(label)}
         <div class="sk-drop" tabindex="0" role="button" aria-label="Add a screenshot or photo for: ${esc(label)}"><span style="font-size:1.3rem">🖼️</span><span><b>Drop ${f.evidence ? "a screenshot" : "a picture"} here</b>, paste it (Ctrl+V) or <u>click to upload</u></span></div>
-        <div class="row" style="gap:6px"><span class="muted" style="font-size:12.5px">or</span><button class="btn sm sec" type="button" data-a="draw">✏️ Sketch here</button></div>
+        ${f.noSketch ? "" : `<div class="row" style="gap:6px"><span class="muted" style="font-size:12.5px">or</span><button class="btn sm sec" type="button" data-a="draw">✏️ Sketch here</button></div>`}
         <input type="file" accept="image/*" hidden>`;
       const d = wrap.querySelector(".sk-drop"), inp = wrap.querySelector("input[type=file]");
       d.onclick = () => inp.click(); d.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); inp.click(); } };
@@ -4111,7 +4111,7 @@ function sketchBox(f, label, p){
       d.ondrop = e => { e.preventDefault(); d.classList.remove("on"); takeFile(e.dataTransfer.files && e.dataTransfer.files[0]); };
       d.onpaste = e => { const it = [...(e.clipboardData && e.clipboardData.items || [])].find(x => /^image\//.test(x.type)); if (it){ e.preventDefault(); takeFile(it.getAsFile()); } };
       inp.onchange = () => takeFile(inp.files[0]);
-      wrap.querySelector('[data-a="draw"]').onclick = () => { mode = "draw"; drawUI(); };
+      const db = wrap.querySelector('[data-a="draw"]'); if (db) db.onclick = () => { mode = "draw"; drawUI(); };
       return;
     }
     wrap.className = "sk";
