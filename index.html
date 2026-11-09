@@ -2,9 +2,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261105o"></script>
-<script src="/python-pathways/pp-sync.js?v=20261105o"></script>
-<script src="keywords.js?v=20261105o"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261109a"></script>
+<script src="/python-pathways/pp-sync.js?v=20261109a"></script>
+<script src="keywords.js?v=20261109a"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2891,9 +2891,10 @@ function renderLogin(app){
       <div class="tabs" role="tablist"><button role="tab" id="tIn" aria-selected="true">Sign in</button><button role="tab" id="tUp" aria-selected="false">Sign up</button></div>
       <form id="lf" class="stack" novalidate>
         <div id="roleRow" class="field" hidden><span class="lbl" style="font-size:13px">I am a</span><div class="seg" id="roleSeg"><button type="button" data-r="student" aria-pressed="true">Student</button><button type="button" data-r="teacher" aria-pressed="false">Teacher</button></div></div>
-        <label class="f">School email<input type="email" id="lEmail" autocomplete="username" placeholder="firstname.lastname@sisd.ae" required></label>
+        <label class="f"><span id="lEmailLbl">School email</span><input type="text" id="lEmail" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="firstname.lastname@sisd.ae" required></label>
         <div id="upOnly" class="stack" hidden>
           <label class="f">Full name<input type="text" id="lName" autocomplete="name" placeholder="First and last name"></label>
+          <div class="notice" id="unPrev" hidden></div>
           <div class="grid2" id="studentOnly">
             <label class="f">Grade<select id="lGrade"><option value="">Choose…</option>${Object.keys(COURSE.groups).map(g=>`<option value="${g}">${esc(COURSE.groups[g].label)}</option>`).join("")}</select></label>
             <label class="f" id="lClassRow" hidden>Class<select id="lClass"></select></label>
@@ -2909,19 +2910,27 @@ function renderLogin(app){
         <p class="muted" id="lFoot" style="font-size:12px;margin:0">Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion.</p>
       </form>
     </section></div>`;
-  const setRole = r => { role = r; $("#roleSeg").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === r)); $("#studentOnly").hidden = r !== "student";
+  const setRole = r => { role = r; $("#roleSeg").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === r)); $("#studentOnly").hidden = r !== "student"; try { unUpd(); } catch(e){}
     $("#lGo").textContent = mode === "in" ? "Sign in" : r === "teacher" ? "Request teacher access" : "Create my account";
     $("#lFoot").textContent = r === "teacher" && mode === "up" ? "Teacher accounts are checked by the course admin. You can sign in once your request is approved." : "Your work is saved on this device. Use the same device each lesson, and download your PDF when you finish each criterion."; };
   const setMode = m => { mode = m; $("#tIn").setAttribute("aria-selected", m==="in"); $("#tUp").setAttribute("aria-selected", m==="up");
     $("#upOnly").hidden = $("#roleRow").hidden = $("#pw2Row").hidden = $("#pwRule").hidden = m !== "up";
     { const fr = $("#fgRow"); if (fr) fr.hidden = m !== "in" || (SDCG && SDCG.mode === "staff"); }
-    $("#pwLbl").textContent = m === "in" ? "Password" : "Create a password"; $("#lPw").autocomplete = m === "in" ? "current-password" : "new-password"; $("#lMsg").innerHTML = "";
+    $("#pwLbl").textContent = m === "in" ? "Password" : "Create a password"; unUpd(); $("#lPw").autocomplete = m === "in" ? "current-password" : "new-password"; $("#lMsg").innerHTML = "";
     if (SDCG && SDCG.mode === "staff"){ role = "teacher"; $("#roleRow").hidden = true; }   // staff door: teacher accounts only
     setRole(role); };
+  function unUpd(){   // Grade 10 sign-up: a username instead of the email
+    const g10 = mode === "up" && role === "student" && String($("#lGrade").value) === "10" && g10Code();
+    $("#lEmailLbl").textContent = mode === "in" ? "School email, or your username (Grade 10)" : g10 ? "Your SISD email (only to send you a code; it is not saved)" : "School email";
+    $("#lEmail").placeholder = mode === "in" ? "Email or username" : "firstname.lastname@sisd.ae";
+    const pv = $("#unPrev"), un = window.SDC && SDC.usernameOf ? SDC.usernameOf($("#lName").value) : "";
+    pv.hidden = !g10; pv.innerHTML = g10 ? (un.length >= 3 ? `Your username will be <b class="notranslate" style="font-size:1.1em">${esc(un)}</b> (your first and last name, no spaces). You'll sign in with it, not your email.` : "Grade 10 students sign in with a <b>username</b>: your first and last name with no spaces, for example <b>MikaeelAhmed</b>.") : "";
+  }
+  $("#lName").addEventListener("input", unUpd);
   $("#tIn").onclick = () => setMode("in"); $("#tUp").onclick = () => setMode("up");
   $("#roleSeg").querySelectorAll("button").forEach(b => b.onclick = () => setRole(b.dataset.r));
   $("#lGrade").onchange = () => { const grp = COURSE.groups[$("#lGrade").value], cl = grp ? (grp.classes || []) : [];
-    $("#lClassRow").hidden = cl.length < 2; $("#lClass").innerHTML = (cl.length > 1 ? `<option value="">Choose…</option>` : "") + cl.map(k => `<option value="${k.id}">${esc(k.label)}</option>`).join(""); };
+    unUpd(); $("#lClassRow").hidden = cl.length < 2; $("#lClass").innerHTML = (cl.length > 1 ? `<option value="">Choose…</option>` : "") + cl.map(k => `<option value="${k.id}">${esc(k.label)}</option>`).join(""); };
   const msg = (t, kind="bad") => $("#lMsg").innerHTML = `<div class="notice ${kind}">${t}</div>`;
   if (SDCG && SDCG.mode === "staff"){ setRole("teacher"); $("#roleRow").hidden = true; }   // staff door: teacher accounts only
   if (SDCG && SDCG.mode !== "staff"){
@@ -2942,7 +2951,9 @@ function renderLogin(app){
   $("#lf").onsubmit = async e => {
     e.preventDefault();
     const email = $("#lEmail").value.trim().toLowerCase(), pw = $("#lPw").value;
-    if (!SCHOOL.test(email)) return msg("Use your full SISD school email address, ending in @sisd.ae.");
+    const asUser = mode === "in" && !email.includes("@") && /^[a-z][a-z0-9]{2,40}$/.test(email);   // Grade 10 username
+    if (!SCHOOL.test(email) && !asUser) return msg(mode === "in" ? "Type your SISD school email, or your username if you are in Grade 10 (your first and last name, no spaces)." : "Use your full SISD school email address, ending in @sisd.ae.");
+    window.__tempPw = mode === "in" && TEMP_RX.test(pw) ? pw : "";
     $("#lGo").disabled = true;
     try {
       if (mode === "in"){
@@ -2965,7 +2976,7 @@ function renderLogin(app){
           else if (syncCfg()){
             msg("Finding your saved work…", "ok");
             let r = null; try { r = await restoreAccount(email, pw); } catch(err){ return msg("Your saved work could not be reached. Check the internet connection and try again."); }
-            if (!r){ noteFail(email); return msg("We could not find an account with that email and password. Check both, or choose <b>Sign up</b> if this is your first time. If you forgot your password, ask your teacher to reset it."); }
+            if (!r){ noteFail(email); if (asUser) return msg("We could not find an account with that username and password. Check both (the username is your first and last name with no spaces). If you forgot your password, ask your teacher for a temporary one."); return msg("We could not find an account with that email and password. Check both, or choose <b>Sign up</b> if this is your first time. If you forgot your password, ask your teacher to reset it."); }
             clearFails(email);
             DB.users[email] = u = r.u; session.email = email; DB.session = email; save(true); flushQueue();
             escrowPw(u, email, pw);
@@ -2974,6 +2985,7 @@ function renderLogin(app){
             speak(P().welcome(u.name.split(" ")[0]));
             return resumeSpot(u);
           }
+          else if (asUser) return msg("We could not find that username. Check the spelling: your first and last name with no spaces.");
           else return msg("No account on this device for that email. Choose <b>Sign up</b> if this is your first time here.");
         } else {
           if (!(await checkPw(pw, u))){
@@ -3020,15 +3032,32 @@ function renderLogin(app){
       if (clsList.length > 1 && !cls) return msg("Choose your class.");
       if (syncCfg()){ let ex = null; try { const id = await emailId(email); ex = (await pullRows(syncCfg(), "E", id + "|", 1))["E|" + id]; } catch(err){} if (ex && SDCG && await SDC.isDeleted(email, name)) ex = null; if (ex) return msg("This email already has an account. Choose <b>Sign in</b>. If you forgot your password, ask your teacher to reset it — your work is kept."); }
       const rc = await rosterCheck(email, name);
-      if (SDCG && SDCG.mode !== "staff"){ msg("Checking…", "ok"); let ck = { ok:true }; try { ck = await SDC.canSignUp(email, name, SDCG.course); } catch(err){} if (!ck.ok) return msg(ck.msg); $("#lMsg").innerHTML = ""; }
+      const g10 = String(grade) === "10" && g10Code();
+      if (SDCG && SDCG.mode !== "staff" && !g10){ msg("Checking…", "ok"); let ck = { ok:true }; try { ck = await SDC.canSignUp(email, name, SDCG.course); } catch(err){} if (!ck.ok) return msg(ck.msg); $("#lMsg").innerHTML = ""; }
       if (!rc.ok) return msg("This email and name are not on the SISD student list. Type your full name exactly as the school has it, with your SISD email. If it still doesn't work, ask your teacher.");
-      DB.users[email] = { role:"student", name, group: grade, cls, grade: sdcFirstUnit(grade), course: SDCG && SDCG.mode !== "staff" ? SDCG.course : undefined, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), yearOf: schoolYear(), progress:{} };
-      const nu = DB.users[email];
-      if (syncCfg()){ nu.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); try { await publishWrap(nu, email, await deriveAcct(email, pw)); } catch(err){ console.warn(err); } }
-      session.email = email; DB.session = email; save();
-      logEvent("-", "Signed up", COURSE.groups[grade].label); syncNow(true); escrowPw(nu, email, pw);
+      let key = email, uname = "";
+      if (g10){
+        const base = SDC.usernameOf(name); if (base.length < 3) return msg("Your name needs at least 3 letters to make a username. Ask your teacher.");
+        msg("Choosing your username…", "ok"); let pick = "";
+        for (let i = 1; i < 10 && !pick; i++){
+          const cand = i === 1 ? base : base + i, k = cand.toLowerCase(); if (DB.users[k]) continue;
+          let taken = false; if (syncCfg()){ try { const id = await emailId(k); taken = !!(await pullRows(syncCfg(), "E", id + "|", 1))["E|" + id]; } catch(err){} }
+          if (!taken) pick = cand;
+        }
+        if (!pick) return msg("We couldn't make a free username for you. Ask your teacher.");
+        $("#lMsg").innerHTML = "";
+        const ok = await codeDialog(email, name.split(" ")[0], pick);
+        if (ok === true){ key = pick.toLowerCase(); uname = pick; }
+        else if (ok !== "old") return msg("Sign-up isn't finished: your SISD email wasn't confirmed. Press <b>Create my account</b> to try again.", "warn");
+      }
+      DB.users[key] = { role:"student", name, uname: uname || undefined, codeOk: !!uname || undefined, group: grade, cls, grade: sdcFirstUnit(grade), course: SDCG && SDCG.mode !== "staff" ? SDCG.course : undefined, teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), yearOf: schoolYear(), progress:{} };
+      const nu = DB.users[key];
+      if (syncCfg()){ nu.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); try { await publishWrap(nu, key, await deriveAcct(key, pw)); } catch(err){ console.warn(err); } }
+      session.email = key; DB.session = key; save();
+      logEvent("-", "Signed up", COURSE.groups[grade].label); syncNow(true); escrowPw(nu, key, pw);
+      if (uname) setTimeout(() => toast(`Your username is ${uname}. Use it with your password to sign in on any device.`, 9000), 600);
       if (SDCG && SDCG.mode !== "staff"){
-        msg("Checking…", "ok"); let ck = { ok:true }; try { ck = await SDC.confirm(sdcAcct(nu, email), true); } catch(err){}
+        msg("Checking…", "ok"); let ck = { ok:true }; try { ck = await SDC.confirm(sdcAcct(nu, key), true); } catch(err){}
         if (!ck.ok){ session = { email:null, preview:false, back:null }; DB.session = null; save(true); SDC.signedOutNotice(ck.msg, ck.verify ? "warn" : "bad"); SDC.leave("blocked"); return; }   // must verify their SISD email first
       }
       speak(P().welcome(name.split(" ")[0]));
@@ -3288,7 +3317,7 @@ async function publishWrap(u, email, A){
   const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
   u.wrapFor = A.lookup; return ver;
 }
-const SYNC_KEYS = ["name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk","reportAdded"];
+const SYNC_KEYS = ["uname","codeOk","name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk","reportAdded"];
 function syncPayload(u){
   const imgs = {};
   const walk = v => {
@@ -4877,7 +4906,84 @@ Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u
 var SDCG = window.SDC ? SDC.gate() : null;
 window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
 const IT_UNITS = ["10IT", "10HH"];   // the G10 IT course: Networks and Harvest Hub
-function sdcAcct(u, email){ return { course: u.course || (SDCG && SDCG.course) || (IT_UNITS.includes(u.grade) ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "", viaCS: !!u.viaCS }; }
+function sdcAcct(u, email){ return { viaCode: !!u.codeOk, course: u.course || (SDCG && SDCG.course) || (IT_UNITS.includes(u.grade) ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "", viaCS: !!u.viaCS }; }
+/* ---------- Grade 10: username accounts ----------
+   New Grade 10 students sign in with a username made from their first and last name (MikaeelAhmed). At sign-up they prove
+   it's them with a 6-digit code sent to their SISD email; the email is then forgotten (not saved on the device, online or in
+   the teacher log). A teacher can give a temporary password (TEMP-XXXX-XXXX); signing in with it asks for a new one. */
+const TEMP_RX = /^TEMP-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+const g10Code = () => !!(window.SDC && SDC.emailCode && SDCG && SDCG.mode !== "staff");
+function codeDialog(email, first, uname){
+  return new Promise(resolve => {
+    const bg = document.createElement("div"); bg.className = "kw-pop-bg"; bg.style.zIndex = 9999;
+    bg.innerHTML = `<div class="kw-pop" role="dialog" aria-modal="true" aria-label="Confirm your SISD email" style="border-top-color:#1B2D4E">
+      <div class="eyebrow">Step 2 of 2 · confirm it's you</div>
+      <h3 style="font-size:22px">Check your school email</h3>
+      <p style="margin:0" id="cdLead">Sending a 6-digit code to <b>${esc(email)}</b>…</p>
+      <label class="f" style="font-weight:700">6-digit code<input id="cdCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" style="font-size:24px;letter-spacing:6px;max-width:200px" disabled></label>
+      <div class="notice" style="margin:0">Your username will be <b class="notranslate" style="font-size:1.1em">${esc(uname)}</b>. You'll use it, not your email, to sign in. Your email address is only used to send this code and is not saved.</div>
+      <div id="cdMsg"></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" type="button" id="cdGo" disabled>Confirm</button><button class="btn ghost" type="button" id="cdAgain" disabled>Send a new code</button><button class="btn ghost" type="button" id="cdX">Cancel</button></div></div>`;
+    document.body.appendChild(bg);
+    const q = s => bg.querySelector(s), say = (t, k) => q("#cdMsg").innerHTML = t ? `<div class="notice ${k || "bad"}" style="margin:0">${t}</div>` : "";
+    const done = v => { bg.remove(); resolve(v); };
+    const WHY = { domain:"That isn't an SISD email address.", soon:"A code was sent less than a minute ago. Check your inbox (and junk folder), or wait a moment and send a new one.", quota:"Too many emails have been sent today. Try again tomorrow, or ask your teacher.", busy:"Lots of students are signing up right now. Wait a minute and press Send a new code.", reach:"The code couldn't be sent. Check the internet connection and press Send a new code.", offline:"You're offline. Connect to the internet and press Send a new code.", error:"Something went wrong sending the code. Press Send a new code." };
+    const send = async () => {
+      q("#cdAgain").disabled = true; say(""); q("#cdLead").innerHTML = `Sending a 6-digit code to <b>${esc(email)}</b>…`;
+      const r = await SDC.emailCode(email, first);
+      if (r.reason === "old") return done("old");   // the email script hasn't been updated: sign up with the email as before
+      if (!r.ok){ q("#cdLead").innerHTML = `We couldn't send the code to <b>${esc(email)}</b>.`; say(WHY[r.reason] || WHY.error); setTimeout(() => { if (bg.isConnected) q("#cdAgain").disabled = false; }, r.reason === "soon" ? 30000 : 3000); return; }
+      q("#cdLead").innerHTML = `We've emailed a 6-digit code to <b>${esc(email)}</b>. It may take a minute, and it can land in Junk. The code works for 15 minutes.`;
+      q("#cdCode").disabled = false; q("#cdGo").disabled = false; q("#cdCode").focus();
+      setTimeout(() => { if (bg.isConnected) q("#cdAgain").disabled = false; }, 45000);
+    };
+    q("#cdCode").oninput = () => { q("#cdCode").value = q("#cdCode").value.replace(/\D/g, "").slice(0, 6); };
+    q("#cdCode").onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); q("#cdGo").click(); } };
+    q("#cdGo").onclick = async () => {
+      const c = q("#cdCode").value; if (c.length !== 6) return say("Type all 6 numbers from the email.");
+      q("#cdGo").disabled = true; say("Checking…", "ok");
+      const r = await SDC.checkCode(email, c);
+      if (r.ok) return done(true);
+      q("#cdGo").disabled = false;
+      say(r.reason === "wrong" ? `That code isn't right.${r.left ? ` ${r.left} tr${r.left > 1 ? "ies" : "y"} left.` : ""}` : r.reason === "expired" || r.reason === "tries" ? "That code has run out. Press <b>Send a new code</b>." : WHY[r.reason] || WHY.error);
+    };
+    q("#cdAgain").onclick = send; q("#cdX").onclick = () => done(false);
+    send();
+  });
+}
+/* signed in with a teacher's temporary password: they must choose their own before going on */
+function newPwDialog(u, key){
+  return new Promise(resolve => {
+    const bg = document.createElement("div"); bg.className = "kw-pop-bg"; bg.style.zIndex = 9999;
+    bg.innerHTML = `<div class="kw-pop" role="dialog" aria-modal="true" aria-label="Create your new password" style="border-top-color:#1B2D4E">
+      <div class="eyebrow">Temporary password accepted</div>
+      <h3 style="font-size:22px">Create your new password</h3>
+      <p style="margin:0">Your teacher gave you a temporary password. Choose your own now: you'll use it from now on, on any device. Your work is kept.</p>
+      <label class="f" style="font-weight:700">New password<input type="password" id="npA" autocomplete="new-password"></label>
+      <label class="f" style="font-weight:700">Type it again<input type="password" id="npB" autocomplete="new-password"></label>
+      <p class="muted" style="margin:0;font-size:12px">At least 10 characters, with at least one letter and one number.</p>
+      <div id="npMsg"></div>
+      <div class="row" style="gap:8px"><button class="btn" type="button" id="npGo">Save my new password</button><button class="btn ghost" type="button" id="npX">Not now (sign out)</button></div></div>`;
+    document.body.appendChild(bg);
+    const q = s => bg.querySelector(s), say = (t, k) => q("#npMsg").innerHTML = `<div class="notice ${k || "bad"}" style="margin:0">${t}</div>`;
+    setTimeout(() => q("#npA").focus(), 50);
+    q("#npX").onclick = () => { bg.remove(); resolve(false); };
+    q("#npB").onkeydown = e => { if (e.key === "Enter") q("#npGo").click(); };
+    q("#npGo").onclick = async () => {
+      const a = q("#npA").value, b = q("#npB").value;
+      const prob = pwProblem(a, key); if (prob) return say(prob);
+      if (TEMP_RX.test(a)) return say("Choose a password of your own, not the temporary one.");
+      if (a !== b) return say("The two passwords do not match.");
+      q("#npGo").disabled = true; say("Saving…", "ok");
+      try {
+        Object.assign(u, await hashPw(a));
+        if (syncCfg() && u.dk){ const ver = await publishWrap(u, key, await deriveAcct(key, a)); queueRow("R", await dataId(u.dk), ver, "x"); }   // the temporary password stops working
+        escrowPw(u, key, a); save(true); try { flushSync(); } catch(e){}
+        bg.remove(); toast("✓ Your new password is saved. Use it from now on.", 4000); resolve(true);
+      } catch(e){ q("#npGo").disabled = false; say(esc(e.message)); }
+    };
+  });
+}
 /* sign in to Design with the school email + Computer Science PIN (students taking both courses): works on any device */
 async function pinIntoDesign(email, pin, msg){
   let name = (($("#lCsName") || {}).value || "").trim();
@@ -4997,6 +5103,9 @@ function sdcApply(u, A){
 }
 /* after a student signs in or signs up: is this the course they are registered for? */
 async function sdcAfter(u, email, signup){
+  if (u && u.role !== "teacher" && window.__tempPw){ window.__tempPw = "";
+    if (!(await newPwDialog(u, email))){ session = { email:null, preview:false, back:null }; DB.session = null; save(true);
+      if (SDCG && SDC.signedOutNotice){ SDC.signedOutNotice("Sign in again with your temporary password and create your new password to carry on.", "warn"); SDC.leave("blocked"); } else render(); return false; } }
   if (u && u.role !== "teacher") promote(u);
   if (SDCG && SDCG.mode === "staff" && u && u.role !== "teacher" && !isTester()){   // the staff door is for teachers only
     session = { email:null, preview:false, back:null }; DB.session = null; save(true);
