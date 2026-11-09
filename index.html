@@ -297,6 +297,12 @@ const CONFIG = {
       "B": false,
       "C": false,
       "D": false
+    },
+    "10GD": {
+      "A": true,
+      "B": false,
+      "C": false,
+      "D": false
     }
   },
   "teachers": [],
@@ -1921,7 +1927,7 @@ COURSE.groups = {
   "6":  { label: "Grade 6",  units: ["6"] },
   "7":  { label: "Grade 7",  units: ["7"] },
   "8":  { label: "Grade 8",  units: ["8"] },
-  "10": { label: "Grade 10", units: ["10", "10HH", "10IT"] }
+  "10": { label: "Grade 10", units: ["10", "10GD", "10IT", "10HH"] }
 };
 
 </script>
@@ -2355,6 +2361,201 @@ COURSE.examples = {
        Pp("<b>Improved network:</b> corrected DHCP and a pilot plan. <b>Impact:</b> visitors can use Wi-Fi without exposing member data, and staff have a weekly security routine.") ]
 }
 };
+
+/* ======================= GRADE 10 IT — GAME DEVELOPMENT (2026–27) =======================
+   Built from the SISD Game Development workbooks (Criteria A–D). Only Criterion A is switched on to start. */
+COURSE.grades["10GD"] = {
+  key: "10GD", myp: 5, label: "G10 IT", subject: "IT", short: "Game Development",
+  unit: "Game Development: Designing for Player Experience",
+  sdg: "Global context: Personal and cultural expression · Key concepts: Communication, Systems · Related concepts: Function, Creativity, Evaluation, Innovation",
+  soi: "Designing meaningful games requires understanding player experience and the ethical responsibilities of digital creators.",
+  product: "an original, playable 2D game for your target audience", productNoun: "your game",
+  ideaLabel: "initial storyboard (title, menu, tutorial, levels, win and game over scenes)", planLabel: "final refined storyboard",
+  scenarios: [
+    { id: "learn", title: "A learning game for younger students", client: "a teacher of younger students", user: "students aged 7–11", problem: "", brief: "" },
+    { id: "puzzle", title: "A puzzle or strategy game for teenagers", client: "a group of teenage players", user: "players aged 12–16", problem: "", brief: "" },
+    { id: "culture", title: "A game that shares a culture, story or social issue", client: "a school club or community group", user: "players who do not yet know the story or issue", problem: "", brief: "" },
+    { id: "active", title: "An arcade game for short breaks", client: "students who play in short breaks", user: "casual players on a school laptop or tablet", problem: "", brief: "" }
+  ],
+  example: { title: "Recycle Rush", client: "Ms. Lina, the Grade 3 teacher who runs the Eco Club", user: "Grade 3 students (aged 8–9) who play on school iPads",
+    problem: "younger students put about 4 in 10 items in the wrong recycling bin, and the sorting worksheets bore them" },
+  lab: {
+    intro: "Build your game from your final storyboard (B.iv). Take an annotated screenshot at every milestone: this is your evidence for C.ii. Use original sprites and sounds, or free assets that you credit.",
+    tools: [
+      { name: "Scratch", url: "https://scratch.mit.edu", use: "Block-based 2D games: sprites, backdrops, variables for score and lives, broadcasts for scenes.", main: true },
+      { name: "Microsoft MakeCode Arcade", url: "https://arcade.makecode.com", use: "Retro-style 2D games with tile maps, blocks or JavaScript, and a built-in score and lives HUD." },
+      { name: "Piskel", url: "https://www.piskelapp.com", use: "Draw and animate your own pixel-art sprites, then export them as PNG." },
+      { name: "Canva for Education", url: "https://www.canva.com/education/", use: "Storyboard frames, title screens and menu artwork." }
+    ],
+    milestones: ["Setting up the project: stage size, sprites and backdrops imported", "Backgrounds and scenes: title, menu, tutorial and levels", "Player sprite and controls (movement, jumping or aiming)", "Scoring system and HUD (score and lives on screen)", "Enemies, obstacles and collision detection", "Win screen, game over screen and menus (play again / main menu)"],
+    skills: ["Create or edit original sprites and costumes", "Program player movement with keyboard or touch controls", "Use variables for score and lives", "Detect collisions between sprites", "Switch scenes with broadcasts or messages", "Show a HUD (score and lives) on every gameplay screen", "Add sound effects or music", "Increase difficulty between levels", "Make win and game over screens with play again", "Test and debug using a bug log"]
+  }
+};
+COURSE.grades["10GD"].u = {
+  problem: "many games are not designed around the real needs of their players, and some use designs that are unfair, unsafe or addictive",
+  client: "your target audience (or a real client who commissions the game)", user: "the players in your target audience",
+  challenge: "Design and build an original, playable 2D game that meets the needs of a clearly defined target audience.",
+  q1: "", designNoun: "storyboard", productNoun: "your game"
+};
+
+/* the strands follow the Game Development workbooks */
+const GD = COURSE.grades["10GD"];
+const GD_TASKS = {
+  A: [
+    [ T("a1aud", "Task 1: Who is your target audience? Describe their age, interests, gaming experience and the devices they use. Be specific.", 40),
+      T("a1type", "What type of game (genre) will you make, and on which platform? Why does this suit your audience?", 30),
+      T("a1gap", "What is missing in existing games for this audience? Give evidence: statistics, survey results or observations, each with its source.", 60),
+      T("a1why", "Explain and justify the need: why does your audience need this game, and what will happen if nothing is made for them?", 50),
+      TB("a1src", "Sources you used (at least 4). Every fact or statistic needs a source.", ["Source title", "Link (https://…)", "What it told you"], 6, 4, [null, "url", null]) ],
+    [ TB("a2t", "Task 2: Research plan. List at least 8 things you need to find out, then prioritise them.", ["Research item or question", "Primary or secondary?", "Source / method", "Why I need it", "Priority"], 10, 8, [null, OPT("Primary", "Secondary"), null, null, OPT("High", "Medium", "Low")]),
+      T("a2j", "Justify your High-priority items: why must you know these before you design?", 40) ],
+    [ RL("a3t", "Task 3: Analyse 3 existing games in your chosen genre. Use gaming terminology (sprite, HUD, mechanic, collision, platform).", "Feature", ["Game title & developer", "Genre & platform", "Target audience", "Core mechanics (how does it play?)", "Scoring system (how does the player score?)", "Lives system (how does the player lose?)", "Visual & art style", "Key strength (with the reason WHY)", "Key weakness (with the reason WHY)", "What I will adopt in my design"], ["Game 1", "Game 2", "Game 3"]),
+      T("a3c", "Compare the three games. Which is most successful for its audience, and why? What will you do differently?", 60) ],
+    [ T("a4what", "My game is called… It is a … (genre) game for … (platform).", 15),
+      T("a4b", "My target audience is… and their needs are…", 25),
+      T("a4c", "My research (A.i and A.ii) revealed that…", 30),
+      T("a4d", "From analysing existing games (A.iii), I learned that…", 30),
+      T("a4e", "My game must include these features (at least 6), described with terms such as sprite, HUD, mechanic, collision and platform…", 40),
+      T("a4f", "My game will be made on … (platform / software) because…", 15),
+      T("a4g", "My game will be different from existing games because…", 25),
+      T("a4brief", "Design brief summary: I am going to design… for… because… It will…", 50) ]
+  ],
+  B: [
+    [ TB("b1t", "Task 1: Design specification. Write 8–10 measurable success criteria, each linked to your Criterion A research.", ["Success criterion (specific and measurable)", "Linked to which research? (A.i–A.iv)", "How I will test it"], 10, 8) ],
+    [ SK("b2s1", "Initial storyboard part 1: title screen, main menu and tutorial / instructions"),
+      SK("b2s2", "Initial storyboard part 2: Level 1 and Level 2 (show the score and lives in every gameplay scene)"),
+      SK("b2s3", "Initial storyboard part 3: win screen and game over screen"),
+      T("b2n", "Describe each scene: player actions, scoring, lives, obstacles and how the player moves to the next scene", 60) ],
+    [ TB("b3self", "Self-review: identify 5 specific issues in your initial storyboard", ["Scene #", "Issue (be specific)", "Why it is a problem for the player", "How I will fix it in B.iv"], 5, 5),
+      RL("b3peer", "Peer feedback from TWO peers (they answer as players, not as friends)", "Question", ["Are all scenes clearly drawn and easy to understand?", "Is it clear how the player moves and controls the game?", "Is the scoring system shown in every gameplay scene?", "Is the lives / game over system shown in every gameplay scene?", "Do the scenes connect logically?", "Is anything confusing? (list scene numbers)", "Which scene is weakest, and why?", "What ONE improvement would make the biggest difference?"], ["Peer 1", "Peer 2"]),
+      RL("b3cli", "Client / target audience feedback", "Question", ["Does this look like a game you would want to play? Why?", "Is the purpose of the game clear?", "Does the visual style appeal to you? Is it right for your age?", "Does the scoring seem fair and motivating?", "Does the difficulty seem right?", "What is missing that you expect in this type of game?", "Which scene excites you most, and least?", "What ONE thing would you change?"], ["Response"]),
+      TB("b3spec", "Check your storyboard against your specification (B.i)", ["Success criterion", "Met / Partly / Not met", "Evidence (scene number)"], 10, 8, [null, OPT("Met", "Partly", "Not met"), null]),
+      T("b3sum", "Summary: what must change in your final storyboard? Use your self-review, peer, client and specification findings.", 50) ],
+    [ SK("b4s1", "Final refined storyboard part 1: title, menu and tutorial (mark improved scenes with *)"),
+      SK("b4s2", "Final refined storyboard part 2: levels, win and game over (mark improved scenes with *)"),
+      T("b4n", "Explain each improvement and the feedback it came from", 50),
+      TB("b4r", "What you need to build it", ["Requirement (software, sprites, sounds, assets)", "Details (sizes, colours, controls, number of levels)"], 6, 4) ]
+  ],
+  C: [
+    [ TB("c1t", "Task 1: Scene-by-scene production plan (at least 12 steps). Another student must be able to follow it.", ["Step", "Scene", "Detailed instructions", "Software / tools", "Time"], 14, 12, ["num", null, null, null, null]),
+      T("c1tot", "Total time, and how it fits into your lessons", 6) ],
+    [ CH("c2tool", "Which software did you use?", GD.lab.tools.map(t => t.name).concat(["Other"])),
+      CL("c2k", "Tick the technical skills you used (at least 7)", GD.lab.skills, 7),
+      ...GD.lab.milestones.flatMap((m, i) => [SK(`c2m${i}`, `Screenshot ${i + 1}: ${m}`, true), T(`c2q${i}`, `Annotation ${i + 1}: what did you build, which skills and blocks did you use, and which plan steps does it match?`, 20)]),
+      Object.assign(T("c2l", "Link to your playable game (a full web address starting with https://, or write: not online)", 1), { fmt: "urlOrNone" }) ],
+    [ TB("c3t", "Did you follow your plan? Match each step in C.i to your screenshots in C.ii.", ["Plan step", "Followed?", "Evidence (screenshot number)"], 14, 12, ["num", OPT("Yes", "Partly", "No"), null]),
+      T("c3f", "Does your game work as intended and match your final storyboard? Explain.", 40) ],
+    [ TB("c4t", "Changes log: what changed from your final storyboard (B.iv) to your game (C.ii)?", ["What I planned (B.iv)", "What I created (C.ii)", "Why I changed it (with evidence)", "Was it an improvement?"], 4, 2),
+      T("c4o", "Overall, did your changes improve the game? Explain with examples.", 25) ]
+  ],
+  D: [
+    [ TB("d1t", "Task 1: Test plan and results: at least 6 tests. At least 2 must involve peers or your target audience.", ["Test", "Method", "Expected result", "Actual result", "Evidence", "Pass / Fail"], 8, 6, [null, OPT("Functional test", "Playtest with peers", "Playtest with target audience", "Survey", "Timed task", "Observation", "Checklist"), null, null, null, OPT("Pass", "Fail")]),
+      SK("d1e", "Evidence of testing (screenshots, photos of playtesting or survey results)", true) ],
+    [ TB("d2t", "Evaluate your game against every success criterion from B.i", ["Success criterion", "Met / Partly / Not met", "Evidence (test numbers)"], 10, 8, [null, OPT("Met", "Partly", "Not met"), null]),
+      T("d2o", "Overall, how successful is your game for your target audience? Use your test evidence.", 50) ],
+    [ TB("d3t", "Five improvements", ["Improvement", "Evidence it is needed (test number)", "How I would implement it", "Impact on players"], 5, 5) ],
+    [ T("d4a", "If your game were released on app stores, what would players do, and how would they feel?", 40),
+      T("d4b", "Who would benefit, and how?", 30),
+      T("d4c", "Ethical considerations: age rating, in-app purchases, privacy, and avoiding addictive design", 50),
+      T("d4d", "Two ways AI could enhance your game, and one risk of using it", 40) ]
+  ]
+};
+const buildTasksGD0 = COURSE.buildTasks;
+COURSE.buildTasks = function(c, gd){ return gd === GD ? GD_TASKS[c] : buildTasksGD0(c, gd); };
+COURSE.focusFromGD0 = COURSE.focusFrom;
+COURSE.focusFrom = function(g, f){ if (g !== "10GD") return COURSE.focusFromGD0(g, f); const t = String((f || {}).a4what || "").trim(); return t.length > 3 ? t.slice(0, 120) : ""; };
+
+GD.strands = {
+  A: ["Explain and justify the need for your game for a specific target audience", "Identify and prioritise the primary and secondary research you need", "Analyse 3 existing games in your chosen genre", "Develop a detailed design brief that summarises your research"],
+  B: ["Write 8–10 measurable success criteria linked to your research", "Present an initial storyboard: title, menu, tutorial, levels, win and game over", "Critically analyse your storyboard with self, peer and client feedback", "Present a final, refined storyboard that shows your improvements"],
+  C: ["Write a scene-by-scene production plan another student could follow", "Demonstrate technical skills with 6 annotated build screenshots", "Follow your plan to create a playable game", "Justify the changes you made to your storyboard and plan"],
+  D: ["Design and carry out 6 tests, including playtests with your audience", "Evaluate your game against every success criterion", "Explain 5 improvements, each based on test evidence", "Explain the impact of your game if it were released, including ethics"]
+};
+GD.critIntro = {
+  A: "In Criterion A you find out who your game is for and why they need it. You plan and prioritise your research, analyse 3 existing games like a game designer, and finish with a design brief that decides what your game will be.",
+  B: "In Criterion B you turn your brief into measurable success criteria, storyboard your whole game, collect self, peer and client feedback, and present a final storyboard that shows your improvements.",
+  C: "In Criterion C you plan your build scene by scene, use your technical skills to make a playable game, prove each stage with annotated screenshots, and justify any changes from your storyboard.",
+  D: "In Criterion D you playtest your game, evaluate it against your success criteria, suggest improvements based on evidence, and explain the impact your game could have on real players."
+};
+GD.tips = {
+  A: ["A strong answer names the audience precisely (age, interests, experience, device) and proves the need with sourced evidence.", "Each research item says how you will find it and why you need it; High priority items are justified.", "Every strength and weakness has a reason WHY, and the last row says exactly what you will adopt.", "The brief uses game vocabulary and refers back to A.i, A.ii and A.iii."],
+  B: ["Each criterion can be tested with a number or a clear yes/no, and links to your research.", "The storyboard shows the whole player journey, with score and lives in every gameplay scene.", "Feedback is specific (scene numbers) and the summary turns it into an action plan.", "Improved scenes are marked * and every change is explained."],
+  C: ["Another student could build the scene from your step alone: software, action and time.", "Each screenshot is annotated with the skill, the blocks used and the plan step it matches.", "Plan steps are matched honestly: Yes, Partly or No, with evidence.", "Each change gives the reason and evidence, and says whether it improved the game."],
+  D: ["Tests have an expected result you can compare, and at least 2 use real players.", "Every success criterion is judged Met, Partly or Not met with a test number.", "Each improvement links to a test result and explains how to build it.", "Impact covers players, benefits and ethics, not only positives."]
+};
+GD.method = {
+  A: [ { steps: ["Name your audience: age range, interests, gaming experience and device.", "Choose a genre and platform that suit them, and say why.", "Find evidence of the gap: a statistic, survey or observation, with its source.", "Explain why the audience needs your game and what happens if nothing is made."], starters: ["My target audience is…", "They usually play… on…", "Evidence shows that… (source: …)", "They need a game that…"], senior: "MYP 5: use data, not opinion, and consider the player's wellbeing as well as fun." },
+       { steps: ["List everything you need to know: audience, existing games, mechanics, rules, platform.", "Label each item primary (you collect it) or secondary (already published).", "Say the source or method for each one.", "Rank High, Medium or Low and justify your High items."], starters: ["I need to find out… because…", "I will survey / interview / play…", "This is High priority because…"], senior: "MYP 5: include at least one item about ethics, such as age ratings or in-app purchases." },
+       { steps: ["Choose 3 games in your genre that your audience plays.", "Play each one and fill every row of the table with game vocabulary.", "Give a reason WHY for each strength and weakness.", "Compare the games and decide what you will adopt."], starters: ["The core mechanic is…", "A strength is… because…", "A weakness is… because…", "I will adopt… because…"], senior: "MYP 5: judge each game against its audience's needs, not your own taste." },
+       { steps: ["Name your game, genre and platform.", "Summarise your audience, research findings and what you learned from existing games.", "List at least 6 features using sprite, HUD, mechanic, collision and platform.", "Say how your game will be different."], starters: ["My game is called…", "My research revealed that…", "From existing games I learned…", "My game will be different because…"], senior: "MYP 5: every feature in the brief should trace back to A.i, A.ii or A.iii." } ],
+  B: [ { steps: ["Turn each brief feature into a criterion with a number or clear test.", "Link each criterion to your research.", "Say how you will test it."], starters: ["The game will… (measurable)", "This comes from my research that…", "I will test it by…"], senior: "MYP 5: include criteria about player experience as well as function." },
+       { steps: ["Draw the title, menu and tutorial scenes.", "Draw at least 2 levels, showing score and lives in every gameplay scene.", "Draw the win and game over scenes.", "Describe each scene: actions, scoring, lives, obstacles, transitions."], starters: ["In this scene the player…", "The score changes when…", "The player loses a life when…"], senior: "MYP 5: show how difficulty increases between levels." },
+       { steps: ["Find 5 specific issues in your own storyboard.", "Collect feedback from 2 peers and 1 client or audience member.", "Check every success criterion: Met, Partly or Not met.", "Summarise what must change in B.iv."], starters: ["Scene … is a problem because…", "Peer 1 said…", "The client wants…", "So in B.iv I will…"], senior: "MYP 5: weigh feedback; explain which you acted on and why." },
+       { steps: ["Redraw the storyboard with your improvements.", "Mark improved scenes with *.", "Explain each improvement and its source.", "List everything you need to build it."], starters: ["Scene …* now… because…", "This responds to feedback from…", "To build it I need…"], senior: "MYP 5: the final storyboard must be detailed enough for someone else to build." } ],
+  C: [ { steps: ["Break the build into at least 12 steps, scene by scene.", "Write exactly what to do in each step.", "Name the software and tools.", "Estimate the time for each step."], starters: ["Step …: In Scratch, …", "This takes … minutes because…"], senior: "MYP 5: order the steps so each one builds on the last." },
+       { steps: ["Build your game from the plan.", "Take a screenshot at each of the 6 milestones.", "Annotate each one: skill, blocks or tools, and plan step.", "Tick the technical skills you used."], starters: ["In this screenshot I…", "I used the … block to…", "This matches plan step…"], senior: "MYP 5: show debugging as well as building." },
+       { steps: ["Go through your plan step by step.", "Mark each step Yes, Partly or No.", "Point to the screenshot that proves it.", "Explain whether the game works as intended."], starters: ["Step … was followed because…", "Step … only partly because…"], senior: "MYP 5: be honest; partly followed steps are fine if explained." },
+       { steps: ["List every change from your final storyboard.", "Say what you planned and what you made.", "Give the reason, with evidence.", "Say whether it improved the game."], starters: ["I planned… but created… because…", "This improved the game because…"], senior: "MYP 5: justify each change with test or feedback evidence." } ],
+  D: [ { steps: ["Write at least 6 tests linked to your success criteria.", "Choose a method and an expected result for each.", "Run each test and record the actual result.", "Include at least 2 playtests with peers or your audience."], starters: ["Test …: I will… and expect…", "The actual result was…"], senior: "MYP 5: use numbers where you can (times, counts, ratings)." },
+       { steps: ["Take each success criterion from B.i.", "Judge it Met, Partly or Not met.", "Point to the test that proves it.", "Sum up how successful the game is for its audience."], starters: ["Criterion … was met because test … showed…", "Overall my game…"], senior: "MYP 5: weigh strengths against weaknesses." },
+       { steps: ["Pick 5 things that failed or could be better.", "Give the test evidence for each.", "Explain how you would implement it.", "Say how it would help players."], starters: ["Test … showed… so I would…", "This would help players by…"], senior: "MYP 5: prioritise the improvements with the biggest impact." },
+       { steps: ["Imagine your game on an app store.", "Describe what players would do and feel.", "Explain who benefits, and the ethical issues.", "Suggest 2 ways AI could enhance it, and a risk."], starters: ["Players would…", "A benefit is…", "An ethical concern is…", "AI could…"], senior: "MYP 5: consider age ratings, privacy, in-app purchases and addictive design." } ]
+};
+/* introduction & expectations: shown before Criterion A */
+GD.intro = {
+  lead: "Over this unit you will design, build and test an original 2D game for a real target audience, and show your thinking at every stage of the design cycle.",
+  sections: [
+    { h: "What you will make", items: ["An original, playable 2D game (Scratch or MakeCode Arcade) for a target audience you research.", "It needs a title screen, a menu, a tutorial, at least 2 levels, a win screen and a game over screen.", "Your score and lives must be on screen (the HUD) in every gameplay scene."] },
+    { h: "How the unit works", items: ["Criterion A · Inquiring and analysing: your audience, research plan, 3 existing games and design brief.", "Criterion B · Developing ideas: success criteria, initial storyboard, feedback and a final storyboard.", "Criterion C · Creating the solution: production plan, annotated build screenshots, plan check and changes log.", "Criterion D · Evaluating: playtesting, evaluation, improvements and real-world impact.", "Each criterion opens when your teacher switches it on. Criterion A is open now; B, C and D are view only until then."] },
+    { h: "Inside every criterion", items: ["Watch the introduction, study the worked example (Recycle Rush), learn the method and read the rubric.", "Pass the practice questions, then complete your task strand by strand.", "Download your PDF and hand it in, and press Save a copy for my teacher."] },
+    { h: "What we expect from you", items: ["Work on your strands in every lesson. Your work saves on this device; save a copy for your teacher at the end of each lesson.", "Hand in each criterion by the deadline your teacher gives you.", "Your work must be your own. Give a source for every fact, statistic and image.", "Use original sprites and sounds, or free assets you credit. Do not copy characters from existing games or films.", "Keep your game suitable for all ages and respectful of every player.", "If you use an AI tool, ask your teacher first and say which tool you used and how.", "Use the vocabulary of game design: sprite, HUD, mechanic, collision, platform, level, playtest.", "Give honest, kind feedback when you playtest a classmate's game."] },
+    { h: "How you are assessed", items: ["Each criterion is marked out of 8 using the MYP Year 5 descriptors (shown in each criterion's Rubric step).", "7–8 means thorough and justified work, supported by evidence and linked to your research."] }
+  ]
+};
+
+/* worked example: Recycle Rush (a different game from the students' own) */
+COURSE.examples["10GD"] = {
+  A: [ Pp("<b>Target audience:</b> Grade 3 students aged 8–9 at our school. They play short games on school iPads, enjoy collecting and sorting games, and have little experience with controls more complex than tap and drag.", "<b>Game type:</b> a 2D arcade sorting game made in Scratch, played on iPads with touch controls, because the class already uses iPads and rounds can fit into 5 minutes.", "<b>The gap:</b> in a sorting check, 11 of 25 items (44%) went in the wrong bin. Most recycling games I found are for adults or use text these students cannot read quickly.", "<b>The need:</b> the Eco Club needs a fun way for young students to practise sorting, so less recycling is contaminated at school."),
+       H(["#", "Research item", "Primary or secondary?", "Source / method", "Why", "Priority"], [["1", "Which items do Grade 3 students sort wrongly?", "Primary", "Sorting check with 25 items", "Decides the items in the game", "High"], ["2", "Which games do they already enjoy?", "Primary", "Survey of 20 students", "Shows mechanics they understand", "High"], ["3", "How long can they focus on one game?", "Primary", "Interview Ms. Lina", "Sets the round length", "High"], ["4", "What are the local recycling rules?", "Secondary", "Municipality recycling guide", "The game must be correct", "Medium"], ["5", "How do existing sorting games work?", "Secondary", "Play 3 games", "Ideas for mechanics", "Medium"]], "The High items come first because the game is useless if it teaches the wrong items or is too long for the class."),
+       H(["Feature", "Game 1 (sorting game)", "Game 2 (endless runner)", "Game 3 (catch game)"], [["Core mechanic", "Drag items to bins", "Swipe to dodge", "Move a basket to catch"], ["Scoring", "+1 per correct item", "Distance and coins", "+10 per catch"], ["Lives", "None", "1 life", "3 misses"], ["Strength (why)", "Teaches real rules", "Instant restart keeps players going", "Simple controls for young players"], ["Weakness (why)", "Text-heavy, slow", "Too fast for 8-year-olds", "No learning goal"], ["What I will adopt", "Real bins and items", "Quick restart", "3 lives shown as hearts"]]),
+       Pp("<b>Design brief:</b> <i>Recycle Rush</i> is a 2D arcade sorting game for Grade 3 students on iPads. Items fall from a conveyor belt and the player drags each sprite into the right bin before it reaches the end. My research showed 44% of items were sorted wrongly and the class can focus for about 5 minutes. From existing games I will adopt real bins, quick restarts and 3 heart lives in the HUD. Features: a tutorial level, 3 levels that speed up, a score counter, 3 lives, collision detection between items and bins, sound feedback and a win screen with a recycling fact. It is different because it uses pictures, not text, and teaches our school's real bins.") ],
+  B: [ H(["Success criterion", "Linked to", "Test"], [["3 heart icons shown top-left in every gameplay scene", "A.iii (adopt hearts)", "Check every scene"], ["A round lasts 4–6 minutes", "A.ii item 3", "Time 5 players"], ["At least 12 items from the school bins", "A.ii item 1", "Count"], ["7 of 10 players say the tutorial is clear", "A.i (little experience)", "Survey"], ["Speed increases in each level", "A.iv features", "Measure item speed"], ["No reading needed to play", "A.i (young readers)", "Observe 5 players"], ["Correct item +1, wrong bin −1 life", "A.iv", "Functional test"], ["Play again button on the game over screen", "A.iii (quick restart)", "Check"]]),
+       Pp("<b>Initial storyboard (14 scenes):</b> 1 title, 2 menu, 3 tutorial, 4–6 Level 1, 7–9 Level 2, 10–12 Level 3, 13 win, 14 game over. Every gameplay scene shows the score top-right and 3 hearts top-left, with arrows showing where items fall and which bin they go to."),
+       H(["Source", "Feedback", "Action for B.iv"], [["Self-review", "Scene 8 shows lives as a number, not hearts", "Use hearts in every scene"], ["Peer 1", "Scene 11 looks impossible: items fall too close together", "Space the items out"], ["Client (Ms. Lina)", "The game over screen is too abrupt", "Add Play again and a recycling tip"], ["Specification check", "Criterion 6 Partly met: menu uses words", "Replace words with icons"]], "Summary: redesign Scenes 8, 11 and 14 and use icons instead of words."),
+       Pp("<b>Final storyboard:</b> the same 14 scenes, with Scenes 2*, 8*, 11* and 14* improved (marked *). Requirements: Scratch, 12 item sprites drawn in Piskel, 4 bin sprites, 3 backdrops, 2 sound effects, iPad screen 480 × 360.") ],
+  C: [ H(["Step", "Scene", "Instructions", "Software", "Time"], [["1", "All", "Create a new Scratch project called Recycle Rush; set the stage to 480 × 360", "Scratch", "5 min"], ["2", "1", "Draw the title backdrop and a Play button sprite", "Scratch paint editor", "20 min"], ["3", "4–6", "Import the conveyor backdrop and 4 bin sprites", "Scratch, Piskel", "20 min"], ["4", "4–6", "Make variables Score and Lives; show them as hearts with a costume per value", "Scratch", "25 min"], ["…", "…", "12 steps in total, one per scene or feature", "…", "…"]], "A full plan lists every step; another student must be able to follow it."),
+       Pp("Screenshot 1 shows the stage set to 480 × 360 with all sprites imported. Screenshot 4 shows the <i>when this sprite touches Bin</i> collision script with <i>change Score by 1</i>, annotated to say which plan step it matches."),
+       H(["Plan step", "Followed?", "Evidence"], [["1–4", "Yes", "Screenshots 1–3"], ["5–8", "Yes", "Screenshots 4–5"], ["9–12", "Partly", "Screenshot 6: Level 3 changed"]]),
+       H(["Planned (B.iv)", "Created (C.ii)", "Why", "Improvement?"], [["Level 3 at double speed", "Level 3 at 1.5× speed", "2 testers lost all lives in 20 s", "Yes: 4 of 5 now reach the win screen"]]) ],
+  D: [ H(["Test", "Method", "Expected", "Actual", "Pass / Fail"], [["Hearts in every scene", "Checklist", "10/10 scenes", "10/10", "Pass"], ["Round length", "Playtest with 5 Grade 3 students", "4–6 min", "5 min 20 s average", "Pass"], ["Tutorial clear", "Survey of 10 players", "7/10", "9/10", "Pass"], ["No reading needed", "Observation", "5/5 play unaided", "4/5", "Fail"]]),
+       H(["Success criterion", "Result", "Evidence"], [["3 hearts top-left", "Met", "Test 1"], ["Round 4–6 min", "Met", "Test 2"], ["Tutorial clear", "Met", "Test 3"], ["No reading needed", "Partly", "Test 4: one student could not read 'Level 2'"]]),
+       H(["Improvement", "Evidence", "How", "Impact"], [["Replace the word 'Level 2' with 2 stars", "Test 4", "New backdrop", "No reading needed"], ["Add a mute button", "Ms. Lina's feedback", "Toggle sprite", "Quieter in class"]]),
+       Pp("<b>Impact:</b> players practise sorting while they play, and Ms. Lina saw fewer wrong items in the class bins. <b>Ethics:</b> no in-app purchases, no personal data collected, and short rounds avoid endless play. <b>AI:</b> AI could adjust the item speed to each player's skill, or read the item names aloud; a risk is that it collects data about young players.") ]
+};
+
+COURSE.gradeExercises["10GD"] = {
+  A: [
+    { type: "mcq", q: "Which is the most specific target audience?", o: ["Gamers", "Everyone who likes fun", "Students aged 12–15 who play puzzle games on phones and have moderate gaming experience", "Young people"], a: 2, h: "Age, interests, experience and device.", w: "A specific audience names age, interests, experience and device." },
+    { type: "classify", q: "Sort these research items into Primary or Secondary.", cats: ["Primary", "Secondary"], items: [["Survey 20 players in your audience", 0], ["Statistics on how many teens play mobile games", 1], ["Playtest a classmate's prototype", 0], ["A review of an existing game on a games website", 1]], h: "Primary = you collect it yourself.", w: "Primary research is collected first-hand." },
+    { type: "mcq", q: "In game design, the HUD is…", o: ["the game's background music", "the on-screen display of information such as score and lives", "the main character", "the level editor"], a: 1, h: "Heads-up display.", w: "The HUD shows score, lives and other information on screen." },
+    { type: "mcq", q: "Which is a CRITICAL analysis of an existing game?", o: ["It is a good game", "It has nice colours", "The wall-jump mechanic is a strength because it rewards practice, but the steep difficulty may put off new players", "I played it last week"], a: 2, h: "Strength or weakness + the reason why.", w: "Critical analysis gives a judgement and the reason for it." }
+  ],
+  B: [
+    { type: "mcq", q: "Which success criterion is measurable?", o: ["The game is fun", "Three heart icons are shown top-left in every gameplay scene", "The game looks good", "Players like it"], a: 1, h: "Can you check it with a test?", w: "It can be checked scene by scene." },
+    { type: "mcq", q: "Why do you collect feedback from your target audience as well as peers?", o: ["Peers are always wrong", "The audience judges whether the game meets their needs; peers check the design is clear", "It is quicker", "It is not needed"], a: 1, h: "Different viewpoints.", w: "Clients judge needs; peers judge clarity." },
+    { type: "mcq", q: "In the final storyboard, the * symbol marks…", o: ["the hardest level", "scenes improved after feedback", "scenes you will remove", "the title screen"], a: 1, h: "Show what changed.", w: "* marks improved scenes." }
+  ],
+  C: [
+    { type: "mcq", q: "Which Scratch feature is best for storing the player's score?", o: ["A costume", "A variable", "A backdrop", "A sound"], a: 1, h: "A value that changes.", w: "Variables store changing values like score and lives." },
+    { type: "mcq", q: "Collision detection means…", o: ["checking whether two sprites are touching", "saving the game", "changing the music", "drawing a sprite"], a: 0, h: "Touching.", w: "Collision detection checks contact between sprites." },
+    { type: "mcq", q: "Which plan step could another student follow?", o: ["Make level 1", "Step 5: In Scratch, add a 'when green flag clicked' script to the Player sprite so the arrow keys move it 10 steps — 15 minutes", "Do the enemies", "Finish the game"], a: 1, h: "Specific software, action and time.", w: "It says exactly what, how and how long." }
+  ],
+  D: [
+    { type: "mcq", q: "Which test gives the strongest evidence that your game suits your audience?", o: ["You play it yourself", "Members of your target audience playtest it and you record what happens", "You check the code", "A friend says it is good"], a: 1, h: "Real players.", w: "Audience playtesting gives authentic evidence." },
+    { type: "mcq", q: "Which is an ethical consideration for a game released on app stores?", o: ["The font size", "In-app purchases aimed at young players", "The number of levels", "The game's name"], a: 1, h: "Could it harm or exploit players?", w: "Purchases aimed at children raise ethical concerns." },
+    { type: "mcq", q: "A good improvement in D.iii…", o: ["is a new idea with no evidence", "links to a failed or partly met test and explains how to implement it", "repeats the specification", "only changes colours"], a: 1, h: "Evidence + implementation.", w: "Improvements are based on test evidence." }
+  ]
+};
 })();
 
 /* ---------- short labels and classes ---------- */
@@ -2365,7 +2566,7 @@ COURSE.examples = {
     "6":  { label: "G6",  units: ["6"],  classes: [{ id: "6",  label: "DES 6" }] },
     "7":  { label: "G7",  units: ["7"],  classes: [{ id: "7X", label: "7X (DES 1)" }, { id: "7Y", label: "7Y (DES 6)" }] },
     "8":  { label: "G8",  units: ["8"],  classes: [] },
-    "10": { label: "G10", units: ["10", "10HH", "10IT"], classes: [] }
+    "10": { label: "G10", units: ["10", "10GD", "10IT", "10HH"], classes: [] }
   };
 })();
 
@@ -2690,7 +2891,9 @@ function courseState(){
   const base = { unlocks: CONFIG.unlocks, teachers: CONFIG.teachers || [], declined: CONFIG.declined || [] };
   const src = LIVE || DB.localState || {};
   const stale = src.t && schoolYear(Date.parse(src.t)) < schoolYear();   // set last school year: closed again from 1 September
-  return { unlocks: stale ? {} : (src.unlocks || base.unlocks), teachers: src.teachers || base.teachers, declined: src.declined || base.declined };
+  let ul = stale ? {} : (src.unlocks || base.unlocks);
+  if (!stale && ul !== base.unlocks){ ul = Object.assign({}, ul); Object.keys(base.unlocks).forEach(g => { if (!ul[g]) ul[g] = base.unlocks[g]; }); }   // a unit added after the switches were last applied starts with the file's default
+  return { unlocks: ul, teachers: src.teachers || base.teachers, declined: src.declined || base.declined };
 }
 function unlocks(){ return courseState().unlocks; }
 function approvedTeacher(email){ return courseState().teachers.find(t => t.email === email) || null; }
@@ -2871,6 +3074,7 @@ function render(){
     return renderTeacherHome(app); }
   if (view.name === "crit"){ renderCrit(app); return rememberSpot(user()); }
   if (view.name === "explore") return renderExplore(app);
+  if (view.name === "intro") return renderIntro(app);
   return renderHome(app);
 }
 
@@ -3169,7 +3373,7 @@ function workPayload(ctx, kind){
   return { v: 2, kind, at: new Date().toISOString(), g, c, myp: gd.myp, unit: gd.unit, cls: classLabel(ctx.u), grp: groupLabel(ctx.u),
     scenario: { title: sc.title, client: sc.client, user: sc.user, problem: sc.problem, brief: sc.brief },
     practice: { correct: p.ex.correct, points: p.ex.points, hints: p.ex.hints },
-    strands: F.map((fs, i) => ({ n: ROMAN[i], strand: cd.strands[Y][i], done: !!p.done[i], self: p.bands[i] || "",
+    strands: F.map((fs, i) => ({ n: ROMAN[i], strand: strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[i], done: !!p.done[i], self: p.bands[i] || "",
       fields: fs.map(f => { const v = p.fields[f.id];
         return { id: f.id, t: f.t, label: fill(f.label, g, sc), cols: f.cols, rowLabels: f.rowLabels, min: f.min,
           value: f.t === "shots" ? (v || []).map(() => "IMAGE") : f.t === "evlist" ? (v ? Array.from({ length: v.__n || 0 }, (_, i) => v[i] ? "IMAGE" : "") : []) : f.t === "sketch" ? (v ? "IMAGE" : "") : f.t === "video" ? (v && v.url ? "Video: " + v.url : f.grp === "video" && p.fields.__skipVideo ? "SKIPPED (lose marks)" : "") : f.grp === "video" && p.fields.__skipVideo && !v ? "SKIPPED" : (v ?? "") }; }) })) };
@@ -3601,19 +3805,62 @@ function unitBlock(u, g, multi){
       <${H} style="font-family:var(--f-display);font-size:${multi?"clamp(19px,2.6vw,24px)":"clamp(24px,3.6vw,34px)"}">${esc(gd.unit)}</${H}>
       <p class="muted" style="margin:0;max-width:70ch">${esc(gd.sdg)}</p>
     </div>
+    ${gd.intro ? introCard(u, g) : ""}
     <div class="crit-grid">${["A","B","C","D"].map(c => {
       const cd = COURSE.criteria[c], open = isOpen(g,c), p = prog0[c], pc = critProgress(p);
       if (open) return `<button class="crit open" data-g="${g}" data-c="${c}" aria-label="Open Criterion ${c}">
         <div class="row" style="justify-content:space-between"><span class="L">${c}</span><span class="muted">${ICON[cd.icon]}</span></div>
         <h3>${esc(cd.name)}</h3><div class="bar"><i style="width:${pc}%"></i></div>
-        <ol style="margin:0;padding-left:18px;font-size:12.5px">${cd.strands[Y].map(st => `<li>${esc(st)}</li>`).join("")}</ol>
+        <ol style="margin:0;padding-left:18px;font-size:12.5px">${strandsFor(cd, typeof gd === "undefined" ? null : gd, Y).map(st => `<li>${esc(st)}</li>`).join("")}</ol>
         <div class="state" style="color:var(--ok)">${p?.finished ? `${ICON.check} Handed in — open to review or edit` : `${ICON.open} Open now · ${pc}% done`}</div></button>`;
       return `<div class="crit locked view-only" aria-disabled="true">
         <div class="row" style="justify-content:space-between"><span class="L">${c}</span><span class="muted">${ICON.lock}</span></div>
         <h3>${esc(cd.name)}</h3>
-        <ol style="margin:0;padding-left:18px;font-size:12.5px;color:var(--muted)">${cd.strands[Y].map(st => `<li>${esc(st)}</li>`).join("")}</ol>
+        <ol style="margin:0;padding-left:18px;font-size:12.5px;color:var(--muted)">${strandsFor(cd, typeof gd === "undefined" ? null : gd, Y).map(st => `<li>${esc(st)}</li>`).join("")}</ol>
         <div class="state" style="color:var(--muted)">View only — not open yet</div></div>`; }).join("")}</div>
   </section>`;
+}
+/* ---------- unit introduction & expectations (Game Development): always open, read before Criterion A ---------- */
+/* a unit can name its own strands (Game Development follows its workbooks); otherwise the MYP year's strands */
+function strandsFor(cd, gd, Y){ const k = Object.keys(COURSE.criteria).find(x => COURSE.criteria[x] === cd); return (gd && gd.strands && gd.strands[k]) || cd.strands[Y]; }
+function introDue(u, g){ return !!(gradeData(g).intro && !session.preview && u.role !== "teacher" && !((u.introBy || {})[g])); }
+function introCard(u, g){
+  const seen = !!((u.introBy || {})[g]);
+  return `<button class="crit open intro-card" data-intro="${g}" aria-label="Open the introduction and expectations" style="min-height:0;border-left:6px solid var(--red,#DC2B3E);flex-direction:row;align-items:center;gap:16px;flex-wrap:wrap">
+    <span class="L" aria-hidden="true">★</span>
+    <span class="stack" style="gap:2px;flex:1;min-width:200px"><span class="eyebrow">Start here</span><h3 style="margin:0">Introduction &amp; expectations</h3>
+      <span class="muted" style="font-size:13px">What you will make, how the unit works and what we expect from you.</span></span>
+    <span class="state" style="color:${seen ? "var(--ok)" : "var(--red,#DC2B3E)"}">${seen ? `${ICON.check} Read` : `${ICON.open} Read this first`}</span></button>`;
+}
+function renderIntro(app){
+  const u = user(), g = view.g, gd = gradeData(g), I = gd && gd.intro;
+  if (!u || !I) return go({ name:"home" });
+  const seen = !!((u.introBy || {})[g]), next = view.next || "A", nextOpen = isOpen(g, next);
+  app.innerHTML = `<div class="stack" style="gap:20px;max-width:900px">
+    <div class="row"><button class="btn ghost sm" id="inBack">← Your units</button></div>
+    <div class="card stack" style="gap:8px;border-top:6px solid var(--red,#DC2B3E)">
+      <div class="eyebrow">${esc(uLabel(g))} · MYP ${esc(gd.subject)} Year ${gd.myp} · Introductory session</div>
+      <h1 style="font-family:var(--f-display);font-size:clamp(24px,3.6vw,34px);margin:0">${esc(gd.unit)}</h1>
+      <p style="margin:0;max-width:70ch">${esc(I.lead)}</p>
+      <div class="notice" style="margin:4px 0 0"><b>Statement of inquiry:</b> ${esc(gd.soi || "")}</div>
+      <p class="muted" style="margin:0;font-size:13px">${esc(gd.sdg)}</p>
+    </div>
+    ${I.sections.map((sec, i) => `<section class="card stack" style="gap:8px"><h2 style="font-family:var(--f-display);font-size:20px;margin:0"><span class="muted" style="font-size:14px">${i + 1}.</span> ${esc(sec.h)}</h2>
+      <ul style="margin:0;padding-left:20px;display:grid;gap:6px">${sec.items.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>`).join("")}
+    <div class="card stack" style="gap:10px">
+      <label class="row" style="gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="inOk" ${seen ? "checked" : ""} style="width:20px;height:20px;margin-top:2px">
+        <span><b>I have read the introduction and I understand what is expected of me in this unit.</b></span></label>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" id="inGo" ${seen ? "" : "disabled"}>${nextOpen ? `Start Criterion ${next} →` : "Back to my units"}</button></div>
+    </div>
+  </div>`;
+  window.scrollTo(0, 0);
+  const ok = $("#inOk"), btn = $("#inGo");
+  ok.onchange = () => { btn.disabled = !ok.checked; };
+  $("#inBack").onclick = () => go({ name:"home" });
+  btn.onclick = () => {
+    if (!session.preview){ u.introBy = u.introBy || {}; if (!u.introBy[g]) u.introBy[g] = new Date().toISOString(); save(); }
+    if (nextOpen){ setUnit(u, g); go({ name:"crit", crit:next, step: firstStep(next) }); } else go({ name:"home" });
+  };
 }
 function renderHome(app){
   const u = user(), gk = u.group || groupOf(u.grade), grp0 = isTester() ? { label:"Test student · every grade", units: Object.values(COURSE.groups).flatMap(x => x.units) } : COURSE.groups[gk] || { label: "Grade " + gk, units: [] }, grp = Object.assign({}, grp0, { units: sdcUnits(u, grp0.units) }), multi = grp.units.length > 1;
@@ -3630,7 +3877,10 @@ function renderHome(app){
   </div>`;
   app.querySelectorAll("[data-hpdf]").forEach(b => b.onclick = async () => { const [g, c] = b.dataset.hpdf.split("|"), p = ((u.progressBy || {})[g] || {})[c];
     if (!p) return; b.disabled = true; try { await buildPDF({ u, c, g, gd: gradeData(g), cd: COURSE.criteria[c], p, sc: scenarioFor(session.email, g) }); } catch(e){ toast("The PDF could not be made: " + e.message, 4000); } b.disabled = false; });
-  app.querySelectorAll(".crit.open[data-c]").forEach(b => b.onclick = () => { setUnit(u, b.dataset.g); go({ name:"crit", crit:b.dataset.c, step: firstStep(b.dataset.c) }); });
+  app.querySelectorAll(".crit.open[data-c]").forEach(b => b.onclick = () => { const g = b.dataset.g, c = b.dataset.c;
+    if (introDue(u, g) && c === "A") return go({ name:"intro", g, next:c });   // read the introduction before the first criterion
+    setUnit(u, g); go({ name:"crit", crit:c, step: firstStep(c) }); });
+  app.querySelectorAll("[data-intro]").forEach(b => b.onclick = () => go({ name:"intro", g:b.dataset.intro }));
   const ex = $("#exploreBtn"); if (ex) ex.onclick = () => go({ name:"explore" });
   rankShow(u);
 }
@@ -3725,14 +3975,14 @@ const SCENE_HEAD = { A:"Find out before you design", B:"Turn research into ideas
 window.SDC_designScripts = () => [...new Set(Object.values(COURSE.groups).flatMap(x => x.units))].flatMap(g => ["A","B","C","D"].filter(c => !COURSE.criteria[c].comingSoon).map(c => {
   const gd = gradeData(g); return { g, c, label: uLabel(g), unit: gd.unit, crit: COURSE.criteria[c].name, paras: buildScenes({ c, g, gd, cd: COURSE.criteria[c], sc:null }).map(x => x.say) }; }));
 function buildScenes(ctx){
-  const { c, g, gd, cd, sc } = ctx, Y = yearKey(gd.myp), strands = cd.strands[Y], top = stripTags(COURSE.rubrics[c][Y][3][1]), subj = gd.subject || "Design";
+  const { c, g, gd, cd, sc } = ctx, Y = yearKey(gd.myp), strands = strandsFor(cd, typeof gd === "undefined" ? null : gd, Y), top = stripTags(COURSE.rubrics[c][Y][3][1]), subj = gd.subject || "Design";
   const sc_ = [
     { k:"Criterion " + c, h: cd.name, p:`MYP ${subj} Year ${gd.myp} · ${gd.unit}`, say:`Welcome to MYP ${subj}, year ${gd.myp}. This is Criterion ${c}: ${cd.name}. Our unit is ${gd.unit}.`, art: cycleSVG(c, cd.name.split(" ")[0]) },
-    { k:"What this criterion is about", h: SCENE_HEAD[c], p: cd.intro, say: cd.intro, art: badgeSVG(c, cd.name.split(" ")[0]) },
+    { k:"What this criterion is about", h: SCENE_HEAD[c], p: (gd.critIntro && gd.critIntro[c]) || cd.intro, say: (gd.critIntro && gd.critIntro[c]) || cd.intro, art: badgeSVG(c, cd.name.split(" ")[0]) },
     sc ? { k:"Your design challenge", h: sc.title, p:`${sc.client} needs help: ${sc.problem}. ${sc.brief}`, say:`Your design challenge is ${sc.title}. ${sc.client} needs help, because ${sc.problem}. ${sc.brief}`, art: badgeSVG("!", "your challenge") }
        : { k:"Your design challenge", h:"Your challenge", p:"", say:"Your own design challenge is on the screen now. Read it carefully, because this is the problem you will be solving.", art: badgeSVG("!", "your challenge") }
   ];
-  strands.forEach((s,i) => sc_.push({ k:`Strand ${ROMAN[i]}`, h: s, p: cd.strandTips[i], say:`Strand ${ROMAN[i]}. ${s}. ${cd.strandTips[i]}`, art: badgeSVG(ROMAN[i], "strand") }));
+  strands.forEach((s,i) => sc_.push({ k:`Strand ${ROMAN[i]}`, h: s, p: ((gd.tips && gd.tips[c]) || cd.strandTips)[i], say:`Strand ${ROMAN[i]}. ${s}. ${((gd.tips && gd.tips[c]) || cd.strandTips)[i]}`, art: badgeSVG(ROMAN[i], "strand") }));
   sc_.push({ k:"How you're assessed", h:"Aim for 7–8", p: top, say:`You will be marked out of 8. To reach the top band, 7 to 8: ${top}`, art: badgeSVG("7–8", "top band") });
   sc_.push({ k:"Your route", h:"What happens next", p:"Study the worked example — it uses a different problem, so you learn the method without copying. Read the method and the rubric, pass the practice, then complete your own task strand by strand and download it to hand in.", say:"Next, study the worked example. It uses a different problem, so you learn the method without copying. Then read the method and the rubric, pass the practice, and complete your own task, strand by strand. Good luck, designer!", art: cycleSVG(c, "Let's go") });
   return sc_;
@@ -3805,10 +4055,10 @@ function paneExample(pane, ctx){
     <div class="card stack" data-read style="gap:8px"><div class="eyebrow">Worked example — not your challenge</div>
       <h2>${esc(ex.title)}</h2><p style="margin:0"><b>Client:</b> ${esc(ex.client)} · <b>Users:</b> ${esc(ex.user)}</p><p style="margin:0"><b>Problem:</b> ${esc(ex.problem)}.</p>
       <p class="muted" style="margin:0;font-size:13px">This example solves a <b>different</b> problem from yours. Study how each strand is answered, then apply the same thinking to your own challenge.</p></div>
-    ${cd.strands[Y].map((s,i)=>`<article class="card stack" data-read style="gap:10px">
+    ${strandsFor(cd, typeof gd === "undefined" ? null : gd, Y).map((s,i)=>`<article class="card stack" data-read style="gap:10px">
       <div class="strand-h"><span class="roman">${ROMAN[i]}</span><h3>${esc(s)}</h3></div>
       <div class="model scroll">${model[i]}</div>
-      <div class="why"><b>Why this works:</b> ${esc(cd.strandTips[i])}</div></article>`).join("")}
+      <div class="why"><b>Why this works:</b> ${esc(((gd.tips && gd.tips[c]) || cd.strandTips)[i])}</div></article>`).join("")}
     ${nextBtn("I've studied the example")}</div>`;
   $("#nextStep").onclick = () => advance(ctx, "ex");
 }
@@ -3819,8 +4069,8 @@ function paneMethod(pane, ctx){
   pane.innerHTML = `<div class="stack">
     ${c === "C" ? labCard(gd) : ""}
     <p class="muted" style="margin:0">Use these steps for every strand. They work for any design problem — including yours.</p>
-    ${COURSE.method[c].map((m,i)=>`<article class="card stack" data-read style="gap:10px">
-      <div class="strand-h"><span class="roman">${ROMAN[i]}</span><h3>${esc(cd.strands[Y][i])}</h3></div>
+    ${((gd.method && gd.method[c]) || COURSE.method[c]).map((m,i)=>`<article class="card stack" data-read style="gap:10px">
+      <div class="strand-h"><span class="roman">${ROMAN[i]}</span><h3>${esc(strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[i])}</h3></div>
       <ol style="margin:0;padding-left:20px">${m.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
       <div><div class="eyebrow" style="color:var(--muted);margin-bottom:6px">Sentence starters</div><div class="starters">${m.starters.map(s=>`<span>${esc(s)}</span>`).join("")}</div></div>
       ${gd.myp>=3?`<div class="notice warn" style="font-size:13px">${esc(m.senior)}</div>`:""}</article>`).join("")}
@@ -3839,7 +4089,7 @@ function paneRubric(pane, ctx){
   const { c, gd, cd } = ctx, Y = yearKey(gd.myp);
   pane.innerHTML = `<div class="stack">
     <div class="card stack" data-read><div class="eyebrow">Criterion ${c}: ${esc(cd.name)} — maximum 8</div>
-      <ol style="margin:0;padding-left:20px">${cd.strands[Y].map((s,i)=>`<li value="${i+1}"><b>Strand ${ROMAN[i]}:</b> ${esc(s)}</li>`).join("")}</ol>
+      <ol style="margin:0;padding-left:20px">${strandsFor(cd, typeof gd === "undefined" ? null : gd, Y).map((s,i)=>`<li value="${i+1}"><b>Strand ${ROMAN[i]}:</b> ${esc(s)}</li>`).join("")}</ol>
       ${rubricTable(c, gd.myp)}
       <p class="muted" style="margin:0;font-size:13px">The command word in each band (<b>state → outline → explain → justify</b>) tells you how deep your answer must go. You will rate yourself against this rubric after each strand.</p></div>
     ${nextBtn("Start the practice")}</div>`;
@@ -3956,9 +4206,9 @@ function paneTask(pane, ctx){
     <p class="muted" style="margin:0;font-size:13.5px">Work through the strands in order. Each one opens when the one before it is complete, and you can download your work once all four are done.</p>
     <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
-      <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(cd.strands[Y][si])}</h3><div id="strandVoice" class="sdcNoRead"></div></div>
+      <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[si])}</h3><div id="strandVoice" class="sdcNoRead"></div></div>
       <div id="kwBox"></div>
-      <p class="muted" id="strandTip" style="margin:0;font-size:13.5px">${esc(cd.strandTips[si])}</p>
+      <p class="muted" id="strandTip" style="margin:0;font-size:13.5px">${esc(((gd.tips && gd.tips[c]) || cd.strandTips)[si])}</p>
       ${c === "B" && si === 0 && COURSE.ACCESSFM ? `<div class="card stack" style="gap:8px;background:var(--soft)"><div class="eyebrow">ACCESS FM — use it to write your specification</div>
         <p style="margin:0;font-size:14px">ACCESS FM is a checklist of eight areas every design must consider. Write at least one specific, measurable requirement for each area in the table below.</p>
         <div class="scroll"><table class="tbl"><tr><th>Letter</th><th>Stands for</th><th>What it means</th><th>Example requirement</th></tr>${COURSE.ACCESSFM.map(r => `<tr><td style="font-family:var(--f-display);color:var(--accent);font-size:18px;text-align:center">${r[0]}</td><td><b>${esc(r[1])}</b></td><td>${esc(r[2])}</td><td class="muted">${esc(r[3])}</td></tr>`).join("")}</table></div></div>` : ""}
@@ -4446,7 +4696,7 @@ function reportBlocks(u, only){
         if (!(RH_UNDER.test(f.id) && lastImg)) sec.push({ k:"h3", t:rhOf(f, label) });
         txt.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(x => sec.push({ k:"p", t:x })); lastImg = false;
       });
-      if (sec.length) out.push({ k:"h2", t:`${ROMAN[i]}. ${cd.strands[Y][i]}` }, ...sec);
+      if (sec.length) out.push({ k:"h2", t:`${ROMAN[i]}. ${strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[i]}` }, ...sec);
     });
   });
   return { title: sc && sc.chosen && sc.title ? sc.title : gd.unit, unit: gd.unit, name: u.name, teacher: u.teacher || "", year: `MYP Design · Year ${gd.myp}`, blocks: out, crits };
@@ -4623,7 +4873,7 @@ function buildPDF(ctx){
     need(20); doc.setFillColor(233,237,245); doc.rect(M, y-5, W-2*M, 10.5, "F"); doc.setTextColor(...RED); doc.setFont("helvetica","bold"); doc.setFontSize(11.5);
     doc.text(`Strand ${ROMAN[i]}`, M+2, y+1.5); doc.setTextColor(...NAVY); doc.setFontSize(9.5);
     doc.text(`Self-rating: ${p.bands[i]||"-"}`, W-M-2, y+1.5, { align:"right" }); y += 10;
-    para(cd.strands[Y][i], 9.5, "italic", [91,103,130]);
+    para(strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[i], 9.5, "italic", [91,103,130]);
     let skipNoted = false;
     fs.forEach(f => {
       const v = p.fields[f.id];
@@ -4905,7 +5155,7 @@ Object.values(DB.users).forEach(u => { if (u.role !== "teacher" && u.grade && !u
 /* ---- SISD Design and Computing: course gate, locked course and grade, House Points activity ---- */
 var SDCG = window.SDC ? SDC.gate() : null;
 window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
-const IT_UNITS = ["10IT", "10HH"];   // the G10 IT course: Networks and Harvest Hub
+const IT_UNITS = ["10GD", "10IT", "10HH"];   // the G10 IT course: Game Development, Networks and Harvest Hub
 function sdcAcct(u, email){ return { viaCode: !!u.codeOk, course: u.course || (SDCG && SDCG.course) || (IT_UNITS.includes(u.grade) ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "", viaCS: !!u.viaCS }; }
 /* ---------- Grade 10: username accounts ----------
    New Grade 10 students sign in with a username made from their first and last name (MikaeelAhmed). At sign-up they prove
@@ -5060,7 +5310,7 @@ function sdcUnits(u, units){
   const c = u.course || SDCG.course, out = units.filter(x => c === "it" ? IT_UNITS.includes(x) : !IT_UNITS.includes(x));
   return out.length ? out : units;
 }
-function sdcFirstUnit(g){ const units = COURSE.groups[g].units; return (SDCG && SDCG.course === "it" && units.includes("10IT")) ? "10IT" : units.filter(x => !IT_UNITS.includes(x))[0] || units[0]; }
+function sdcFirstUnit(g){ const units = COURSE.groups[g].units; return (SDCG && SDCG.course === "it" && units.includes("10GD")) ? "10GD" : (SDCG && SDCG.course === "it" && units.includes("10IT")) ? "10IT" : units.filter(x => !IT_UNITS.includes(x))[0] || units[0]; }
 const SDC_W = { "Practice passed":1, "Criterion submitted":2 };
 function sdcTask(u, crit, event){
   if (!SDCG || session.preview) return;
