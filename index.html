@@ -2,9 +2,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261109a"></script>
-<script src="/python-pathways/pp-sync.js?v=20261109a"></script>
-<script src="keywords.js?v=20261109a"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261109b"></script>
+<script src="/python-pathways/pp-sync.js?v=20261109b"></script>
+<script src="keywords.js?v=20261109b"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3157,7 +3157,7 @@ function renderLogin(app){
     const email = $("#lEmail").value.trim().toLowerCase(), pw = $("#lPw").value;
     const asUser = mode === "in" && !email.includes("@") && /^[a-z][a-z0-9]{2,40}$/.test(email);   // Grade 10 username
     if (!SCHOOL.test(email) && !asUser) return msg(mode === "in" ? "Type your SISD school email, or your username if you are in Grade 10 (your first and last name, no spaces)." : "Use your full SISD school email address, ending in @sisd.ae.");
-    window.__tempPw = mode === "in" && TEMP_RX.test(pw) ? pw : "";
+    window.__tempPw = mode === "in" && TEMP_RX.test(pw) ? pw : ""; window.__pwTry = mode === "in" ? pw : "";
     $("#lGo").disabled = true;
     try {
       if (mode === "in"){
@@ -3521,7 +3521,7 @@ async function publishWrap(u, email, A){
   const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
   u.wrapFor = A.lookup; return ver;
 }
-const SYNC_KEYS = ["uname","codeOk","name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk","reportAdded"];
+const SYNC_KEYS = ["pwSetAt","uname","codeOk","name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk","reportAdded"];
 function syncPayload(u){
   const imgs = {};
   const walk = v => {
@@ -5226,7 +5226,7 @@ function newPwDialog(u, key){
       if (a !== b) return say("The two passwords do not match.");
       q("#npGo").disabled = true; say("Saving…", "ok");
       try {
-        Object.assign(u, await hashPw(a));
+        Object.assign(u, await hashPw(a)); u.pwSetAt = Date.now();
         if (syncCfg() && u.dk){ const ver = await publishWrap(u, key, await deriveAcct(key, a)); queueRow("R", await dataId(u.dk), ver, "x"); }   // the temporary password stops working
         escrowPw(u, key, a); save(true); try { flushSync(); } catch(e){}
         bg.remove(); toast("✓ Your new password is saved. Use it from now on.", 4000); resolve(true);
@@ -5352,7 +5352,17 @@ function sdcApply(u, A){
   if (A.t) u.teacher = A.t;
 }
 /* after a student signs in or signs up: is this the course they are registered for? */
+/* did a teacher set this password on the staff dashboard (and the student hasn't chosen their own since)? */
+async function teacherTemp(key, pw, u){
+  try {
+    const hx = async t => hexOf(await sha256(TE.encode(t))), id = (await hx("sdc-temp|" + key)).slice(0, 32), th = await hx("sdc-tmp|" + key + "|" + pw);
+    for (const r of await SDC.rows("X", id, 5)){ const o = await SDC.verify(r.text); if (o && o.k === id && o.th === th && o.at > (u.pwSetAt || 0)) return true; }
+  } catch(e){}
+  return false;
+}
 async function sdcAfter(u, email, signup){
+  if (u && u.role !== "teacher" && !window.__tempPw && window.__pwTry && window.SDC && SDC.rows && await teacherTemp(email, window.__pwTry, u)) window.__tempPw = window.__pwTry;
+  window.__pwTry = "";
   if (u && u.role !== "teacher" && window.__tempPw){ window.__tempPw = "";
     if (!(await newPwDialog(u, email))){ session = { email:null, preview:false, back:null }; DB.session = null; save(true);
       if (SDCG && SDC.signedOutNotice){ SDC.signedOutNotice("Sign in again with your temporary password and create your new password to carry on.", "warn"); SDC.leave("blocked"); } else render(); return false; } }
