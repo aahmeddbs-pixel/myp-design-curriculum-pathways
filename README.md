@@ -1,6 +1,6 @@
 # MYP Design Curriculum Pathways
 
-SISD online course for IB MYP Design and IT, built from the teacher's workbooks: Grade 6 Smart & Sustainable City 2050, Grade 7 Awareness Campaign, Grade 8 Parent's Business Website (Wix), Grade 10 Design ePortfolio "Revealing the unseen through design", and Grade 10 IT Game Development (Criterion A open; an introduction & expectations session comes first) and Networks & Network Security.
+SISD online course for IB MYP Design and IT, built from the teacher's workbooks: Grade 6 Smart & Sustainable City 2050, Grade 7 Awareness Campaign, Grade 8 Parent's Business Website (Wix), Grade 10 Design ePortfolio "A Future with Resilient Design" (May 2027; replaces "Revealing the unseen through design"), and Grade 10 IT Game Development (Criterion A open; an introduction & expectations session comes first) and Networks & Network Security.
 
 **Student link:** https://aahmeddbs-pixel.github.io/myp-design-curriculum-pathways/
 
