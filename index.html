@@ -5,6 +5,7 @@
 <script src="/sisd-design-and-computing/sdc.js?v=20261105o"></script>
 <script src="/python-pathways/pp-sync.js?v=20261105o"></script>
 <script src="keywords.js?v=20261105o"></script>
+<script src="homelearning.js?v=20261105o"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -64,6 +65,17 @@ main{padding-block:22px 60px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:bold}
 input[type=text],input[type=email],input[type=password],select,textarea{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 12px;width:100%;font-weight:normal}
 textarea{min-height:110px;resize:vertical;line-height:1.5}
+.hl-open{display:flex;align-items:center;gap:12px;width:100%;background:#fff;color:#1B2D4E;border:2px solid #1B2D4E;border-radius:12px;padding:11px 16px;font:inherit;font-size:15.5px;font-weight:800;cursor:pointer;text-align:left;margin-top:6px}
+.hl-open:hover{background:#EEF1F7}
+.hl-open .hl-st{margin-left:auto;font-size:13px;color:#5B6782;white-space:nowrap}
+.hl-open .kw-arrow{background:#EEF1F7}
+.hl{margin-top:8px;border-left:5px solid #1B2D4E}
+.hl-part{display:flex;flex-direction:column;gap:8px;padding-top:4px}
+.hl-part h4{margin:6px 0 2px;font-size:15px;color:#1B2D4E}
+.hl-row{display:grid;grid-template-columns:1fr minmax(140px,190px) 22px;gap:10px;align-items:center;font-weight:normal;font-size:14px}
+@media (max-width:640px){.hl-row{grid-template-columns:1fr 22px}.hl-row select{grid-column:1}.hl-row .hl-mark{grid-row:1/3;grid-column:2}}
+.hl-mark{font-weight:900;font-size:18px;text-align:center}
+.hl-mark.ok{color:#1E8A55}.hl-mark.no{color:#DC2B3E}
 .kw{gap:0;padding:12px 14px;border-left:5px solid #1B2D4E;margin-top:8px}
 .kw-open{display:flex;align-items:center;gap:12px;width:100%;background:#1B2D4E;color:#fff;border:0;border-radius:12px;padding:12px 16px;font:inherit;font-size:15.5px;font-weight:800;cursor:pointer;text-align:left;box-shadow:0 2px 0 #0E1A30}
 .kw-open:hover{background:#243A63}
@@ -3944,7 +3956,8 @@ function paneTask(pane, ctx){
         <div class="row"><button class="btn ghost" id="prevS" ${si===0?"disabled":""}>← Strand ${ROMAN[Math.max(0,si-1)]}</button>
         <button class="btn sec" id="spellBtn" type="button">Check spelling and grammar</button></div>
         <div class="row">${p.done.every(Boolean) ? `<button class="btn ghost" id="toSub" type="button" title="Go to Download &amp; hand in without changing this strand">Back to Download &amp; hand in</button>` : ""}<button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button></div>
-      </div></div></div>`;
+      </div>
+      <div id="hlBox"></div></div></div>`;
   pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
   let vg = null;
@@ -3955,6 +3968,7 @@ function paneTask(pane, ctx){
     else host.appendChild(buildField(f, ctx)); }
   strandVoice($("#strandVoice"), g, c, si);
   kwSearch($("#kwBox"), ctx, si);
+  homeLearn($("#hlBox"), ctx, si);
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
   if ($("#toSub")) $("#toSub").onclick = () => { view.step = 6; render(); window.scrollTo({ top:0, behavior:"smooth" }); };
@@ -4075,6 +4089,114 @@ function kwSearch(box, ctx, si){
     grid.addEventListener("pointerup", up); grid.addEventListener("pointercancel", () => { dragging = false; clear(); });
   }
   box._open = !!box._open; paint(box._open);   // closed until they press the button
+}
+/* ---------- Home learning: a reinforcement activity for each strand ----------
+   Shown only when the super admin or a teacher has switched it on for the unit (staff dashboard → 📚 Home learning).
+   Part 1 match keywords to meanings, Part 2 complete sentences, Part 3 apply it (written), Part 4 reflect.
+   Students download it as a PDF and hand it in on ManageBac. Answers are saved with their work. */
+const HL_MIN = g => { const y = String(g).replace(/\D/g, "").slice(0, 2); return y === "6" ? 25 : y === "10" ? 50 : 35; };
+function hlParts(ctx, si){
+  const bank = (window.DS_KEYWORDS || {})[ctx.c + (si + 1)] || [], L = kwLevel(ctx.g), pool = bank.filter(e => e[0].length <= L.size).slice(0, L.n);
+  const R = kwRand(((session && session.email) || "") + "|hl|" + ctx.g + "|" + ctx.c + "|" + si), shuf = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const order = shuf(pool), match = order.slice(0, 5);
+  const gapPool = order.slice(5).concat(order.slice(0, 5)).filter(e => new RegExp("\\b" + e[0] + "\\b", "i").test(e[2]));
+  const gaps = gapPool.filter((e, i, a) => a.findIndex(x => x[0] === e[0]) === i).slice(0, 4).map(e => ({ w:e[0], text:e[2].replace(new RegExp("\\b" + e[0] + "\\b", "i"), "______") }));
+  return { match, matchOpts: shuf(match.map(e => e[0])), gaps, gapOpts: shuf(gaps.map(x => x.w)), act: (window.DS_HOMELEARN || {})[ctx.c + (si + 1)] };
+}
+function homeLearn(box, ctx, si){
+  if (!box) return; const P = hlParts(ctx, si); if (!P.act || P.match.length < 3){ box.innerHTML = ""; return; }
+  const unit = String(ctx.g), key = ctx.c + (si + 1), preview = isTester() || (ctx.u && ctx.u.role === "teacher");
+  const draw = live => {
+    if (!box.isConnected) return;
+    if (!live && !preview){ box.innerHTML = ""; return; }
+    const p = ctx.p; p.hl = p.hl || {}; const H = p.hl[si] = p.hl[si] || { m:{}, g:{}, q:[], r:[], tries:0 };
+    const min = HL_MIN(unit), opt = (list, v) => `<option value="">Choose…</option>${list.map(w => `<option value="${w}" ${v === w ? "selected" : ""}>${w.charAt(0) + w.slice(1).toLowerCase()}</option>`).join("")}`;
+    const open = !!box._open, status = H.dl ? "✓ Downloaded" : (Object.keys(H.m).length || H.q.some(Boolean)) ? "In progress" : "Not started";
+    box.innerHTML = `<button type="button" class="hl-open" aria-expanded="${open}"><span>📚 Home learning</span><span class="hl-st">${status}</span><span class="kw-arrow">${open ? "▴ Close" : "▾ Open"}</span></button>
+      <div class="card stack hl" ${open ? "" : "hidden"}>
+        ${live ? "" : `<div class="notice warn"><b>Preview:</b> this home learning isn't live for students yet. Switch it on in the staff dashboard → 📚 Home learning.</div>`}
+        <p style="margin:0">This home learning helps you remember what you learnt about <b>${esc(P.act.focus)}</b>. Complete all four parts, press <b>Download my home learning (PDF)</b>, then hand in the PDF on <b>ManageBac</b>.</p>
+        <div class="hl-part"><h4>Part 1 · Match each meaning to its keyword</h4>
+          ${P.match.map((e, i) => `<label class="hl-row"><span>${i + 1}. ${esc(e[1])}</span><select data-m="${i}" class="notranslate">${opt(P.matchOpts, H.m[i])}</select><span class="hl-mark" data-mk="m${i}"></span></label>`).join("")}</div>
+        <div class="hl-part"><h4>Part 2 · Complete each sentence with the right keyword</h4>
+          ${P.gaps.map((x, i) => `<label class="hl-row"><span>${i + 1}. ${esc(x.text)}</span><select data-g="${i}" class="notranslate">${opt(P.gapOpts, H.g[i])}</select><span class="hl-mark" data-mk="g${i}"></span></label>`).join("")}</div>
+        <div class="hl-part"><h4>Part 3 · Think and apply <span class="muted" style="font-weight:normal;font-size:13px">(at least ${min} words each, in full sentences)</span></h4>
+          ${P.act.q.map((q, i) => `<label class="f" style="font-weight:normal"><span><b>${i + 1}.</b> ${esc(q)}</span><textarea data-q="${i}" class="notranslate" spellcheck="true" lang="en-GB">${esc(H.q[i] || "")}</textarea><span class="counter" data-qc="${i}"></span></label>`).join("")}</div>
+        <div class="hl-part"><h4>Part 4 · Reflect</h4>
+          ${["One important thing I learnt from this strand:", "One question I still have, or something I want to get better at:"].map((q, i) => `<label class="f" style="font-weight:normal"><span>${q}</span><textarea data-r="${i}" class="notranslate tcell" rows="2" spellcheck="true" lang="en-GB">${esc(H.r[i] || "")}</textarea></label>`).join("")}</div>
+        <div id="hlMsg"></div>
+        <div class="row" style="gap:10px"><button type="button" class="btn sec" id="hlCheck">Check my answers</button><button type="button" class="btn ok" id="hlDl">⬇ Download my home learning (PDF)</button></div>
+        <p class="muted" style="margin:0;font-size:12.5px">Your answers are saved as you go, on any device. Hand in the downloaded PDF on ManageBac.</p>
+      </div>`;
+    box.querySelector(".hl-open").onclick = () => { box._open = !box._open; draw(live); };
+    if (!open) return;
+    const panel = box.querySelector(".hl");
+    panel.querySelectorAll("textarea").forEach(autoGrow);
+    const upd = () => panel.querySelectorAll("[data-qc]").forEach(c => { const v = H.q[+c.dataset.qc] || "", w = LIT.count(v), pr = LIT.problem(v); c.textContent = `${w} / ${min} real words` + (pr ? " · ⚠ " + pr : ""); c.classList.toggle("ok", w >= min && !pr); });
+    const later = () => { clearTimeout(box._t); box._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 500); };
+    panel.querySelectorAll("[data-m]").forEach(x => x.onchange = () => { H.m[x.dataset.m] = x.value; mark(false); later(); });
+    panel.querySelectorAll("[data-g]").forEach(x => x.onchange = () => { H.g[x.dataset.g] = x.value; mark(false); later(); });
+    panel.querySelectorAll("[data-q]").forEach(x => x.oninput = () => { H.q[x.dataset.q] = x.value; upd(); later(); });
+    panel.querySelectorAll("[data-r]").forEach(x => x.oninput = () => { H.r[x.dataset.r] = x.value; later(); });
+    LIT.onReady(() => { if (panel.isConnected) upd(); }); upd();
+    const right = () => ({ m: P.match.filter((e, i) => H.m[i] === e[0]).length, g: P.gaps.filter((x, i) => H.g[i] === x.w).length });
+    function mark(show){ panel.querySelectorAll("[data-mk]").forEach(el => { const t = el.dataset.mk[0], i = +el.dataset.mk.slice(1), v = (t === "m" ? H.m : H.g)[i], want = t === "m" ? P.match[i][0] : P.gaps[i].w;
+      el.textContent = !show || !v ? "" : v === want ? "✓" : "✗"; el.className = "hl-mark" + (show && v ? (v === want ? " ok" : " no") : ""); }); }
+    const missing = () => { const out = [];
+      if (P.match.some((e, i) => !H.m[i])) out.push("Part 1: choose a keyword for every meaning");
+      if (P.gaps.some((x, i) => !H.g[i])) out.push("Part 2: complete every sentence");
+      P.act.q.forEach((q, i) => { const v = H.q[i] || "", pr = LIT.problem(v), w = LIT.count(v); if (w < min || pr) out.push(`Part 3, question ${i + 1}: ${pr || `only ${w} of ${min} real words`}`); });
+      [0, 1].forEach(i => { if (LIT.count(H.r[i] || "") < 5) out.push(`Part 4: answer the ${i ? "second" : "first"} reflection (at least 5 words)`); });
+      return out; };
+    $("#hlCheck").onclick = () => { const r = right(), tot = P.match.length + P.gaps.length;
+      if (!H.first && Object.keys(H.m).length === P.match.length && Object.keys(H.g).length === P.gaps.length){ H.first = { m:r.m, g:r.g }; }
+      H.tries = (H.tries || 0) + 1; save(); mark(true);
+      $("#hlMsg").innerHTML = r.m + r.g === tot ? `<div class="notice ok">✓ All ${tot} keyword answers are right. ${missing().length ? "Now finish Parts 3 and 4." : "You can download your home learning."}</div>`
+        : `<div class="notice warn">${r.m + r.g} of ${tot} keyword answers are right. Change the ones marked ✗ and check again.</div>`; };
+    $("#hlDl").onclick = async () => {
+      if (!LIT.ready()) await Promise.race([LIT.load(), new Promise(r => setTimeout(r, 6000))]);
+      const r = right(), tot = P.match.length + P.gaps.length, miss = missing();
+      if (r.m + r.g < tot && !miss.some(m => /^Part [12]/.test(m))) miss.unshift(`Parts 1 and 2: ${tot - r.m - r.g} keyword answer${tot - r.m - r.g > 1 ? "s are" : " is"} not right yet. Press Check my answers to see which.`);
+      if (miss.length && !isTester()){ $("#hlMsg").innerHTML = `<div class="notice bad"><b>Not finished yet.</b><ul style="margin:6px 0 0;padding-left:18px">${miss.map(m => `<li>${esc(m)}</li>`).join("")}</ul></div>`; return; }
+      if (!H.first) H.first = { m:r.m, g:r.g };
+      try { await hlPDF(ctx, si, P, H, min); H.dl = Date.now(); save(); sendWork(ctx.c, "snapshot");
+        try { logEvent(ctx.c, `Home learning downloaded (strand ${ROMAN[si]})`, `Keywords right first time: ${H.first.m + H.first.g}/${tot}`); } catch(e){}
+        box._open = true; draw(live); $("#hlMsg").innerHTML = `<div class="notice ok">✓ Downloaded. Now hand in the PDF on <b>ManageBac</b>.</div>`;
+      } catch(e){ $("#hlMsg").innerHTML = `<div class="notice bad">${esc(e.message)}</div>`; } };
+  };
+  box.innerHTML = "";
+  if (!(window.SDC && SDC.homeLearning)){ if (preview) draw(false); return; }
+  SDC.homeLearning().then(st => draw(SDC.hlLive(st.map, unit, key))).catch(() => { if (preview) draw(false); });
+}
+async function hlPDF(ctx, si, P, H, min){
+  if (!window.jspdf) throw new Error("PDF tool not loaded — check the internet connection");
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4" }), W = 210, M = 18, NAVY = [27,45,78], RED = [220,43,62], TW = W - 2 * M;
+  const u = ctx.u || {}, cd = ctx.cd || COURSE.criteria[ctx.c] || {}, Y = yearKey(ctx.gd.myp), strand = ((cd.strands || {})[Y] || [])[si] || "";
+  let y = 0;
+  const page = () => { doc.setFillColor(...NAVY); doc.rect(0, 0, W, 22, "F"); doc.setFillColor(...RED); doc.rect(0, 22, W, 1.6, "F");
+    doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("SISD · Design Home Learning", M, 14);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text(`${uLabel(ctx.g)} · Criterion ${ctx.c}, strand ${ROMAN[si]}`, W - M, 14, { align:"right" }); doc.setTextColor(22, 34, 58); y = 32; };
+  const need = h => { if (y + h > 282){ doc.addPage(); page(); } };
+  const para = (t, o) => { o = o || {}; doc.setFont("helvetica", o.b ? "bold" : o.i ? "italic" : "normal"); doc.setFontSize(o.s || 10.5);
+    const lines = doc.splitTextToSize(String(t || ""), o.w || TW); for (const ln of lines){ need(5.4); doc.text(ln, (o.x || M), y); y += (o.lh || 5.2); } };
+  const head = t => { y += 3; need(12); doc.setFillColor(238, 241, 247); doc.rect(M, y - 5, TW, 8, "F"); doc.setFont("helvetica", "bold"); doc.setFontSize(11.5); doc.setTextColor(...NAVY); doc.text(t, M + 2, y + 0.5); doc.setTextColor(22, 34, 58); y += 8; };
+  page();
+  para(`${cd.name ? "Criterion " + ctx.c + ": " + cd.name : ""}`, { b:true, s:12 }); para(strand, { s:10.5 }); y += 2;
+  const info = [["Name", u.name || ""], ["Email", (session && session.email) || ""], ["Class", u.cls || ""], ["Teacher", u.teacher || ""], ["Date", new Date().toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" })]];
+  info.forEach(([k, v]) => { need(5.4); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text(k + ":", M, y); doc.setFont("helvetica", "normal"); doc.text(String(v), M + 22, y); y += 5.2; });
+  const tot = P.match.length + P.gaps.length; y += 1;
+  para(`Keyword answers right first time: ${H.first ? H.first.m + H.first.g : "–"} / ${tot}`, { b:true, s:10 });
+  head("Part 1 · Match each meaning to its keyword");
+  P.match.forEach((e, i) => { para(`${i + 1}. ${e[1]}`); para(`Answer: ${(H.m[i] || "—").toLowerCase()}`, { b:true, x:M + 5, w:TW - 5 }); y += 1; });
+  head("Part 2 · Complete each sentence");
+  P.gaps.forEach((x, i) => { para(`${i + 1}. ${x.text.replace("______", (H.g[i] || "______").toLowerCase())}`); y += 1; });
+  head(`Part 3 · Think and apply`);
+  P.act.q.forEach((q, i) => { para(`${i + 1}. ${q}`, { b:true }); y += 0.5; para(H.q[i] || "", { x:M + 4, w:TW - 4 }); para(`(${LIT.count(H.q[i] || "")} words)`, { i:true, s:8.5, x:M + 4 }); y += 2; });
+  head("Part 4 · Reflect");
+  ["One important thing I learnt:", "One question I still have:"].forEach((q, i) => { para(q, { b:true }); para(H.r[i] || "", { x:M + 4, w:TW - 4 }); y += 2; });
+  const n = doc.getNumberOfPages(); for (let i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(120); doc.text(`Hand in on ManageBac · page ${i} of ${n}`, W / 2, 291, { align:"center" }); }
+  const fn = (`HomeLearning-${uLabel(ctx.g)}-${ctx.c}-${ROMAN[si]}-${u.name || "student"}`).replace(/[^\w-]+/g, "-") + ".pdf";
+  doc.save(fn); return fn;
 }
 /* "🎧 Strand brief": the teacher's own recorded briefing for the strand (voice/strand/<grade>-<criterion>-<strand>).
    Until a strand has been recorded, the same button reads the strand aloud with the narrator. */
