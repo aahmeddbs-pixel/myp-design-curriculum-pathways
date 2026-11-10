@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://docs.google.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.gstatic.com https://*.googleapis.com; media-src 'self' blob: data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleapis.com https://*.googleusercontent.com; frame-src https://*.google.com https://*.googleapis.com; worker-src 'self' blob:; form-action https://docs.google.com; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261109f"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261110c"></script>
 <script src="/python-pathways/pp-sync.js?v=20261109f"></script>
 <script src="keywords.js?v=20261109f"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
@@ -3437,6 +3437,7 @@ function renderLogin(app){
             DB.users[email] = u = r.u; session.email = email; DB.session = email; save(true); flushQueue();
             escrowPw(u, email, pw);
             if (!(await sdcAfter(u, email, false))) return;
+            spBond(u, email, pw);
             toast("Welcome back — your work has been loaded on this device.", 4000);
             speak(P().welcome(u.name.split(" ")[0]));
             return resumeSpot(u);
@@ -3460,6 +3461,7 @@ function renderLogin(app){
         session.email = email; DB.session = email; save(true); flushQueue();
         if (u.role !== "teacher"){
           if (!(await sdcAfter(u, email, false))) return;
+          spBond(u, email, pw);
           if (synced === "restored") toast("Your latest work from another device has been loaded.", 4000);
           if (synced !== "restored") syncNow(); else flushSync();
           speak(P().welcome(u.name.split(" ")[0])); return resumeSpot(u);
@@ -3773,7 +3775,7 @@ async function publishWrap(u, email, A){
   const esc = await escrowSeal(u.dk); if (esc) queueRow("E", await emailId(email), ver, esc);
   u.wrapFor = A.lookup; return ver;
 }
-const SYNC_KEYS = ["pwSetAt","uname","codeOk","name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk","reportAdded"];
+const SYNC_KEYS = ["csLink","csAlt","csAltAt","pwSetAt","uname","codeOk","name","role","group","cls","grade","teacher","created","yearOf","history","viaCS","progress","progressBy","choice","choiceBy","last","rk","reportAdded"];
 function syncPayload(u){
   const imgs = {};
   const walk = v => {
@@ -5512,6 +5514,41 @@ async function pinIntoDesign(email, pin, msg){
 }
 /* ---------- Computer Science students joining Design ----------
    The first time, their teacher approves it (and sets the grade/class); after that they switch straight in. */
+/* ---------- Study Plus student: one sign-in opens Computer Science, Design and Study Plus ----------
+   The Computer Science link password (made from the CS account's own secret key) becomes a second key to this
+   student's own Design account, here and online, so arriving from Computer Science never asks for the Design password. */
+const spOK = a => !!(window.SDC && SDC.studyPlusOK && SDC.studyPlusOK(a));
+function spLocalCS(email, name){
+  try { const all = JSON.parse(localStorage.getItem("pyl_accounts") || "{}"), em = String(email || "").toLowerCase();
+    return Object.values(all).find(x => x && (String(x.email || "").toLowerCase() === em || (spOK({ name:x.name }) && SDC.studyPlusEmail && SDC.studyPlusEmail(x) === em))) || null; } catch(e){ return null; }
+}
+async function spCsPw(email, acc){
+  const k = acc && (acc.dk || acc.pin); if (!k) return "";
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", TE.encode("sdc-cs-design|" + String(email).toLowerCase() + "|" + k)));
+  return "cs" + [...h].slice(0, 20).map(v => v.toString(16).padStart(2, "0")).join("");
+}
+async function spBond(u, email, pw){
+  if (!u || u.role === "teacher" || !SDCG || !spOK({ email, name:u.name })) return;
+  try {
+    const L = SDCG.link || {}, cs = spLocalCS(email, u.name);
+    if (cs) u.csLink = { name:cs.name, email:String(cs.email || email).toLowerCase(), grade:String(cs.grade || ""), teacher:cs.teacher || "", dk:cs.dk || "" };
+    else if (L.cs && L.cs.name) u.csLink = Object.assign({}, u.csLink || {}, { name:L.cs.name, email:String(L.cs.email || email).toLowerCase(), grade:String(L.cs.grade || ""), teacher:L.cs.teacher || "", dk:L.cs.dk || (u.csLink && u.csLink.dk) || "" });
+    const csPw = cs ? await spCsPw(email, cs) : (L.design && String(L.design.email || "").toLowerCase() === email && /^cs[0-9a-f]{40}$/.test(L.design.pw || "") ? L.design.pw : "");
+    const fresh = u.csAlt && await checkPw(csPw, u.csAlt);
+    if (csPw && (!fresh || Date.now() - (u.csAltAt || 0) > 86400000)){   // refreshed daily, so it survives a password reset
+      if (!fresh) u.csAlt = await hashPw(csPw);
+      u.csAltAt = Date.now();
+      if (syncCfg() && u.dk){ const A = await deriveAcct(email, csPw); queueRow("W", A.lookup, String(Date.now()), await sealText(A.kek, JSON.stringify({ dk: u.dk }))); }
+    }
+    save(true); try { flushSync(); } catch(e){}
+    const c = u.csLink;
+    if (c && c.name){
+      SDCG.link = { cs:{ name:c.name, email:c.email, grade:c.grade, teacher:c.teacher, dk:c.dk || undefined },
+        design:{ email, pw: pw || (L.design && L.design.pw) || csPw, name:u.name, grade:c.grade, teacher:c.teacher, created:u.created || Date.now() } };
+      SDC.patchGate({ link: SDCG.link }); try { SDC.setSignedIn(true); } catch(e){}
+    }
+  } catch(e){}
+}
 let LINKWAIT = null;   // { state: "asked" | "declined" | "nogo", grade, teacher }
 async function linkIn(){
   const L = SDCG && SDCG.link, D = L && L.design;
@@ -5530,8 +5567,17 @@ async function linkIn(){
   LINKWAIT = null;
   let u = DB.users[email];
   if (u && u.role === "teacher") return false;
-  if (u && !(await checkPw(pw, u))){ if (!u.viaCS) return false; Object.assign(u, await hashPw(pw)); }   // their own Design password account: normal sign-in
+  const sp = spOK({ email, name:D.name });
+  if (u && !(await checkPw(pw, u))){
+    const spPass = sp && ((u.csAlt && await checkPw(pw, u.csAlt)) || (await spCsPw(email, spLocalCS(email, D.name))) === pw);
+    if (!u.viaCS && !spPass) return false;
+    if (!spPass) Object.assign(u, await hashPw(pw)); else if (!u.csAlt) u.csAlt = await hashPw(pw);
+  }   // their own Design password account: normal sign-in
   if (!u && syncCfg()){ try { const r = await restoreAccount(email, pw); if (r){ u = DB.users[email] = r.u; } } catch(e){} }
+  if (!u && sp && syncCfg()){   // Study Plus: they already have their own Design account online: link it once with their Design password
+    let has = false; try { const id = await emailId(email); has = !!(((await pullRows(syncCfg(), "E", id + "|", 5))["E|" + id] || []).length); } catch(e){}
+    if (has){ setTimeout(() => { toast("Sign in to Design once with your Design password. After that, Computer Science, Design and Study Plus open with one sign-in.", 7000); const e = $("#lEmail"); if (e && !e.value) e.value = email; }, 400); return false; }
+  }
   if (!u){
     const g = COURSE.groups[A.g] ? String(A.g) : "6", rec = await hashPw(pw);
     u = DB.users[email] = { role:"student", name:D.name, group:g, cls:A.cls || "", grade:sdcFirstUnit(g), course:"design", teacher:A.t || D.teacher, salt:rec.salt, hash:rec.hash, created:new Date().toISOString(), yearOf:schoolYear(), progress:{}, viaCS:true };
@@ -5542,6 +5588,7 @@ async function linkIn(){
   if (syncCfg()){ try { await syncIn(u, email, pw); } catch(e){} }
   if (!(await sdcAfter(u, email, false))) return true;
   try { SDC.setSignedIn(true); } catch(e){}
+  spBond(u, email, pw);
   resumeSpot(u); return true;
 }
 function renderLinkWait(app){
