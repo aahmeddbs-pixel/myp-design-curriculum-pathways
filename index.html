@@ -5,6 +5,7 @@
 <script src="/sisd-design-and-computing/sdc.js?v=20261110c"></script>
 <script src="/python-pathways/pp-sync.js?v=20261109f"></script>
 <script src="keywords.js?v=20261109f"></script>
+<script src="citybuilder.js?v=20261110a"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
 <title>SISD Design Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1595,6 +1596,12 @@ Object.assign(COURSE.grades["6"], {
     ]
   }
 });
+COURSE.grades["6"].cityBuilder = true;
+COURSE.grades["6"].lab.intro = "Build your city in City Builder 2050 (the button above, inside this course). It saves automatically every 2 seconds. Your finished city must show your layout, label at least 3 smart or sustainable features with a short description of each, and include your key building in detail. Use 📸 Add picture to my task at each stage. You can also use the free tools below for extra work, such as a 3D model of your key building in Tinkercad.";
+COURSE.grades["6"].lab.tools.forEach(t => t.main = false);
+COURSE.grades["6"].lab.tools.unshift({ name: "City Builder 2050", url: "#", app: true, use: "Build, label and test your whole city inside this course. Saves automatically.", main: true });
+COURSE.grades["6"].lab.skills.unshift("Build a connected road, cycle and tram network", "Balance power, water and waste using the City Advisor", "Label districts and features with descriptions");
+COURSE.grades["6"].tasks.C[0][0] = CH("c1tool", "Which platform will you use?", ["City Builder 2050 (in this course)", "Tinkercad", "Canva for Education", "Google Slides", "Scratch", "Excalidraw", "Other free software"]);
 COURSE.grades["6"].tasks.C[1][12] = CL("c2k", "Tick the technical skills you used (at least 4)", COURSE.grades["6"].lab.skills, 4);
 COURSE.grades["6"].scenarios.forEach(s => { if (!s.custom) s.brief = s.brief.replace(/^Design a smart, sustainable /, "Your key building: a smart, sustainable "); });
 
@@ -3602,13 +3609,36 @@ function renderChooser(box, done){
   const bk = $("#chBack"); if (bk) bk.onclick = () => { view.choosing = false; done(); };
 }
 
+/* ================= CITY BUILDER 2050 (Grade 6, Criterion C) ================= */
+function cityCard(p){
+  const sm = window.CityBuilder ? CityBuilder.summary(p.fields.__city) : null;
+  return `<div class="card stack" style="gap:10px;background:linear-gradient(135deg,#1B2D4E,#24406E);color:#fff;border:0">
+    <div class="row" style="gap:14px;align-items:center;flex-wrap:wrap"><div style="font-size:42px;line-height:1">🏙️</div>
+      <div class="stack" style="gap:4px;flex:1;min-width:220px"><b style="font-size:19px">City Builder 2050</b>
+        <span style="color:#C9D6F0;font-size:14px">${sm && sm.has ? `${esc(sm.name || "Your city")} · ${esc(sm.rank)} · population ${sm.pop.toLocaleString()} · Smart ${sm.smart} · Sustainable ${sm.sust} · Liveable ${sm.live} · ${sm.labels} label${sm.labels === 1 ? "" : "s"}` : "Build your Smart & Sustainable City here: roads, homes, clean energy, water, green space, smart tech and your key building. Label every area. It saves automatically every 2 seconds."}</span></div>
+      <button class="btn" type="button" data-cityopen style="background:#E5484D;color:#fff">${sm && sm.has ? "Continue building →" : "Open City Builder →"}</button></div>
+    <span style="color:#C9D6F0;font-size:13px">Use 📸 <b>Add to my task</b> inside the builder to put pictures of your city straight into your evidence boxes below.</span>
+  </div>`;
+}
+function openCity(ctx){
+  if (!window.CityBuilder) return toast("The City Builder is still loading. Try again in a moment.");
+  const { p, gd, sc } = ctx, F = fieldsFor("C", gd), ev = [];
+  F.forEach((fs, i) => fs.forEach(f => { if (f.t === "sketch") ev.push({ id: f.id, label: "Strand " + ROMAN[i] + " · " + fill(f.label, ctx.g, sc), short: f.label.split(/ — | - |:/)[0].slice(0, 40), has: !!p.fields[f.id] }); }));
+  const A4 = prog(ctx.u, "A").fields || {};
+  CityBuilder.open({ id: (session.email || "me") + "|" + ctx.g, data: p.fields.__city, cityName: String(A4.a4n || "").trim(), keyName: sc && sc.title || "My key building",
+    evidence: ev,
+    onSave: data => { p.fields.__city = data; save(); },
+    onEvidence: (id, url) => { p.fields[id] = url; save(); },
+    onClose: () => render() });
+}
+
 /* ================= BUILD LAB (Criterion C) ================= */
 function labCard(gd, compact){
   const L = gd.lab; if (!L) return "";
   return `<div class="card stack" data-read style="gap:12px">
     <div class="eyebrow">Build Lab — create your solution digitally</div>
     <p style="margin:0">${esc(L.intro)}</p>
-    <div class="scroll"><table class="tbl"><tr><th>Free software</th><th>Use it to…</th></tr>${L.tools.map(t=>`<tr><td><a href="${esc(t.url)}" target="_blank" rel="noopener"><b class="notranslate">${esc(t.name)}</b></a>${t.main?` <span class="counter ok">recommended</span>`:""}</td><td>${esc(t.use)}</td></tr>`).join("")}</table></div>
+    <div class="scroll"><table class="tbl"><tr><th>Free software</th><th>Use it to…</th></tr>${L.tools.map(t=>`<tr><td>${t.app ? `<a href="#" onclick="event.preventDefault();var b=document.querySelector('[data-cityopen]');if(b)b.click();"><b class="notranslate">${esc(t.name)}</b></a>` : `<a href="${esc(t.url)}" target="_blank" rel="noopener"><b class="notranslate">${esc(t.name)}</b></a>`}${t.main?` <span class="counter ok">recommended</span>`:""}</td><td>${esc(t.use)}</td></tr>`).join("")}</table></div>
     <div><div class="eyebrow" style="color:var(--muted);margin-bottom:6px">Milestones — take a screenshot at the end of each</div><ol style="margin:0;padding-left:20px">${L.milestones.map(m=>`<li>${esc(m)}</li>`).join("")}</ol></div>
     ${compact?"":`<div><div class="eyebrow" style="color:var(--muted);margin-bottom:6px">Technical skills to show</div><div class="starters">${L.skills.map(s=>`<span>${esc(s)}</span>`).join("")}</div></div>`}
   </div>`;
@@ -4466,6 +4496,7 @@ function paneTask(pane, ctx){
       ${c === "B" && si === 0 && COURSE.ACCESSFM ? `<div class="card stack" style="gap:8px;background:var(--soft)"><div class="eyebrow">ACCESS FM — use it to write your specification</div>
         <p style="margin:0;font-size:14px">ACCESS FM is a checklist of eight areas every design must consider. Write at least one specific, measurable requirement for each area in the table below.</p>
         <div class="scroll"><table class="tbl"><tr><th>Letter</th><th>Stands for</th><th>What it means</th><th>Example requirement</th></tr>${COURSE.ACCESSFM.map(r => `<tr><td style="font-family:var(--f-display);color:var(--accent);font-size:18px;text-align:center">${r[0]}</td><td><b>${esc(r[1])}</b></td><td>${esc(r[2])}</td><td class="muted">${esc(r[3])}</td></tr>`).join("")}</table></div></div>` : ""}
+      ${c === "C" && gd.cityBuilder ? cityCard(p) : ""}
       ${c === "C" && si === 1 && gd.lab ? `<details open class="notranslate-none"><summary><b>Build Lab: software, milestones and skills</b></summary><div style="margin-top:10px">${labCard(gd, true)}</div></details>` : ""}
       ${planFrom(ctx, si)}
       <div class="stack" id="fields"></div>
@@ -4488,6 +4519,7 @@ function paneTask(pane, ctx){
     else host.appendChild(buildField(f, ctx)); }
   strandVoice($("#strandVoice"), g, c, si);
   kwSearch($("#kwBox"), ctx, si);
+  const cbBtn = pane.querySelector("[data-cityopen]"); if (cbBtn) cbBtn.onclick = () => openCity(ctx);
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
   if ($("#toSub")) $("#toSub").onclick = () => { view.step = 6; render(); window.scrollTo({ top:0, behavior:"smooth" }); };
