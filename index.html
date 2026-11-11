@@ -4905,6 +4905,7 @@ function buildField(f, ctx){
     upd();
   } else if (f.t === "table"){
     const v = p.fields[f.id] || Array.from({length:f.rows},()=>f.cols.map(()=>""));
+    while (v.length < f.rows) v.push(f.cols.map(() => ""));   // a table that has grown (e.g. 12 → 15 rows) shows its new empty rows too
     if (f.rowLabels) v.forEach((r,ri) => { r[0] = f.rowLabels[ri]; });
     v.forEach(r => f.cols.forEach((_,k) => { const t = colType(f, k); if (t && t.opts && r[k] && !t.opts.includes(r[k])) r[k] = ""; }));
     const cell = (ri, ci, val) => { const t = colType(f, ci), base = `id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" aria-label="${esc(f.cols[ci] || "")} ${esc(f.rowLabels ? f.rowLabels[ri] : "row " + (ri+1))}"`;
