@@ -2526,6 +2526,20 @@ GD.intro = {
   ]
 };
 
+GD.scenarioBrief = {
+  title: "Level Up: a game that is made for its players",
+  scenario: "The school's Digital Media Club is launching an <b>Indie Game Showcase</b> at the end of the unit. Teachers, younger students and parents will play every game on school laptops and tablets. The club has noticed that many popular games are not designed around their players: they are too hard or too easy, unclear, or built to keep people playing rather than to give them a good experience. You are a junior game designer. Your commission is to <b>research one target audience, then design, build and playtest an original 2D game that meets their needs</b>, fairly and safely.",
+  blocks: [
+    { h: "🎯 Choose ONE direction", items: ["A learning game for younger students (aged 7–11)", "A puzzle or strategy game for teenagers (aged 12–16)", "A game that shares a culture, story or social issue", "An arcade game for short breaks on a school laptop or tablet"] },
+    { h: "✅ Your game must have", items: ["A title screen, a menu and a short tutorial", "At least 2 levels that get harder", "Score and lives on screen (the HUD) in every level", "A win screen and a game over screen with play again", "Original sprites and sounds, or free assets you credit"] },
+    { h: "⚠️ Constraints", items: ["Built in Scratch or MakeCode Arcade, playable in a browser", "One playthrough takes about 3–5 minutes", "Suitable for all ages: no violence, unfair rewards or pay-to-win", "Time: 21 hours of lesson time (see the countdown), about 1 hour per strand"] },
+    { h: "📦 What you hand in", items: ["Criterion A: the need, research plan, analysis of 2 existing games and a design brief", "Criterion B: success criteria, storyboards, feedback and a chosen design", "Criterion C: production plan, annotated build screenshots and a changes log", "Criterion D: playtest results, evaluation, improvements and impact"] }
+  ],
+  success: "a player from your audience can start, understand and finish your game without help, enjoys it, and your playtest data proves it meets your success criteria."
+};
+GD.intro.sections[0].items[1] = "It needs a title screen, a menu, a tutorial, at least 2 levels, a win screen and a game over screen.";
+GD.intro.sections[1].items[0] = "Criterion A · Inquiring and analysing: your audience, research plan, 2 existing games and design brief.";
+
 /* worked example: Recycle Rush (a different game from the students' own) */
 COURSE.examples["10GD"] = {
   A: [ Pp("<b>Target audience:</b> Grade 3 students aged 8–9 at our school. They play short games on school iPads, enjoy collecting and sorting games, and have little experience with controls more complex than tap and drag.", "<b>Game type:</b> a 2D arcade sorting game made in Scratch, played on iPads with touch controls, because the class already uses iPads and rounds can fit into 5 minutes.", "<b>The gap:</b> in a sorting check, 11 of 25 items (44%) went in the wrong bin. Most recycling games I found are for adults or use text these students cannot read quickly.", "<b>The need:</b> the Eco Club needs a fun way for young students to practise sorting, so less recycling is contaminated at school."),
@@ -4511,6 +4525,17 @@ function testsOf(p, srcId){ return (p.fields[srcId] || []).map((r, i) => ({ i, n
 /* a field the student still has to do (the Grade 7 video task can be skipped) */
 const needed = (f, p) => !(f.grp === "video" && p.fields.__skipVideo);
 function strandValid(ctx, i){ const fs = fieldsFor(ctx.c, ctx.gd)[i]; return fs.every(f => !needed(f, ctx.p) || fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
+/* the main project scenario brief, shown above strand i of Criterion A (open until strand i is done) */
+function scenarioBriefCard(B, open){
+  return `<details class="card stack" ${open ? "open" : ""} style="gap:10px;border-left:6px solid #E5484D">
+    <summary style="cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center"><span style="font-size:26px">📜</span><span class="stack" style="gap:2px;flex:1"><span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#C42236">Project scenario brief · read before strand i</span><b style="font-size:19px">${esc(B.title)}</b></span><span class="muted" style="font-size:13px">${open ? "▲ Hide" : "▼ Show"}</span></summary>
+    <p style="margin:0;line-height:1.55">${B.scenario}</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px">
+      ${B.blocks.map(b => `<div style="background:#F4F6FA;border-radius:12px;padding:12px 14px"><b>${b.h}</b><ul style="margin:6px 0 0;padding-left:18px;line-height:1.5;font-size:14.5px">${b.items.map(i => `<li>${i}</li>`).join("")}</ul></div>`).join("")}
+    </div>
+    ${B.success ? `<p style="margin:0;background:#ECFAF1;border-radius:10px;padding:10px 12px;font-size:14.5px"><b>Success looks like:</b> ${B.success}</p>` : ""}
+  </details>`;
+}
 function paneTask(pane, ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
   const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
@@ -4519,6 +4544,7 @@ function paneTask(pane, ctx){
   try { itStrandSeen(c, si, p); } catch(e){}
   try { if (SDCG && window.SDC && SDC.slow && !session.preview && ctx.u.role !== "teacher"){ if (p.done[si]) SDC.slow.stop(); else SDC.slow.start("ds|" + g + "|" + c + "|" + si, uLabel(g) + " · Criterion " + c + " · Strand " + ROMAN[si], sdcAcct(ctx.u, session.email), [12, 20, 30]); } } catch(e){}   // taking too long on one strand
   pane.innerHTML = `<div class="stack">
+    ${c === "A" && gd.scenarioBrief ? scenarioBriefCard(gd.scenarioBrief, !p.done[0]) : ""}
     <p class="muted" style="margin:0;font-size:13.5px">Work through the strands in order. Each one opens when the one before it is complete, and you can download your work once all four are done.</p>
     <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
