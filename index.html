@@ -2231,7 +2231,7 @@ COURSE.buildTasks0 = function(c, gd){
     ];
   }
   if (c === "C") return [
-    [ TB("c1t", `${gd === COURSE.grades["7"] ? "Logical plan for YOUR awareness poster: a step-by-step instruction manual to make the final poster you chose and developed in Criterion B, strand iv (B.iv)" : "Logical plan: a step-by-step instruction manual to bring your developed design to life"} (at least ${n.steps} steps). Every step must be SMART: specific, measurable, achievable, realistic and timely.`, ["Step number", "Detailed instruction (exactly what to do)", "Tools / resources", "Time (minutes)"], n.steps + 2, n.steps, ["num", null, null, "num"]),
+    [ TB("c1t", `${gd === COURSE.grades["7"] ? "Logical plan for YOUR awareness poster: a step-by-step instruction manual to make the final poster you chose and developed in Criterion B, strand iv (B.iv)" : "Logical plan: a step-by-step instruction manual to bring your developed design to life"} (at least ${n.steps} steps). Every step must be SMART: specific, measurable, achievable, realistic and timely.`, ["Step number", "Detailed instruction (exactly what to do)", "Tools / resources", "Time (minutes)"], gd === COURSE.grades["7"] ? 15 : n.steps + 2, n.steps, ["num", null, null, "num"]),
       T("c1tot", "Total time, and how it fits into your lessons", 6) ],
     [ CH("c2tool", "Which software or tools did you use?", L.tools.map(t => t.name).concat(["Other"])),
       CL("c2k", `Tick the technical skills you used (at least ${n.skills})`, L.skills, Math.min(n.skills, L.skills.length)),
