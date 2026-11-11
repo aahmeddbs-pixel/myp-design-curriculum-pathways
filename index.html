@@ -2757,6 +2757,15 @@ COURSE.buildTasks = function(c, gd){
 COURSE.focusFromRD0 = COURSE.focusFrom;
 COURSE.focusFrom = function(g, f){ if (g !== "10RD") return COURSE.focusFromRD0(g, f); f = f || {}; const t = String(f.a1title || f.a4what || "").trim(); return t.length > 3 ? t.slice(0, 120) : ""; };
 
+RD.scenarioBrief = {
+  title: "A Future with Resilient Design",
+  paras: [
+    "In this unit, students explore how design can help people and communities respond to disruption and change. They investigate how products, services and systems can be made more resilient, adaptable and useful over time. Students consider the needs of a selected client or target audience and develop a design solution that can withstand disruption and evolve as needs change.",
+    "Students follow the MYP Design Cycle: Inquiring and Analysing, Developing Ideas, Creating the Solution and Evaluating. They identify a need, plan and prioritise research, analyse existing products and develop a detailed design brief. They then establish measurable design specifications, generate a range of feasible ideas, justify a chosen design and prepare detailed planning drawings or diagrams. Students plan and create their solution, demonstrate technical skills, document and justify changes, and test and evaluate the outcome against their design specification.",
+    "The emphasis throughout the unit is on purposeful and inclusive design, resilience, adaptation, evidence-based decision-making, technical skill and the impact of design on the intended client or target audience."
+  ],
+  focus: ["Purposeful and inclusive design", "Resilience", "Adaptation", "Evidence-based decisions", "Technical skill", "Impact on the client or audience"]
+};
 RD.strands = {
   A: ["Explain and justify the need for a solution for your chosen target audience", "Identify and prioritise the primary and secondary research needed", "Analyse a range of existing products that inspire a solution", "Develop a detailed design brief that summarises your research"],
   B: ["Develop design specifications with measurable success criteria", "Develop a range of feasible design ideas others can interpret", "Present the chosen design and justify its selection", "Develop accurate, detailed planning drawings and requirements"],
@@ -3429,8 +3438,8 @@ function renderLogin(app){
     setRole(role); };
   function unUpd(){   // Grade 10 sign-up: a username instead of the email
     const g10 = mode === "up" && role === "student" && String($("#lGrade").value) === "10" && g10Code();
-    $("#lEmailLbl").textContent = mode === "in" ? "School email, or your username (Grade 10)" : g10 ? "Your SISD email (only to send you a code; it is not saved)" : "School email";
-    $("#lEmail").placeholder = mode === "in" ? "Email or username" : "firstname.lastname@sisd.ae";
+    $("#lEmailLbl").innerHTML = mode === "in" ? "<b>Grades 6–9:</b> your school email · <b>Grade 10:</b> your first and last name, no spaces (e.g. SaraKhan)" : g10 ? "Your SISD email (only to send you a code; it is not saved)" : "School email";
+    $("#lEmail").placeholder = mode === "in" ? "firstname.lastname@sisd.ae  or  FirstnameLastname" : "firstname.lastname@sisd.ae";
     const pv = $("#unPrev"), un = window.SDC && SDC.usernameOf ? SDC.usernameOf($("#lName").value) : "";
     pv.hidden = !g10; pv.innerHTML = g10 ? (un.length >= 3 ? `Your username will be <b class="notranslate" style="font-size:1.1em">${esc(un)}</b> (your first and last name, no spaces). You'll sign in with it, not your email.` : "Grade 10 students sign in with a <b>username</b>: your first and last name with no spaces, for example <b>MikaeelAhmed</b>.") : "";
   }
@@ -4536,17 +4545,36 @@ function scenarioBriefCard(B, open){
     ${B.success ? `<p style="margin:0;background:#ECFAF1;border-radius:10px;padding:10px 12px;font-size:14.5px"><b>Success looks like:</b> ${B.success}</p>` : ""}
   </details>`;
 }
+/* the "Scenario brief" tab before strand i of Criterion A */
+function paneBrief(pane, ctx){
+  const { gd, p } = ctx, B = gd.scenarioBrief;
+  const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
+  pane.innerHTML = `<div class="stack">
+    <p class="muted" style="margin:0;font-size:13.5px">Read the scenario brief first, then start strand i. You can come back to this tab at any time.</p>
+    <div class="strand-tabs" role="tablist"><button role="tab" data-brief="1" aria-selected="true" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
+    ${B.paras ? `<div class="card stack" style="gap:12px;border-left:6px solid #E5484D">
+        <span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#C42236">Scenario brief</span>
+        <h2 style="margin:0">${esc(B.title)}</h2>
+        ${B.paras.map(t => `<p style="margin:0;line-height:1.65;font-size:16px">${esc(t)}</p>`).join("")}
+        ${B.focus ? `<div class="row" style="gap:8px;flex-wrap:wrap">${B.focus.map(f => `<span style="background:#F4F6FA;border-radius:999px;padding:5px 12px;font-size:13.5px;font-weight:700">${esc(f)}</span>`).join("")}</div>` : ""}
+      </div>` : scenarioBriefCard(B, true).replace("<details", "<div").replace("</details>", "</div>").replace(/<summary[^]*?<\/summary>/, `<b style="font-size:19px">📜 ${esc(B.title)}</b>`)}
+    <div class="row" style="justify-content:flex-end"><button class="btn" id="briefGo">I have read the brief · start strand i →</button></div>
+  </div>`;
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled || b.dataset.brief) return; p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; view.strand = +b.dataset.i; render(); });
+  pane.querySelector("#briefGo").onclick = () => { p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; view.strand = 0; render(); window.scrollTo({ top: pane.getBoundingClientRect().top + scrollY - 90, behavior: "smooth" }); };
+}
 function paneTask(pane, ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
   const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
   if (!reach(view.strand)) view.strand = Math.max(0, p.done.findIndex(d => !d));
   const si = view.strand;
+  const hasBrief = c === "A" && !!gd.scenarioBrief, showBrief = hasBrief && (view.brief === true || (view.brief !== false && !p.briefSeen && !p.done[0]));
+  if (showBrief){ paneBrief(pane, ctx); return; }
   try { itStrandSeen(c, si, p); } catch(e){}
   try { if (SDCG && window.SDC && SDC.slow && !session.preview && ctx.u.role !== "teacher"){ if (p.done[si]) SDC.slow.stop(); else SDC.slow.start("ds|" + g + "|" + c + "|" + si, uLabel(g) + " · Criterion " + c + " · Strand " + ROMAN[si], sdcAcct(ctx.u, session.email), [12, 20, 30]); } } catch(e){}   // taking too long on one strand
   pane.innerHTML = `<div class="stack">
-    ${c === "A" && gd.scenarioBrief ? scenarioBriefCard(gd.scenarioBrief, !p.done[0]) : ""}
     <p class="muted" style="margin:0;font-size:13.5px">Work through the strands in order. Each one opens when the one before it is complete, and you can download your work once all four are done.</p>
-    <div class="strand-tabs" role="tablist">${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
+    <div class="strand-tabs" role="tablist">${hasBrief ? `<button role="tab" data-brief="1" aria-selected="${showBrief}" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>` : ""}${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[si])}</h3><div id="strandVoice" class="sdcNoRead"></div></div>
       <div id="kwBox"></div>
@@ -4567,7 +4595,7 @@ function paneTask(pane, ctx){
         <button class="btn sec" id="spellBtn" type="button">Check spelling and grammar</button></div>
         <div class="row">${p.done.every(Boolean) ? `<button class="btn ghost" id="toSub" type="button" title="Go to Download &amp; hand in without changing this strand">Back to Download &amp; hand in</button>` : ""}<button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button></div>
       </div></div></div>`;
-  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; view.strand = +b.dataset.i; render(); });
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; if (b.dataset.brief){ view.brief = true; render(); return; } view.brief = false; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
   let vg = null;
   const fs = F[si];
