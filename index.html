@@ -2434,7 +2434,7 @@ const GD_TASKS = {
       T("a4brief", "Design brief summary: I am going to design… for… because… It will…", 50) ]
   ],
   B: [
-    [ TB("b1t", "Task 1: Design specification. Write 8–10 measurable success criteria, each linked to your Criterion A research.", ["Success criterion (specific and measurable)", "Linked to which research? (A.i–A.iv)", "How I will test it"], 10, 8) ],
+    [ TB("b1t", "Task 1: Design specification. Write 4–5 measurable success criteria, each linked to your Criterion A research.", ["Success criterion (specific and measurable)", "Linked to which research? (A.i–A.iv)", "How I will test it"], 10, 8) ],
     [ SK("b2s1", "Initial storyboard part 1: title screen, main menu and tutorial / instructions"),
       SK("b2s2", "Initial storyboard part 2: Level 1 and Level 2 (show the score and lives in every gameplay scene)"),
       SK("b2s3", "Initial storyboard part 3: win screen and game over screen"),
@@ -2479,10 +2479,10 @@ COURSE.focusFromGD0 = COURSE.focusFrom;
 COURSE.focusFrom = function(g, f){ if (g !== "10GD") return COURSE.focusFromGD0(g, f); const t = String((f || {}).a4what || "").trim(); return t.length > 3 ? t.slice(0, 120) : ""; };
 
 GD.strands = {
-  A: ["Explain and justify the need for your game for a specific target audience", "Identify and prioritise the primary and secondary research you need", "Analyse 3 existing games in your chosen genre", "Develop a detailed design brief that summarises your research"],
-  B: ["Write 8–10 measurable success criteria linked to your research", "Present an initial storyboard: title, menu, tutorial, levels, win and game over", "Critically analyse your storyboard with self, peer and client feedback", "Present a final, refined storyboard that shows your improvements"],
+  A: ["Explain and justify the need for your game for a specific target audience", "Identify and prioritise the primary and secondary research you need", "Analyse 2 existing games in your chosen genre", "Develop a detailed design brief that summarises your research"],
+  B: ["Write 4–5 measurable success criteria linked to your research", "Present an initial storyboard: title, menu, tutorial, levels, win and game over", "Critically analyse your storyboard with self, peer and client feedback", "Present a final, refined storyboard that shows your improvements"],
   C: ["Write a scene-by-scene production plan another student could follow", "Demonstrate technical skills with 6 annotated build screenshots", "Follow your plan to create a playable game", "Justify the changes you made to your storyboard and plan"],
-  D: ["Design and carry out 6 tests, including playtests with your audience", "Evaluate your game against every success criterion", "Explain 5 improvements, each based on test evidence", "Explain the impact of your game if it were released, including ethics"]
+  D: ["Design and carry out 3 tests, including playtests with your audience", "Evaluate your game against every success criterion", "Explain 3 improvements, each based on test evidence", "Explain the impact of your game if it were released, including ethics"]
 };
 GD.critIntro = {
   A: "In Criterion A you find out who your game is for and why they need it. You plan and prioritise your research, analyse 3 existing games like a game designer, and finish with a design brief that decides what your game will be.",
@@ -3609,6 +3609,29 @@ function uLabel(g){ const gd = COURSE.grades[g]; if (!gd) return gLabel(g); cons
 function groupOf(g){ for (const [k,v] of Object.entries(COURSE.groups)) if (v.units.includes(g)) return k; return g; }
 function groupLabel(u){ const k = u.group || groupOf(u.grade); return (COURSE.groups[k] && COURSE.groups[k].label) || gLabel(u.grade); }
 let pendingSnap = null;
+/* The test student (the teacher's test account) can open any grade's area and switch between them */
+function testerAreas(){
+  const out = [];
+  Object.keys(COURSE.groups).forEach(k => { const us = COURSE.groups[k].units, d = us.filter(x => !IT_UNITS.includes(x)), it = us.filter(x => IT_UNITS.includes(x));
+    if (d.length) out.push({ k, label: "Grade " + k + (it.length ? " Design" : ""), units: d });
+    if (it.length) out.push({ k: k + "it", label: "Grade " + k + " IT", units: it }); });
+  return out;
+}
+function testerArea(u){
+  const A = testerAreas(); let a = A.find(x => x.k === u.testerArea);
+  if (!a) a = A.find(x => x.units.includes(u.grade)) || A[0];
+  return a;
+}
+function testerBar(tv){
+  return `<div class="card" style="padding:12px 14px;border-left:6px solid #1F6FEB;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <b style="margin-right:4px">🧪 Test student · view any grade:</b>
+    ${testerAreas().map(a => `<button class="btn sm ${a.k === tv.k ? "" : "ghost"}" type="button" data-tarea="${esc(a.k)}" aria-pressed="${a.k === tv.k}">${esc(a.label)}</button>`).join("")}
+  </div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-tarea]"); if (!b || !isTester()) return;
+  const u = user(), a = testerAreas().find(x => x.k === b.dataset.tarea); if (!u || !a) return;
+  u.testerArea = a.k; if (!a.units.includes(u.grade)) setUnit(u, a.units[0]); else save();
+  view = { name: "home", crit: null, step: 0, strand: 0 }; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
 function setUnit(u, key){
   if (!u || u.grade === key) return;
   if (pendingSnap){ clearTimeout(snapTimer); const c = pendingSnap; pendingSnap = null; sendWork(c, "snapshot"); }
@@ -4201,9 +4224,10 @@ function renderIntro(app){
   };
 }
 function renderHome(app){
-  const u = user(), gk = u.group || groupOf(u.grade), grp0 = isTester() ? { label:"Test student · every grade", units: Object.values(COURSE.groups).flatMap(x => x.units) } : COURSE.groups[gk] || { label: "Grade " + gk, units: [] }, grp = Object.assign({}, grp0, { units: sdcUnits(u, grp0.units) }), multi = grp.units.length > 1;
+  const u = user(), gk = u.group || groupOf(u.grade), tv = isTester() ? testerArea(u) : null, grp0 = tv ? { label: "Test student · " + tv.label, units: tv.units } : COURSE.groups[gk] || { label: "Grade " + gk, units: [] }, grp = Object.assign({}, grp0, { units: tv ? tv.units : sdcUnits(u, grp0.units) }), multi = grp.units.length > 1;
   if (promote(u)) return renderHome(app);   // a new school year started: move up first
   app.innerHTML = `<div class="stack" style="gap:26px">
+    ${tv ? testerBar(tv) : ""}
     ${!grp.units.length ? `<div class="card stack" style="gap:6px;border-left:6px solid var(--red,#DC2B3E)"><div class="eyebrow">${esc(grp.label)}</div><h1 style="font-family:var(--f-display);font-size:clamp(22px,3.2vw,30px)">Welcome to ${esc(grp.label)}!</h1>
       <p class="muted" style="margin:0;max-width:66ch">Your ${esc(grp.label)} ${SDCG && SDCG.course === "it" ? "IT" : "Design"} work isn't open here yet. Your teacher will let you know when it starts. Until then you can look back at last year's work below.</p></div>` : ""}
     ${multi ? `<div class="stack" style="gap:4px"><div class="eyebrow">${esc(grp.label)}</div><h1 style="font-family:var(--f-display);font-size:clamp(24px,3.6vw,34px)">Your units</h1>
