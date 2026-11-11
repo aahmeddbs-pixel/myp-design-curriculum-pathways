@@ -2173,7 +2173,7 @@ Object.keys(UNITS).forEach(g => {
 
 /* ---------- the task builder ---------- */
 /* Grade 7, Criterion C strand ii: Task 1 = the poster being made (5 annotated screenshots + the finished poster);
-   Task 2 = editing the video (5 annotated screenshots) + upload the finished video. Task 2 can be skipped (marks are lost). */
+   Task 2 = editing the video (5 annotated screenshots) + a link to the finished video in their school OneDrive. Task 2 can be skipped (marks are lost). */
 function g7C2(gd){
   const L = gd.lab || { tools: [] }, W = 15;
   const P = ["setting up your page: size, background and layout grid", "adding and editing your images (crop, remove background, adjust)", "adding your headline and text: fonts, sizes and colours", "building the visual hierarchy: what is seen first, second and third", "final details: call to action, facts, logo, checking alignment"];
@@ -2185,7 +2185,7 @@ function g7C2(gd){
     SK("c2pf", "Task 1 · Your finished poster", true),
     ...V.flatMap((h, k) => [Object.assign(SK(`c2v${k + 1}`, `Task 2 · Video evidence ${k + 1} of 5: a screenshot of you editing your video: ${h}`, true), { grp: "video", pair: true, noSketch: true }),
       Object.assign(T(`c2va${k + 1}`, `Annotation ${k + 1}: what did you do at this step, and which editing skill or tool did you use?`, W), { grp: "video" })]),
-    { t: "video", id: "c2vid", label: "Task 2 · Drag and drop your finished 30-second video here for assessment", grp: "video" }
+    { t: "video", id: "c2vid", label: "Task 2 · Submit a link to your video, which should first be saved in your school OneDrive folder. If you do not know how to do this, ask your teacher for help.", grp: "video" }
   ];
 }
 COURSE.buildTasks = function(c, gd){
@@ -4777,7 +4777,7 @@ function videoGroup(box, ctx, redraw){
   wrap.append(head, body); box.appendChild(wrap);
   const paint = () => { const sk = !!p.fields.__skipVideo;
     head.innerHTML = sk ? `<div class="notice warn"><b>You skipped Task 2 (the video).</b> You will lose some marks towards your overall grade for this criterion. Changed your mind? <button class="btn sm sec" type="button" id="vidUndo">Do the video task</button></div>`
-      : `<div class="row" style="justify-content:space-between;gap:10px"><div><div class="eyebrow">Task 2</div><h3 style="margin:2px 0 0">Editing your 30-second video</h3><p class="muted" style="margin:4px 0 0;font-size:13.5px">Add 5 screenshots of you editing your video, each with an annotation, then upload your finished video.</p></div><button class="btn ghost sm" type="button" id="vidSkip">Skip the video task</button></div>`;
+      : `<div class="row" style="justify-content:space-between;gap:10px"><div><div class="eyebrow">Task 2</div><h3 style="margin:2px 0 0">Editing your 30-second video</h3><p class="muted" style="margin:4px 0 0;font-size:13.5px">Add 5 screenshots of you editing your video, each with an annotation, then submit a link to your finished video saved in your school OneDrive folder.</p></div><button class="btn ghost sm" type="button" id="vidSkip">Skip the video task</button></div>`;
     body.hidden = sk;
     const sb = head.querySelector("#vidSkip"), ub = head.querySelector("#vidUndo");
     if (sb) sb.onclick = () => skipDialog(() => { p.fields.__skipVideo = true; save(); logEvent(c, "Skipped the video task", ""); scheduleSnapshot(c); paint(); });
@@ -4826,32 +4826,24 @@ async function uploadVideo(file, meta, onProgress){
   throw new Error("The video was sent, but the link didn't come back. Try again.");
 }
 function videoBox(el, f, ctx, label){
-  const { p, c, u } = ctx, MAX = 300 * 1024 * 1024;
+  /* the finished video is saved in the student's school OneDrive first; they paste its share link here */
+  const { p, c } = ctx, ONE = /^https:\/\/([a-z0-9-]+\.)*(sharepoint\.com|onedrive\.live\.com|1drv\.ms)\//i;
   const paint = (msg) => { const v = p.fields[f.id];
     el.innerHTML = `<span class="lbl">${esc(label)}</span>
-      <div class="vdrop sk-drop" tabindex="0" role="button" aria-label="Choose your video file">
-        ${v && v.url ? `<span style="font-size:1.3rem">✅</span><span><b>Uploaded: ${esc(v.name || "your video")}</b> <span class="muted">${esc(new Date(v.at).toLocaleString())}${v.size ? " · " + (v.size / 1048576).toFixed(1) + " MB" : ""}</span><br><a href="${esc(v.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">▶ Open my video</a> <span class="muted">· drop a new file here to replace it</span></span>`
-          : `<span style="font-size:1.3rem">🎬</span><span><b>Drop your finished video here</b> or <u>click to choose it</u> <span class="muted">(MP4 or MOV, up to 300 MB)</span></span>`}
-        <input type="file" accept="video/*" hidden></div><div class="vmsg" style="margin-top:6px">${msg || ""}</div>`;
-    const drop = el.querySelector(".vdrop"), inp = el.querySelector("input");
-    drop.onclick = () => inp.click(); drop.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); inp.click(); } };
-    drop.ondragover = e => { e.preventDefault(); drop.style.borderColor = "var(--accent,#DC2B3E)"; };
-    drop.ondragleave = () => { drop.style.borderColor = ""; };
-    drop.ondrop = e => { e.preventDefault(); drop.style.borderColor = ""; const fl = e.dataTransfer.files && e.dataTransfer.files[0]; if (fl) go(fl); };
-    inp.onchange = () => { if (inp.files[0]) go(inp.files[0]); };
-  };
-  const go = async file => {
-    if (!/^video\//.test(file.type || "") && !/\.(mp4|mov|m4v|webm|avi)$/i.test(file.name)) return paint(`<div class="notice bad">That isn't a video file. Choose your finished MP4 or MOV video.</div>`);
-    if (file.size > MAX) return paint(`<div class="notice bad">That video is too big (${(file.size / 1048576).toFixed(0)} MB). Export it again at 720p or 1080p so it is under 300 MB.</div>`);
-    el.innerHTML = `<span class="lbl">${esc(label)}</span><div style="border:2px solid var(--line);border-radius:14px;padding:16px"><b>Uploading ${esc(file.name)}…</b> <span class="vpct">0%</span>
-      <div style="height:10px;border-radius:99px;background:var(--soft);overflow:hidden;margin-top:8px"><i class="vbar" style="display:block;height:100%;width:0;background:var(--ok,#1E8A55);transition:width .3s"></i></div>
-      <div class="muted" style="font-size:13px;margin-top:6px">Keep this page open until it says Uploaded. A big video can take a few minutes.</div></div>`;
-    try {
-      const url = await uploadVideo(file, { who: u.name, w: uLabel(ctx.g) + " · Criterion " + c, cls: uLabel(ctx.g) + (classLabel(u) ? " " + classLabel(u) : "") + " · " + (u.teacher || "") },
-        fr => { const pc = Math.round(fr * 100); const b = el.querySelector(".vbar"), t = el.querySelector(".vpct"); if (b) b.style.width = pc + "%"; if (t) t.textContent = pc + "%"; });
-      p.fields[f.id] = { url, name: file.name, size: file.size, at: Date.now() }; save(); scheduleSnapshot(c); logEvent(c, "Uploaded video", url);
-      paint(`<div class="notice ok">Uploaded. Your teacher can now watch your video.</div>`);
-    } catch(e){ paint(`<div class="notice bad">${esc(e.message)}</div>`); }
+      ${v && v.url ? `<div class="notice ok" style="margin:6px 0">✅ <b>Video link submitted</b> <span class="muted">${esc(new Date(v.at).toLocaleString())}</span><br><a href="${esc(v.url)}" target="_blank" rel="noopener" style="word-break:break-all">${esc(v.url)}</a></div>` : ""}
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><input type="url" class="vlink" style="flex:1;min-width:240px" placeholder="Paste your OneDrive link here (https://…sharepoint.com/…)" value="${esc(v && v.url && ONE.test(v.url) ? v.url : "")}" aria-label="Link to your video in OneDrive">
+        <button class="btn" type="button" data-vsave>${v && v.url ? "Update link" : "Submit link"}</button></div>
+      <details style="margin-top:8px"><summary class="muted" style="cursor:pointer;font-size:13.5px">How do I get a link from OneDrive?</summary>
+        <ol class="muted" style="font-size:13.5px;margin:6px 0 0;padding-left:20px;line-height:1.55"><li>Save (export) your finished video, then upload it to your <b>school OneDrive</b> folder.</li><li>In OneDrive, click the video's <b>…</b> menu, then <b>Share</b>.</li><li>Choose who can view: <b>People in Swiss International Scientific School Dubai</b>, then <b>Copy link</b>.</li><li>Paste the link in the box above and press <b>Submit link</b>.</li><li>Not sure? Ask your teacher for help.</li></ol></details>
+      <div class="vmsg" style="margin-top:6px">${msg || ""}</div>`;
+    const inp = el.querySelector(".vlink"), go = () => {
+      const url = inp.value.trim();
+      if (!url) return paint(`<div class="notice bad">Paste the link to your video first.</div>`);
+      if (!ONE.test(url)) return paint(`<div class="notice bad">That isn't a OneDrive link. Save your video in your school OneDrive folder, press Share, copy the link and paste it here. Ask your teacher if you need help.</div>`);
+      p.fields[f.id] = { url, name: "OneDrive video", at: Date.now() }; save(); scheduleSnapshot(c); logEvent(c, "Submitted video link", url);
+      paint(`<div class="notice ok">Link submitted. Your teacher can now watch your video. Check the link opens for you.</div>`);
+    };
+    el.querySelector("[data-vsave]").onclick = go; inp.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); go(); } };
   };
   paint();
 }
@@ -5250,7 +5242,7 @@ function buildPDF(ctx){
     fs.forEach(f => {
       const v = p.fields[f.id];
       if (f.grp === "video" && p.fields.__skipVideo){ if (!skipNoted){ skipNoted = true; need(12); para("Task 2 (the video): SKIPPED by the student. Marks are lost for this task.", 10.5, "bold", RED); } return; }
-      if (f.t === "video"){ need(14); para(fill(f.label, g, sc), 10, "bold", NAVY); para(v && v.url ? "Finished video: " + v.url : "(no video uploaded)", 10.5); return; }
+      if (f.t === "video"){ need(14); para(fill(f.label, g, sc), 10, "bold", NAVY); para(v && v.url ? "Finished video: " + v.url : "(no video link submitted)", 10.5); return; }
       if (f.t === "shots"){ need(12); para(fill(f.label, g, sc), 10, "bold", NAVY); (v || []).forEach(im => { const pr = doc.getImageProperties(im), w = W-2*M, h = Math.min(100, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h+4); doc.addImage(im, "JPEG", M, y, ww, h); y += h + 5; }); if (!(v || []).length) para("(no screenshots)", 10, "italic"); return; }
       if (f.t === "evlist"){ need(12); para(fill(f.label, g, sc), 10, "bold", NAVY); const ts = testsOf(p, f.src);
         ts.forEach((t, n) => { const im = v && v[n]; para(`Test ${n + 1}${t.name ? ": " + t.name : ""}`, 10, "bold");
