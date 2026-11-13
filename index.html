@@ -5603,15 +5603,17 @@ function itTimerTick(){
 }
 setInterval(itTimerTick, 1000); setTimeout(itTimerTick, 300);
 /* ---------- Grade 10 Design: ePortfolio countdown (lesson time only, Dubai time), shown at the top of the page ----------
-   "A Future with Resilient Design" runs for 22 Design lessons from Tuesday 10 November 2026. Time only runs during Design
+   "A Future with Resilient Design" has 20 hours of Design lesson time from Tuesday 10 November 2026. Time only runs during Design
    lessons: Tuesday 2:45–3:30 pm, Wednesday 9:05–9:50 am and Friday 9:00–9:40 am (Dubai). Each strand has a 1-hour target,
-   counted in lesson time from when the student opens it (16 strands × 1 hour ≈ the 22 lessons). */
+   counted in lesson time from when the student opens it. */
 const DES_UNITS = ["10RD", "10"];   // G10 Design: Resilient Design and the older ePortfolio
-const DTT = { start: Date.UTC(2026, 10, 10) - DXB, lessons: 22, strand: 3600,
+const DTT = { start: Date.UTC(2026, 10, 10) - DXB, total: 20 * 3600, strand: 3600,
   slots: { 2: [[14, 45], [15, 30]], 3: [[9, 5], [9, 50]], 5: [[9, 0], [9, 40]] } };   // 0 = Sunday
-(function(){   // the project's lessons: start and end of each of the 22, and the total lesson time
-  const L = []; for (let day = DTT.start; L.length < DTT.lessons; day += 86400e3){ const x = lessonsOn(day, DTT); if (x) L.push(x); }
-  DTT.list = L; DTT.end = L[L.length - 1][1]; DTT.total = lessonSecs(DTT.start, DTT.end, DTT);
+(function(){   // the project's lessons until the 20 hours run out, and the moment they run out
+  const L = []; let t = 0;
+  for (let day = DTT.start; t < DTT.total; day += 86400e3){ const x = lessonsOn(day, DTT); if (!x) continue;
+    const len = (x[1] - x[0]) / 1000; L.push(x); if (t + len >= DTT.total){ DTT.end = x[0] + (DTT.total - t) * 1000; } t += len; }
+  DTT.list = L; DTT.lessons = L.length;
 })();
 function desTimerUser(){ const u = user(); return u && u.role !== "teacher" && !session.preview && DES_UNITS.includes(u.grade) ? u : null; }
 function desTimerTick(){
