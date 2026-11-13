@@ -5557,27 +5557,30 @@ const IT_UNITS = ["10GD", "10IT", "10HH"];   // the G10 IT course: Game Developm
 const ITT = { start: Date.UTC(2026, 10, 10) - 4 * 3600e3, total: 21 * 3600, strand: 3600,
   slots: { 2: [[14, 45], [15, 30]], 3: [[9, 5], [9, 50]], 5: [[8, 15], [8, 55]] } };   // 0 = Sunday
 const DXB = 4 * 3600e3;
-function lessonsOn(dayMs){   // [start, end] of the IT lesson on that Dubai day (ms), or null
-  const d = new Date(dayMs + DXB), sl = ITT.slots[d.getUTCDay()]; if (!sl) return null;
+/* school holidays (Dubai 2026–27, KHDA): no lessons, so the countdowns pause. [first day, last day] as "YYYY-MM-DD" */
+const SCHOOL_OFF = [["2026-12-14", "2027-01-03"], ["2027-04-05", "2027-04-11"]];
+function lessonsOn(dayMs, cfg){   // [start, end] of the lesson on that Dubai day (ms), or null
+  const d = new Date(dayMs + DXB), sl = (cfg || ITT).slots[d.getUTCDay()]; if (!sl) return null;
+  const iso = d.toISOString().slice(0, 10); if (SCHOOL_OFF.some(r => iso >= r[0] && iso <= r[1])) return null;
   const y = d.getUTCFullYear(), m = d.getUTCMonth(), dd = d.getUTCDate();
   return [Date.UTC(y, m, dd, sl[0][0], sl[0][1]) - DXB, Date.UTC(y, m, dd, sl[1][0], sl[1][1]) - DXB];
 }
-function lessonSecs(a, b){   // lesson seconds between two moments
+function lessonSecs(a, b, cfg){   // lesson seconds between two moments
   if (!(b > a)) return 0; let t = 0;
   const d0 = new Date(a + DXB); let day = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), d0.getUTCDate()) - DXB;
-  for (; day < b; day += 86400e3){ const L = lessonsOn(day); if (L) t += Math.max(0, Math.min(b, L[1]) - Math.max(a, L[0])); }
+  for (; day < b; day += 86400e3){ const L = lessonsOn(day, cfg); if (L) t += Math.max(0, Math.min(b, L[1]) - Math.max(a, L[0])); }
   return Math.floor(t / 1000);
 }
-function lessonNow(now){ const d = new Date(now + DXB), day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - DXB, L = lessonsOn(day); return L && now >= L[0] && now < L[1] ? L : null; }
-function nextLesson(now){ const d = new Date(now + DXB); let day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - DXB;
-  for (let i = 0; i < 9; i++, day += 86400e3){ const L = lessonsOn(day); if (L && L[0] > now) return L; } return null; }
+function lessonNow(now, cfg){ const d = new Date(now + DXB), day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - DXB, L = lessonsOn(day, cfg); return L && now >= L[0] && now < L[1] ? L : null; }
+function nextLesson(now, cfg){ const d = new Date(now + DXB); let day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - DXB;
+  for (let i = 0; i < 30; i++, day += 86400e3){ const L = lessonsOn(day, cfg); if (L && L[0] > now) return L; } return null; }
 const hms = sec => { const neg = sec < 0, v = Math.abs(sec); return (neg ? "−" : "") + Math.floor(v / 3600) + ":" + String(Math.floor(v / 60) % 60).padStart(2, "0") + ":" + String(v % 60).padStart(2, "0"); };
 const dxbTime = ms => { const d = new Date(ms + DXB); let h = d.getUTCHours(); const ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12; return h + ":" + String(d.getUTCMinutes()).padStart(2, "0") + " " + ap; };
 const dxbDay = ms => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(ms + DXB).getUTCDay()];
 function itTimerUser(){ const u = user(); return u && u.role !== "teacher" && IT_UNITS.includes(u.grade) ? u : null; }
 /* called when a student opens a strand's task: the strand's 1-hour target starts counting from then */
 function itStrandSeen(c, si, p){
-  const u = itTimerUser(); if (!u || !p) return;
+  const u = itTimerUser() || desTimerUser(); if (!u || !p) return;
   p.tStart = p.tStart || {}; p.tDone = p.tDone || {};
   if (!p.tStart[si]){ p.tStart[si] = Date.now(); save(true); }
   if (p.done[si] && !p.tDone[si]){ p.tDone[si] = Date.now(); save(true); }
@@ -5599,6 +5602,39 @@ function itTimerTick(){
     <div style="font-size:12px;color:${L ? "#9BE3B7" : "#C9D6F0"}">${L ? "▶ Lesson time: counting down until " + dxbTime(L[1]) : "⏸ Paused" + (nx ? " · next IT lesson " + dxbDay(nx[0]) + " " + dxbTime(nx[0]) : "")}</div>${st}`;
 }
 setInterval(itTimerTick, 1000); setTimeout(itTimerTick, 300);
+/* ---------- Grade 10 Design: ePortfolio countdown (lesson time only, Dubai time), shown at the top of the page ----------
+   "A Future with Resilient Design" runs for 22 Design lessons from Tuesday 10 November 2026. Time only runs during Design
+   lessons: Tuesday 2:45–3:30 pm, Wednesday 9:05–9:50 am and Friday 9:00–9:40 am (Dubai). Each strand has a 1-hour target,
+   counted in lesson time from when the student opens it (16 strands × 1 hour ≈ the 22 lessons). */
+const DES_UNITS = ["10RD", "10"];   // G10 Design: Resilient Design and the older ePortfolio
+const DTT = { start: Date.UTC(2026, 10, 10) - DXB, lessons: 22, strand: 3600,
+  slots: { 2: [[14, 45], [15, 30]], 3: [[9, 5], [9, 50]], 5: [[9, 0], [9, 40]] } };   // 0 = Sunday
+(function(){   // the project's lessons: start and end of each of the 22, and the total lesson time
+  const L = []; for (let day = DTT.start; L.length < DTT.lessons; day += 86400e3){ const x = lessonsOn(day, DTT); if (x) L.push(x); }
+  DTT.list = L; DTT.end = L[L.length - 1][1]; DTT.total = lessonSecs(DTT.start, DTT.end, DTT);
+})();
+function desTimerUser(){ const u = user(); return u && u.role !== "teacher" && !session.preview && DES_UNITS.includes(u.grade) ? u : null; }
+function desTimerTick(){
+  let bar = document.getElementById("desTimer"); const u = desTimerUser(), mast = document.querySelector("header.mast");
+  if (!u || !mast){ if (bar) bar.remove(); return; }
+  if (!bar){ bar = document.createElement("div"); bar.id = "desTimer"; bar.setAttribute("role", "timer"); bar.setAttribute("aria-live", "off");
+    bar.style.cssText = "background:#1B2D4E;color:#fff;border-top:1px solid rgba(255,255,255,.12);font:600 13px Inter,Arial,sans-serif";
+    mast.appendChild(bar); }
+  const now = Date.now(), used = lessonSecs(DTT.start, now, DTT), left = Math.max(0, DTT.total - used), L = lessonNow(now, DTT), nx = L ? null : nextLesson(now, DTT);
+  const n = DTT.list.filter(x => x[0] <= now).length, finished = now >= DTT.end;
+  let st = "";
+  const cur = u.itCur && u.itCur.g === u.grade ? u.itCur : null;
+  if (cur){ const p = (u.progress || {})[cur.c]; if (p && p.tStart && p.tStart[cur.si]){
+    const end = p.done[cur.si] ? (p.tDone && p.tDone[cur.si]) || now : now, sl = DTT.strand - lessonSecs(p.tStart[cur.si], end, DTT);
+    st = `<span style="color:${p.done[cur.si] ? "#9BE3B7" : sl < 0 ? "#FFB4B4" : sl < 600 ? "#FFD58A" : "#C9D6F0"}">🎯 Strand ${cur.c}.${["i", "ii", "iii", "iv"][cur.si]} target: <b style="font-variant-numeric:tabular-nums">${p.done[cur.si] ? "✓ done in " + hms(DTT.strand - sl) : sl < 0 ? hms(sl) + " over" : hms(sl) + " left"}</b></span>`; } }
+  const status = finished ? "■ Project lessons finished: submit your ePortfolio"
+    : L ? "▶ Design lesson " + n + " of " + DTT.lessons + ": counting down until " + dxbTime(L[1])
+    : "⏸ Paused" + (nx ? " · next Design lesson " + dxbDay(nx[0]) + " " + dxbTime(nx[0]) + " (lesson " + (n + 1) + " of " + DTT.lessons + ")" : "");
+  bar.innerHTML = `<div class="wrap" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding-block:7px">
+    <span>⏱ ePortfolio time left <b style="font-size:19px;margin-left:6px;font-variant-numeric:tabular-nums;color:${left < 3 * 3600 ? "#FFB4B4" : "#fff"}">${hms(left)}</b></span>
+    <span style="font-size:12.5px;color:${L ? "#9BE3B7" : "#C9D6F0"}">${status}</span>${st ? `<span style="font-size:12.5px;margin-left:auto">${st}</span>` : ""}</div>`;
+}
+setInterval(desTimerTick, 1000); setTimeout(desTimerTick, 300);
 function sdcAcct(u, email){ return { viaCode: !!u.codeOk, course: u.course || (SDCG && SDCG.course) || (IT_UNITS.includes(u.grade) ? "it" : "design"), name:u.name, email, grade:u.group || groupOf(u.grade), teacher:u.teacher, level:u.grade, cls:u.cls || "", created:u.created || "", viaCS: !!u.viaCS }; }
 /* ---------- Grade 10: username accounts ----------
    New Grade 10 students sign in with a username made from their first and last name (MikaeelAhmed). At sign-up they prove
