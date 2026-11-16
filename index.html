@@ -2535,7 +2535,7 @@ GD.scenarioBrief = {
   blocks: [
     { h: "🎯 Choose ONE direction", items: ["A learning game for younger students (aged 7–11)", "A puzzle or strategy game for teenagers (aged 12–16)", "A game that shares a culture, story or social issue", "An arcade game for short breaks on a school laptop or tablet"] },
     { h: "✅ Your game must have", items: ["A title screen, a menu and a short tutorial", "At least 2 levels that get harder", "Score and lives on screen (the HUD) in every level", "A win screen and a game over screen with play again", "Original sprites and sounds, or free assets you credit"] },
-    { h: "⚠️ Constraints", items: ["Built in Scratch or MakeCode Arcade, playable in a browser", "One playthrough takes about 3–5 minutes", "Suitable for all ages: no violence, unfair rewards or pay-to-win", "Time: 21 hours of lesson time (see the countdown), about 1 hour per strand"] },
+    { h: "⚠️ Constraints", items: ["Built in Scratch or MakeCode Arcade, playable in a browser", "One playthrough takes about 3–5 minutes", "Suitable for all ages: no violence, unfair rewards or pay-to-win", "Time: the project countdown shows the lesson time left (5.5 hours from 16 November), so plan your strands carefully"] },
     { h: "📦 What you hand in", items: ["Criterion A: the need, research plan, analysis of 2 existing games and a design brief", "Criterion B: success criteria, storyboards, feedback and a chosen design", "Criterion C: production plan, annotated build screenshots and a changes log", "Criterion D: playtest results, evaluation, improvements and impact"] }
   ],
   success: "a player from your audience can start, understand and finish your game without help, enjoys it, and your playtest data proves it meets your success criteria."
@@ -5552,10 +5552,10 @@ var SDCG = window.SDC ? SDC.gate() : null;
 window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
 const IT_UNITS = ["10GD", "10IT", "10HH"];   // the G10 IT course: Game Development, Networks and Harvest Hub
 /* ---------- Grade 10 IT: project countdown (lesson time only, Dubai time) ----------
-   The project has 21 hours. Time only runs during IT lessons: Tuesday 2:45–3:30 pm, Wednesday 9:05–9:50 am and
-   Friday 8:15–8:55 am (Dubai). Each strand has a 1-hour target, counted in lesson time from when the student opens it. */
-const ITT = { start: Date.UTC(2026, 10, 10) - 4 * 3600e3, total: 21 * 3600, strand: 3600,
-  slots: { 2: [[14, 45], [15, 30]], 3: [[9, 5], [9, 50]], 5: [[8, 15], [8, 55]] } };   // 0 = Sunday
+   The project has 5.5 hours left (from 16 Nov 2026). Time only runs during IT lessons: Monday 8:20–8:55 am, Wednesday 1:45–2:35 pm and Thursday 8:20–8:55 am
+   (Dubai). Each strand has a 1-hour target, counted in lesson time from when the student opens it. */
+const ITT = { start: Date.UTC(2026, 10, 16, 4, 45), total: 5.5 * 3600, strand: 3600,   // reset: 5.5 hours left from Monday 16 Nov 2026, 8:45 am Dubai
+  slots: { 1: [[8, 20], [8, 55]], 3: [[13, 45], [14, 35]], 4: [[8, 20], [8, 55]] } };   // 0 = Sunday
 const DXB = 4 * 3600e3;
 /* school holidays (Dubai 2026–27, KHDA): no lessons, so the countdowns pause. [first day, last day] as "YYYY-MM-DD" */
 const SCHOOL_OFF = [["2026-12-14", "2027-01-03"], ["2027-04-05", "2027-04-11"]];
