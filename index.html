@@ -4,7 +4,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261116lv"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261117mv"></script>
 <script src="/python-pathways/pp-sync.js?v=20261116lv"></script>
 <script src="keywords.js?v=20261109f"></script>
 <script src="citybuilder.js?v=20261110a"></script>
@@ -5884,6 +5884,9 @@ function sdcApply(u, A){
   if (A.cls != null && A.cls !== "") u.cls = A.cls;
   if (A.t) u.teacher = A.t;
 }
+// a teacher moved this student (🔀 Move teacher / class) while the course is open: apply it without waiting for the next sign-in
+try { if (window.SDC && SDC.watchAssign) SDC.watchAssign(A => { const u = user(); if (!u || u.role === "teacher" || session.preview || isTester()) return;
+  const c = u.course || "design"; if (A.c !== c && !(c === "design" && A.also)) return; sdcApply(u, A); save(true); }); } catch(e){}
 /* after a student signs in or signs up: is this the course they are registered for? */
 /* did a teacher set this password on the staff dashboard (and the student hasn't chosen their own since)? */
 async function teacherTemp(key, pw, u){
