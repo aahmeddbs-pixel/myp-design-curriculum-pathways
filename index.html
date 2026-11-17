@@ -3903,13 +3903,13 @@ function syncPayload(u){
   return { data, imgs, sig: hash(body).toString(36) + "." + body.length };
 }
 function syncable(){ const u = session.email && DB.users[session.email]; return u && u.role === "student" && !session.preview && session.email !== PREVIEW && u.dk && syncCfg() ? u : null; }
-let syncTimer = null, syncBusy = false, syncDirty = false;
+let syncTimer = null, syncBusy = false, syncDirty = false, syncHold = !!DB.session;   // hold sending until the first catch-up on page load
 function afterSave(){ if (syncBusy || !syncable()) return; syncable().touchedAt = Date.now(); syncDirty = true; }
 setInterval(() => { if (syncDirty && !syncBusy) syncNow(); else if ((DB.syncQ || []).length && !syncFlushing) flushSync(); }, SYNC_EVERY);
 /* "Saving… / ✓ Saved" in the top bar */
 try { if (window.SDC && SDC.saveBadge) SDC.saveBadge.watch(() => ({ on: !!(SDCG && syncable()), pending: syncDirty || syncBusy || syncFlushing || (DB.syncQ || []).length > 0 })); } catch(e){}
 async function syncNow(force){
-  const u = syncable(), email = session.email; if (!u) return;
+  const u = syncable(), email = session.email; if (!u || syncHold) return;
   syncBusy = true; syncDirty = false;
   try {
     const { data, imgs, sig } = syncPayload(u);
@@ -4002,6 +4002,80 @@ function applyRemote(u, got){
   u.role = "student"; u.savedAt = u.syncedAt = u.touchedAt = got.savedAt;
   u.syncSent = Object.assign({}, u.syncSent || {}, got.sent); u.syncSig = syncPayload(u).sig;
 }
+/* ---- keeping the newest answer for every box, whichever computer it was typed on ----
+   Every save sends the whole account to the sync sheet. A device that hadn't caught up (a school computer still holding
+   last week's copy) used to win just by opening the page, and sent its old answers back as the "newest" copy.
+   Now each answer box is decided on its own: the cloud's latest value for a box is the latest one that isn't an older
+   value sent again, and this device keeps a box only when it holds something new that hasn't reached the cloud yet. */
+const toRefs = v => typeof v === "string" ? (v.startsWith("data:image") ? "IMG:" + hash(v).toString(36) + v.length.toString(36) : v)
+  : Array.isArray(v) ? v.map(toRefs) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toRefs(x)])) : v;
+function normV(v){
+  v = toRefs(v);
+  if (Array.isArray(v) && v.length && v.every(r => Array.isArray(r))){ const a = v.map(r => r.map(x => String(x == null ? "" : x).trim())); while (a.length && a[a.length - 1].every(x => !x)) a.pop(); return JSON.stringify(a); }   // a table: empty rows at the end don't count
+  if (typeof v === "string") return JSON.stringify(v.trim());
+  return JSON.stringify(v == null ? null : v);
+}
+const emptyN = n => n === '""' || n === "null" || n === "[]" || n === "{}" || n === "false";
+async function historyOf(cfg, dk, limit){
+  const did = await dataId(dk), list = (await pullRows(cfg, "D", did + "|", limit))["D|" + did] || [], out = [];
+  for (const v of list){ try { const o = JSON.parse(await openText(dk, v.text)); if (o && o.data) out.push({ savedAt: +o.savedAt || +v.ver || 0, data: o.data }); } catch(e){} }
+  return out.sort((a, b) => a.savedAt - b.savedAt);
+}
+function resolveFields(hist){
+  // for each box: the value typed most recently = the value that FIRST appeared latest. An older value sent again by a
+  // device that hadn't caught up appeared long ago, so it never wins, however many times it is sent back.
+  const res = {};
+  for (const h of hist){ const P = (h.data && h.data.progress) || {};
+    for (const c in P){ const F = (P[c] && P[c].fields) || {}, rc = res[c] = res[c] || {};
+      for (const id in F){ const n = normV(F[id]), r = rc[id] = rc[id] || { first:new Map(), val:new Map(), all:new Set() };
+        r.all.add(n); if (!r.first.has(n)){ r.first.set(n, h.savedAt); r.val.set(n, F[id]); } } } }
+  for (const c in res) for (const id in res[c]){ const r = res[c][id]; let best = null;
+    for (const [n, at] of r.first) if (!best || at >= best[1]) best = [n, at];
+    r.n = best[0]; r.v = r.val.get(best[0]); r.at = best[1]; }
+  return res;
+}
+/* merge the cloud's history into this device's copy; returns { took, kept, ask } */
+function mergeInto(u, hist){
+  const out = { took:0, kept:0, unsure:0 }; if (!hist.length) return out;
+  const newest = hist[hist.length - 1], res = resolveFields(hist), NP = (newest.data && newest.data.progress) || {};
+  u.progress = u.progress || {};
+  for (const c of new Set([...Object.keys(res), ...Object.keys(NP)])){
+    const rp = NP[c] || {}; let p = u.progress[c];
+    if (!p){ u.progress[c] = p = JSON.parse(JSON.stringify(rp)); p.fields = {}; }
+    p.fields = p.fields || {};
+    if (Array.isArray(rp.done)){ p.done = p.done || []; rp.done.forEach((d, i) => { if (d) p.done[i] = true; }); }
+    ["watched"].forEach(k => { if (rp[k]) p[k] = true; });
+    ["seen", "bands"].forEach(k => { if (rp[k] && typeof rp[k] === "object") p[k] = Object.assign({}, rp[k], p[k] || {}); });
+    if (rp.ex && (!p.ex || (rp.ex.points || 0) > (p.ex.points || 0))) p.ex = rp.ex;
+    for (const id in (res[c] || {})){
+      const r = res[c][id], has = Object.prototype.hasOwnProperty.call(p.fields, id), ln = has ? normV(p.fields[id]) : null;
+      if (ln === r.n) continue;
+      if (!has || emptyN(ln) || r.all.has(ln)){ if (!(has && emptyN(r.n))){ p.fields[id] = r.v; out.took++; } }   // missing, empty or an older value here: take the cloud's
+      else { out.kept++; if (!r.all.has(ln)) out.unsure++; }   // typed on this device and not in the cloud yet: keep it
+    }
+  }
+  return out;
+}
+async function fillImages(cfg, dk, u){
+  const refs = new Set(); JSON.stringify(u.progress || {}).replace(/"IMG:([a-z0-9.]+)"/g, (_, h) => refs.add(h)); if (!refs.size) return;
+  const did = await dataId(dk), all = await pullRows(cfg, "I", did + ".", 0), imgs = {};
+  for (const h of refs){ for (const x of all[`I|${did}.${h}`] || []){ try { imgs[h] = await openText(dk, x.text); break; } catch(e){} } }
+  const walk = x => typeof x === "string" && x.startsWith("IMG:") ? (imgs[x.slice(4)] || "") : Array.isArray(x) ? x.map(walk) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).map(([k, y]) => [k, walk(y)])) : x;
+  u.progress = walk(u.progress); u.syncSent = Object.assign({}, u.syncSent || {}, Object.fromEntries(Object.keys(imgs).map(h => [h, 1])));
+}
+async function pullMerge(u){
+  const cfg = syncCfg(); if (!cfg || !u.dk) return "";
+  let hist = await historyOf(cfg, u.dk, 40); if (!hist.length) return "";
+  const trial = JSON.parse(JSON.stringify({ progress: u.progress || {} })), t = mergeInto(trial, hist);
+  if (t.unsure || t.took) hist = await historyOf(cfg, u.dk, 300);   // a disagreement: look further back so an older copy can be recognised
+  const before = normV(u.progress || {}), m = mergeInto(u, hist), newest = hist[hist.length - 1];
+  if (newest.savedAt > (u.syncedAt || 0)) SYNC_KEYS.forEach(k => { if (k !== "progress" && k !== "last" && newest.data[k] !== undefined) u[k] = newest.data[k]; });
+  if (m.took) await fillImages(cfg, u.dk, u);
+  u.role = "student"; u.pulledAt = Date.now();
+  const changed = normV(u.progress || {}) !== before;
+  if (changed || m.kept){ u.syncSig = ""; u.touchedAt = Date.now(); syncDirty = true; }   // send the merged copy so every device agrees
+  return changed ? "restored" : "";
+}
 /* bring this device up to date; returns "restored" when newer work was loaded */
 async function syncIn(u, email, pw){
   const cfg = syncCfg(); if (!cfg || u.role === "teacher") return "";
@@ -4019,9 +4093,7 @@ async function syncIn(u, email, pw){
       if (u.syncV !== 4){ u.syncV = 4; syncDirty = true; save(true); }
     }
     if (!u.dk) return "";
-    const got = await openData(cfg, u.dk);
-    const localTime = u.syncSig !== syncPayload(u).sig ? Math.max(u.touchedAt || Date.now(), (u.savedAt || 0) + 1) : (u.savedAt || 0);
-    if (got && got.savedAt > localTime){ applyRemote(u, got); out = "restored"; }
+    out = await pullMerge(u);
   } catch(e){ console.warn("sync in", e); out = "offline"; }
   return out;
 }
@@ -4031,7 +4103,7 @@ async function restoreAccount(email, pw){
   const A = await deriveAcct(email, pw), dk = await openWrap(cfg, A); if (!dk) return null;
   const got = await openData(cfg, dk); if (!got) return null;
   const rec = await hashPw(pw), u = { role: "student", salt: rec.salt, hash: rec.hash, dk, wrapFor: A.lookup, progress: {} };
-  applyRemote(u, got); return { u };
+  applyRemote(u, got); try { await pullMerge(u); } catch(e){} return { u };
 }
 /* admin recovery: give a student a new password that works on every device */
 async function adminReset(email, newPw){
@@ -4067,7 +4139,7 @@ async function viewPw(email){
 function rememberSpot(u){
   if (!u || u.role !== "student" || session.preview || view.name !== "crit") return;
   const L = { grade: u.grade, crit: view.crit, step: view.step, strand: view.strand }, o = u.last || {};
-  if (o.grade !== L.grade || o.crit !== L.crit || o.step !== L.step || o.strand !== L.strand){ u.last = L; save(); }
+  if (o.grade !== L.grade || o.crit !== L.crit || o.step !== L.step || o.strand !== L.strand){ u.last = L; save(true); }   // moving around isn't new work: never let it make an old copy look newer
 }
 function resumeSpot(u){
   const L = u && u.last;
@@ -5947,9 +6019,16 @@ try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; }
 new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = requestAnimationFrame(() => addListenButtons(document.getElementById("app"))); }).observe(document.getElementById("app"), { childList:true, subtree:true });
 render(); loadLive(); flushQueue(); flushSync();
 if (SDCG && SDCG.link && SDCG.link.design && !user()) linkIn().catch(() => {});   // came from Computer Science
-(async () => { const u = syncable(); if (!u) return; const em = session.email, r = await syncIn(u, em, null);
+(async () => { const u = syncable(); if (!u){ syncHold = false; return; } const em = session.email; let r = "";
+  try { r = await syncIn(u, em, null); } finally { syncHold = false; }
   if (session.email !== em) return; save(true);
   if (r === "restored"){ toast("Your latest work from another device has been loaded.", 4000); resumeSpot(u); } else syncNow(); })();
+/* coming back to a tab left open (e.g. on a school computer since last lesson): catch up before carrying on */
+document.addEventListener("visibilitychange", async () => {
+  const u = syncable(); if (document.hidden || !u || syncBusy || syncHold || Date.now() - (u.pulledAt || 0) < 3 * 60000) return;
+  const em = session.email; syncHold = true; let r = "";
+  try { if (syncDirty) { syncHold = false; await syncNow(); syncHold = true; } r = await syncIn(u, em, null); } catch(e){} finally { syncHold = false; }
+  if (session.email !== em) return; save(true); if (r === "restored"){ toast("Your latest work from another device has been loaded.", 4000); render(); } });
 if (lang() !== "en") applyLang(lang(), true);
 setInterval(() => { loadLive(); flushQueue(); flushSync(); }, 60000);
 window.addEventListener("online", flushQueue);
