@@ -1077,7 +1077,7 @@ TASK_FIELDS.C = {
     [ { t: "sketch", id: "c2e1", label: "Evidence: screenshot or photo of you making your solution", evidence: true },
       { t: "text", id: "c2n", label: "Which tools and skills did you use? How did you keep your work neat and accurate?", min: 40 } ],
     [ { t: "sketch", id: "c3e1", label: "Your finished solution (screenshot or photo)", evidence: true },
-      { t: "text", id: "c3l", label: "Link to your solution (or write 'not online')", min: 1 },
+      { t: "text", id: "c3l", label: "Link to your solution", min: 1, fmt: "urlOrNone" },
       { t: "text", id: "c3w", label: "Does your solution work as intended? Explain with an example.", min: 40 } ],
     [ { t: "table", id: "c4t", label: "Changes you made to your design and plan", cols: ["Change I made", "Why I made it"], rows: 3 } ]
   ],
@@ -1088,7 +1088,7 @@ TASK_FIELDS.C = {
       { t: "sketch", id: "c2e2", label: "Evidence: a close-up of a detail you are proud of", evidence: true },
       { t: "text", id: "c2n", label: "Describe the technical skills you used and how you made the work accurate", min: 60 } ],
     [ { t: "sketch", id: "c3e1", label: "Your finished solution (screenshot or photo)", evidence: true },
-      { t: "text", id: "c3l", label: "Link to your solution (or write 'not online')", min: 1 },
+      { t: "text", id: "c3l", label: "Link to your solution", min: 1, fmt: "urlOrNone" },
       { t: "text", id: "c3w", label: "Explain how your solution works as intended, using your success criteria", min: 60 } ],
     [ { t: "table", id: "c4t", label: "Changes to your design and plan", cols: ["Change", "Why", "Effect on the design"], rows: 3 } ]
   ],
@@ -1099,7 +1099,7 @@ TASK_FIELDS.C = {
       { t: "sketch", id: "c2e2", label: "Evidence of technical skill 2 (screenshot or photo)", evidence: true },
       { t: "text", id: "c2n", label: "Describe the range of technical skills you used and how each improved the quality of the solution", min: 80 } ],
     [ { t: "sketch", id: "c3e1", label: "Your finished solution (screenshot or photo)", evidence: true },
-      { t: "text", id: "c3l", label: "Link to your solution (or write 'not online')", min: 1 },
+      { t: "text", id: "c3l", label: "Link to your solution", min: 1, fmt: "urlOrNone" },
       { t: "text", id: "c3w", label: "Explain how you followed your plan and how the solution functions as intended", min: 70 } ],
     [ { t: "table", id: "c4t", label: "Changes to your design and plan", cols: ["Change", "Reason", "Effect"], rows: 3 },
       { t: "text", id: "c4n", label: "Explain the most important change you made", min: 50 } ]
@@ -1112,7 +1112,7 @@ TASK_FIELDS.C = {
       { t: "text", id: "c2n", label: "Explain the technical skills and techniques you used and why each was the best choice", min: 100 } ],
     [ { t: "sketch", id: "c3e1", label: "Your finished solution — main view", evidence: true },
       { t: "sketch", id: "c3e2", label: "Your finished solution — second view (for example the dashboard or form)", evidence: true },
-      { t: "text", id: "c3l", label: "Link to your solution (or write 'not online')", min: 1 },
+      { t: "text", id: "c3l", label: "Link to your solution", min: 1, fmt: "urlOrNone" },
       { t: "text", id: "c3w", label: "Explain how the solution functions as intended and how it is presented appropriately for {client}", min: 100 } ],
     [ { t: "table", id: "c4t", label: "Changes to your design and plan", cols: ["Change", "Justification (evidence)", "Impact on the specification"], rows: 3 },
       { t: "text", id: "c4n", label: "Fully justify your most significant change", min: 80 } ]
@@ -2213,7 +2213,7 @@ COURSE.buildTasks0 = function(c, gd){
       T("a1who", "Who does this problem affect, and how does it affect them?", W(40)),
       T("a1none", "Why has this problem not been solved yet? What do existing products or solutions miss?", W(40)),
       T("a1if", "What will happen if nothing is done?", W(25)),
-      TB("a1src", `Sources you used (at least ${n.src}). Every fact or statistic needs a source.`, ["Source title", "Link (https://…)", "What it told you"], n.src + 1, n.src, [null, "url", null]) ],
+      TB("a1src", `Sources you used (at least ${n.src}). Every fact or statistic needs a source.`, ["Source title", "Link", "What it told you"], n.src + 1, n.src, [null, "url", null]) ],
     [ TB("a2q", `List at least ${n.q} research questions that will help you understand the problem and the need for a solution. Include at least 2 questions about existing products or solutions.`, ["Research question", "Primary or secondary research?"], n.q + 2, n.q, [null, OPT("Primary", "Secondary")]) ],
     [ TB("a3t", "Justify and prioritise each research question", ["Research question", "Why do you need to know this? (justification)", "Where will you find the answer?", "Priority"], n.q + 2, n.q, [null, null, null, OPT("High", "Medium", "Low")]),
       T("a3top", "Which question is your top priority, and why?", W(30)) ],
@@ -2246,7 +2246,7 @@ COURSE.buildTasks0 = function(c, gd){
       ...L.milestones.flatMap((m, i) => [SK(`c2m${i}`, `Making evidence ${i + 1}: ${m}`, true), T(`c2q${i}`, `Evidence ${i + 1}: what did you do, which skills did you use, and which plan steps does it match?`, W(20))]),
       SK("c2f1", "Your finished solution — main view", true),
       SK("c2f2", "Your finished solution — second view or close-up", true),
-      ...(gd.noUrls ? [] : [Object.assign(T("c2l", "Link to your solution (a full web address starting with https://, or write: not online)", 1), { fmt: "urlOrNone" })]) ],
+      ...(gd.noUrls ? [] : [Object.assign(T("c2l", "Link to your solution", 1), { fmt: "urlOrNone" })]) ],
     [ TB("c3t", "Did you follow your logical plan? Check each step from C.i against your making evidence in C.ii.", ["Plan step number", "Followed?", "Evidence (which screenshot shows it)"], n.steps + 2, n.steps, ["num", OPT("Yes", "Partly", "No"), null]),
       T("c3f", "Does your solution work as intended and match your developed design? Explain.", W(40)) ],
     [ TB("c4t", "Changes that were NOT in your design brief, specification or logical plan (if there were none, write 'No changes' in the first row)", ["What changed", "What the original plan or design said", "Why you made the change (justification)", "Effect on the solution"], 4, 1),
@@ -2427,7 +2427,7 @@ const GD_TASKS = {
       T("a1type", "What type of game (genre) will you make, and on which platform? Why does this suit your audience?", 30),
       T("a1gap", "What is missing in existing games for this audience? Give evidence: statistics, survey results or observations, each with its source.", 60),
       T("a1why", "Explain and justify the need: why does your audience need this game, and what will happen if nothing is made for them?", 50),
-      TB("a1src", "Sources you used (at least 4). Every fact or statistic needs a source.", ["Source title", "Link (https://…)", "What it told you"], 6, 4, [null, "url", null]) ],
+      TB("a1src", "Sources you used (at least 4). Every fact or statistic needs a source.", ["Source title", "Link", "What it told you"], 6, 4, [null, "url", null]) ],
     [ TB("a2t", "Task 2: Research plan. List at least 8 things you need to find out, then prioritise them.", ["Research item or question", "Primary or secondary?", "Source / method", "Why I need it", "Priority"], 10, 8, [null, OPT("Primary", "Secondary"), null, null, OPT("High", "Medium", "Low")]),
       T("a2j", "Justify your High-priority items: why must you know these before you design?", 40) ],
     [ RL("a3t", "Task 3: Analyse 3 existing games in your chosen genre. Use gaming terminology (sprite, HUD, mechanic, collision, platform).", "Feature", ["Game title & developer", "Genre & platform", "Target audience", "Core mechanics (how does it play?)", "Scoring system (how does the player score?)", "Lives system (how does the player lose?)", "Visual & art style", "Key strength (with the reason WHY)", "Key weakness (with the reason WHY)", "What I will adopt in my design"], ["Game 1", "Game 2", "Game 3"]),
@@ -2463,7 +2463,7 @@ const GD_TASKS = {
     [ CH("c2tool", "Which software did you use?", GD.lab.tools.map(t => t.name).concat(["Other"])),
       CL("c2k", "Tick the technical skills you used (at least 7)", GD.lab.skills, 7),
       ...GD.lab.milestones.flatMap((m, i) => [SK(`c2m${i}`, `Screenshot ${i + 1}: ${m}`, true), T(`c2q${i}`, `Annotation ${i + 1}: what did you build, which skills and blocks did you use, and which plan steps does it match?`, 20)]),
-      Object.assign(T("c2l", "Link to your playable game (a full web address starting with https://, or write: not online)", 1), { fmt: "urlOrNone" }) ],
+      Object.assign(T("c2l", "Link to your playable game", 1), { fmt: "urlOrNone" }) ],
     [ TB("c3t", "Did you follow your plan? Match each step in C.i to your screenshots in C.ii.", ["Plan step", "Followed?", "Evidence (screenshot number)"], 14, 12, ["num", OPT("Yes", "Partly", "No"), null]),
       T("c3f", "Does your game work as intended and match your final storyboard? Explain.", 40) ],
     [ TB("c4t", "Changes log: what changed from your final storyboard (B.iv) to your game (C.ii)?", ["What I planned (B.iv)", "What I created (C.ii)", "Why I changed it (with evidence)", "Was it an improvement?"], 4, 2),
@@ -4710,13 +4710,49 @@ function cellProblem(f, k, val){
   const v = String(val || "").trim(), t = colType(f, k);
   if (!v) return "empty";
   if (t && t.opts && !t.opts.includes(v)) return `choose an option for "${f.cols[k]}"`;
-  if (t === "url" && !URL_RE.test(v)) return `"${f.cols[k]}" must be a full web address starting with https://`;
+  if (t === "url"){ const pr = linkProblem(v); if (pr) return `"${f.cols[k]}": ${pr}`; }
   if (t === "num" && !(/^\d+(\.\d+)?$/.test(v) && +v > 0)) return `"${f.cols[k]}" must be a number`;
   if (t === "sent"){ const pr = LIT.problem(v); if (pr) return `"${f.cols[k]}": ${pr}`; if (LIT.count(v) < 5) return `"${f.cols[k]}": write a full sentence`; }
   return "";
 }
 function rowDone(f, r){ return r && f.cols.every((_,k) => (f.rowLabels && k === 0) || !cellProblem(f, k, r[k])); }
-function textProblem(f, val){ if (f.fmt === "urlOrNone"){ const v = String(val || "").trim(); if (!(URL_RE.test(v) || /^not online$/i.test(v))) return "Enter a full web address starting with https://, or write: not online"; } return ""; }
+function textProblem(f, val){ if (f.fmt === "urlOrNone"){ const v = String(val || "").trim(); if (!v) return "Choose an option and fill it in"; return linkProblem(v); } return ""; }
+/* ---------- link answers: three choices ----------
+   Wherever a link is asked for, the student picks from a drop-down:
+     🔗 Add a link            → a full web address (https://…)
+     🚫 No link required      → saved as "No link required" (older answers "not online" count too)
+     ✏️ Type text instead     → a short description, e.g. a book title, an interview, "printed leaflet"
+   The answer is saved as plain text, so downloads, PDFs and feedback read it as before. */
+const NO_LINK = "No link required";
+const isNoLink = v => /^(no link required|not online)$/i.test(String(v || "").trim());
+function linkMode(v){ v = String(v || "").trim(); if (!v) return ""; if (isNoLink(v)) return "none"; if (/^(https?:\/\/|www\.)/i.test(v)) return "link"; return "text"; }
+function linkProblem(v){
+  v = String(v || "").trim(); const m = linkMode(v);
+  if (!m) return "choose Add a link, No link required, or Type text";
+  if (m === "link") return URL_RE.test(v) ? "" : "the link must be a full web address starting with https://";
+  if (m === "text" && v.split(/\s+/).filter(Boolean).length < 2) return "type a few words (at least 2) to describe it";
+  return "";
+}
+/* the drop-down + box. input = the box that holds the answer (it keeps its own data- attributes and handlers) */
+function linkPicker(input, mode0){
+  const wrap = document.createElement("div"); wrap.className = "linkPick";
+  wrap.style.cssText = "display:flex;flex-direction:column;gap:6px;min-width:220px";
+  const sel = document.createElement("select"); sel.className = "notranslate lkMode"; sel.setAttribute("aria-label", "Link: choose an option");
+  sel.innerHTML = `<option value="">Choose…</option><option value="link">🔗 Add a link</option><option value="none">🚫 No link required</option><option value="text">✏️ Type text instead</option>`;
+  input.parentNode.insertBefore(wrap, input); wrap.appendChild(sel); wrap.appendChild(input);
+  const fire = () => { input.dispatchEvent(new Event("input", { bubbles:true })); };
+  const show = (m, user) => {
+    sel.value = m || "";
+    if (m === "none"){ input.value = NO_LINK; input.readOnly = true; input.style.display = "none"; }
+    else { input.readOnly = false; input.style.display = m ? "" : "none";
+      if (m === "link"){ input.type = "url"; input.inputMode = "url"; input.placeholder = "https://…"; if (user && linkMode(input.value) !== "link") input.value = ""; }
+      if (m === "text"){ input.type = "text"; input.inputMode = "text"; input.placeholder = "Type it here, e.g. book title, interview, printed leaflet"; if (user && linkMode(input.value) !== "text") input.value = ""; } }
+    if (user){ fire(); if (m && m !== "none") input.focus(); }
+  };
+  sel.onchange = () => show(sel.value, true);
+  show(mode0 || linkMode(input.value), false);
+  return wrap;
+}
 function fieldValid(f, val){
   if (f.t === "text") return f.fmt ? !textProblem(f, val) : LIT.count(val) >= f.min && !LIT.problem(val);
   if (f.t === "table"){ const rows = (val||[]).filter(r => rowDone(f, r));
@@ -5094,9 +5130,9 @@ function buildField0(f, ctx){
   }
   if (f.t === "text" && f.fmt){
     const v = p.fields[f.id] || "";
-    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><input type="text" id="f_${f.id}" class="notranslate" inputmode="url" placeholder="https://… or not online" value="${esc(v)}"><span class="counter"></span>`;
-    const inp = el.querySelector("input"), cn = el.querySelector(".counter");
-    const upd = () => { const pr = textProblem(f, inp.value); cn.textContent = pr || "Looks right"; cn.classList.toggle("ok", !pr); inp.classList.toggle("bad", !!inp.value.trim() && !!pr); };
+    el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><input type="text" id="f_${f.id}" class="notranslate" inputmode="url" placeholder="https://…" value="${esc(v)}"><span class="counter"></span>`;
+    const inp = el.querySelector("input"), cn = el.querySelector(".counter"); linkPicker(inp);
+    const upd = () => { const pr = textProblem(f, inp.value); cn.textContent = pr ? pr.charAt(0).toUpperCase() + pr.slice(1) : "Looks right"; cn.classList.toggle("ok", !pr); inp.classList.toggle("bad", !!inp.value.trim() && !!pr); };
     inp.oninput = () => { p.fields[f.id] = inp.value; upd(); clearTimeout(inp._t); inp._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
     upd();
   } else if (f.t === "text"){
@@ -5116,13 +5152,14 @@ function buildField0(f, ctx){
     v.forEach(r => f.cols.forEach((_,k) => { const t = colType(f, k); if (t && t.opts && r[k] && !t.opts.includes(r[k])) r[k] = ""; }));
     const cell = (ri, ci, val) => { const t = colType(f, ci), base = `id="t_${f.id}_${ri}_${ci}" data-r="${ri}" data-c="${ci}" aria-label="${esc(f.cols[ci] || "")} ${esc(f.rowLabels ? f.rowLabels[ri] : "row " + (ri+1))}"`;
       if (t && t.opts) return `<td><select ${base}><option value="">Choose…</option>${t.opts.map(o => `<option value="${esc(o)}" ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></td>`;
-      if (t === "url") return `<td class="notranslate"><input type="url" inputmode="url" placeholder="https://…" ${base} value="${esc(val||"")}"></td>`;
+      if (t === "url") return `<td class="notranslate"><input type="url" inputmode="url" placeholder="https://…" data-link="1" ${base} value="${esc(val||"")}"></td>`;
       if (t === "num") return `<td class="notranslate"><input type="text" inputmode="decimal" placeholder="0" style="min-width:70px" ${base} value="${esc(val||"")}"></td>`;
       return `<td class="notranslate"><textarea class="tcell" rows="${deepUnit(g) ? 2 : 1}" spellcheck="true" lang="en-GB" ${base}>${esc(val||"")}</textarea></td>`; };   // text wraps and the box grows as they write
     p.fields[f.id] = v;
     el.innerHTML = `<span class="lbl">${esc(label)}</span><div class="scroll"><table class="tbl tin"><tr>${f.cols.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>${v.map((r,ri)=>`<tr>${f.cols.map((_,ci)=> (f.rowLabels && ci===0) ? `<th scope="row" style="text-transform:none;letter-spacing:0;font-size:13px">${esc(f.rowLabels[ri])}</th>` : cell(ri, ci, r[ci])).join("")}</tr>`).join("")}</table></div>${deepUnit(g) && !f.rowLabels ? `<div class="row" style="gap:8px;margin-top:6px"><button class="btn sm sec" type="button" data-addrow>＋ Add a row</button><span class="muted" style="font-size:12.5px">Add as many rows as you need to go into depth.</span></div>` : ""}<span class="counter"></span>`;
     const cn = el.querySelector(".counter");
     el.querySelectorAll("textarea.tcell").forEach(autoGrow);
+    el.querySelectorAll("input[data-link]").forEach(x => linkPicker(x));   // link columns: Add a link / No link required / Type text
     const ar = el.querySelector("[data-addrow]"); if (ar) ar.onclick = () => { v.push(f.cols.map(() => "")); p.fields[f.id] = v; save(); const n = buildField(f, ctx); el.replaceWith(n); const last = n.querySelectorAll("tr"); const inp = last[last.length - 1] && last[last.length - 1].querySelector("textarea,input,select"); if (inp) inp.focus(); };
     const upd = () => { const done = v.filter(r => rowDone(f, r)).length, need = tableRowsNeeded(f.rows, f);
       let hint = ""; v.forEach((r, ri) => f.cols.forEach((_, k) => { if (hint || (f.rowLabels && k === 0)) return; const val = String(r[k]||"").trim(); if (!val) return; const pr = cellProblem(f, k, val); if (pr) hint = ` · Row ${ri+1}: ${pr}`; }));

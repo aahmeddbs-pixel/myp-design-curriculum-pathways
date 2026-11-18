@@ -7,3 +7,8 @@ SISD online course for IB MYP Design and IT, built from the teacher's workbooks:
 Each criterion (A–D) opens only when the teacher switches it on in the Staff panel. Inside each criterion: introduction video, worked example (different problem), method, MYP rubric for the grade's year, practice that must be passed, then the main task in strands i–iv. Completed work downloads as a PDF and a copy is saved to the teacher's Google Sheet.
 
 Criteria A, B, C and D are complete. Students can listen to any reading section and switch the course to English, French, Russian or Spanish.
+
+## Link answers: three choices (Nov 2026)
+Wherever a link is asked for (source tables, "Link to your solution", "Link to your playable game"), students pick from a drop-down:
+**🔗 Add a link** (a full https:// address), **🚫 No link required**, or **✏️ Type text instead** (at least 2 words, e.g. a book title or an interview).
+Answers are saved as plain text, so downloads, PDFs and feedback work as before. Older "not online" answers count as "No link required".
