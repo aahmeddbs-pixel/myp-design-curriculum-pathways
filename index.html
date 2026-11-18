@@ -2641,7 +2641,10 @@ const RD_TASKS = {
       CH("a1type", "What kind of solution are you likely to develop?", ["Digital (app, website, video, interactive guide)", "Physical (product, furniture, garment, object)", "System (sharing, distribution or waste system)", "Combined (physical and digital)"]),
       T("a1title", "Working title of your project, written as a sentence (for example: My project is an adaptable repair guide for household fans.)", 5),
       T("a1p", "Problem statement: what is the problem, who experiences it, when and how often does it happen? (2–3 precise sentences)", 45),
-      TB("a1why", "Three reasons the problem matters, each with evidence", ["Reason the problem matters", "Evidence (statistic, survey result, quote, photo or observation)", "Source (MLA)"], 4, 3),
+      TB("a1why", "Task · Give THREE reasons why the problem matters to your target audience. Back up each reason with its own evidence (a statistic, survey result, quote, photo or observation) and give the source.", ["Reason the problem matters", "Evidence (statistic, survey result, quote, photo or observation)", "Source (MLA)"], 3, 3),
+      { t:"shots", id:"a1whyS1", label:"Evidence for reason 1: add a screenshot if you want to (optional)", min:1, opt:true },
+      { t:"shots", id:"a1whyS2", label:"Evidence for reason 2: add a screenshot if you want to (optional)", min:1, opt:true },
+      { t:"shots", id:"a1whyS3", label:"Evidence for reason 3: add a screenshot if you want to (optional)", min:1, opt:true },
       T("a1e", "Explain and justify the need: why are existing solutions not enough, and what happens if nothing is done? Use your evidence. Do not describe your solution yet.", 150),
       T("a1r", "Connect the need to resilience, adaptation and fairness: how could a solution help your audience withstand disruption and adapt to change, and why would that be fairer?", 80),
       T("a1soi", "Statement of inquiry link: \"My project could help (who?) adapt to (what change?) by (what resilient feature?), which is fairer because…\"", 30) ],
@@ -4647,7 +4650,7 @@ function fieldValid(f, val){
 /* the tests written in the D.i test plan (first column = test name) */
 function testsOf(p, srcId){ return (p.fields[srcId] || []).map((r, i) => ({ i, name: String((r || [])[0] || "").trim(), row: r || [] })).filter(t => t.row.some(x => String(x || "").trim())); }
 /* a field the student still has to do (the Grade 7 video task can be skipped) */
-const needed = (f, p) => !(f.grp === "video" && p.fields.__skipVideo) && !isExField(f);   // strand exercises are optional: students may skip them
+const needed = (f, p) => !(f.grp === "video" && p.fields.__skipVideo) && !isExField(f) && !f.opt;   // optional uploads (f.opt) never block a strand   // strand exercises are optional: students may skip them
 function strandValid(ctx, i){ const fs = fieldsFor(ctx.c, ctx.gd)[i]; return fs.every(f => !needed(f, ctx.p) || fieldValid(f, ctx.p.fields[f.id])) && !!ctx.p.bands[i]; }
 /* the main project scenario brief, shown above strand i of Criterion A (open until strand i is done) */
 function scenarioBriefCard(B, open){
@@ -4968,7 +4971,7 @@ const autoGrow = ta => { const fit = () => { ta.style.height = "auto"; ta.style.
 /* a short exercise inside a strand ("Exercise · …"): practice, not the main task */
 const isExField = f => /^Exercise\b/i.test(String(f.label || "")) || /ex\d*$/.test(String(f.id || ""));
 function buildField(f, ctx){ const el = buildField0(f, ctx);
-  try { const ex = isExField(f); el.classList.add(ex ? "exQ" : "mainQ");
+  try { const ex = isExField(f); el.classList.add(ex ? "exQ" : f.opt ? "optQ" : "mainQ");
     if (ex){ const l = el.querySelector(".lbl"), n = document.createElement("span"); n.className = "muted exOpt"; n.style.fontSize = "12.5px"; n.textContent = "Optional exercise: you can skip it and go straight to the task below."; if (l) l.after(n); else el.prepend(n); } } catch(e){}
   return el; }
 function buildField0(f, ctx){
