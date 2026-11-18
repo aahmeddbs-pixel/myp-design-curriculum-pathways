@@ -3923,13 +3923,14 @@ setInterval(() => { if (syncDirty && !syncBusy) syncNow(); else if ((DB.syncQ ||
 try { if (window.SDC && SDC.saveBadge) SDC.saveBadge.watch(() => ({ on: !!(SDCG && syncable()), pending: syncDirty || syncBusy || syncFlushing || (DB.syncQ || []).length > 0 })); } catch(e){}
 /* every answer box carries the time it was last changed on a device (progress[c].fieldAt), so a device that
    was left behind can tell its old answers from new ones, whatever the size of the history */
-const fKey = (c, id) => c + "|" + id;
 function stampFields(u, baselineOnly){
-  const P = u.progress || {}, first = !u.sentN, now = u.touchedAt || Date.now(), seen = {};
+  // the boxes of the unit being worked on (u.grade); each unit keeps its own record, so switching units is not an "edit"
+  const P = u.progress || {}, G = String(u.grade || ""), old = u.sentN || {}, known = !!(u.sentG || {})[G], now = u.touchedAt || Date.now(), seen = {};
+  for (const k in old) if (k.split("|").length === 3 && !k.startsWith(G + "|")) seen[k] = old[k];   // other units' records stay
   for (const c in P){ const p = P[c]; if (!p || !p.fields) continue; p.fieldAt = p.fieldAt || {};
-    for (const id in p.fields){ const h = hash(normV(p.fields[id])).toString(36), k = fKey(c, id); seen[k] = h;
-      if (!first && !baselineOnly && u.sentN[k] !== h) p.fieldAt[id] = now; } }
-  u.sentN = seen;
+    for (const id in p.fields){ const k = G + "|" + c + "|" + id, h = hash(normV(p.fields[id])).toString(36); seen[k] = h;
+      if (known && !baselineOnly && old[k] !== h) p.fieldAt[id] = now; } }
+  u.sentN = seen; u.sentG = Object.assign({}, u.sentG || {}, { [G]: 1 });
 }
 const SEND_GAP = 15000;   // one full copy at most every 15 seconds while typing (the old sheet filled up with one every 5 seconds)
 let lastSendAt = 0;
@@ -4109,24 +4110,39 @@ function mergeInto(u, hist){
   return out;
 }
 async function fillImages(cfg, dk, u){
-  const refs = new Set(); JSON.stringify(u.progress || {}).replace(/"IMG:([a-z0-9.]+)"/g, (_, h) => refs.add(h)); if (!refs.size) return;
+  const refs = new Set(); JSON.stringify([u.progress || {}, u.progressBy || {}]).replace(/"IMG:([a-z0-9.]+)"/g, (_, h) => refs.add(h)); if (!refs.size) return;
   const did = await dataId(dk), all = await pullRows(cfg, "I", did + ".", 0), imgs = {};
   for (const h of refs){ for (const x of all[`I|${did}.${h}`] || []){ try { imgs[h] = await openText(dk, x.text); break; } catch(e){} } }
   const walk = x => typeof x === "string" && x.startsWith("IMG:") ? (imgs[x.slice(4)] || "") : Array.isArray(x) ? x.map(walk) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).map(([k, y]) => [k, walk(y)])) : x;
-  u.progress = walk(u.progress); u.syncSent = Object.assign({}, u.syncSent || {}, Object.fromEntries(Object.keys(imgs).map(h => [h, 1])));
+  u.progress = walk(u.progress); if (u.progressBy) u.progressBy = walk(u.progressBy); u.syncSent = Object.assign({}, u.syncSent || {}, Object.fromEntries(Object.keys(imgs).map(h => [h, 1])));
 }
 async function pullMerge(u){
   const cfg = syncCfg(); if (!cfg || !u.dk) return "";
   let hist = await historyOf(cfg, u.dk, 40, true); if (!hist.length) hist = await historyOf(cfg, u.dk, 40); if (!hist.length) return "";   // the new sheet first (small and quick); the old one if nothing is there yet
-  const trial = JSON.parse(JSON.stringify({ progress: u.progress || {} })), t = mergeInto(trial, hist);
-  if (t.unsure || t.took) hist = await historyOf(cfg, u.dk, 300);   // a disagreement: look further back so an older copy can be recognised
   stampFields(u);   // edits typed here but not sent yet keep their time
-  const before = normV(u.progress || {}), m = mergeInto(u, hist), newest = hist[hist.length - 1];
+  // each saved copy holds the unit it was on (data.grade → data.progress) and its other units (data.progressBy):
+  // compare unit with unit, never one unit's work with another's
+  const G = String(u.grade || ""), unitOf = (h, g) => { const d = h.data || {}; return String(d.grade) === g ? (d.progress || {}) : ((d.progressBy || {})[g] || {}); };
+  const viewOf = (H, g) => H.map(h => ({ savedAt: h.savedAt, data: { progress: unitOf(h, g) } }));
+  const t = mergeInto(JSON.parse(JSON.stringify({ progress: u.progress || {}, flushedAt: u.flushedAt })), viewOf(hist, G));
+  if (t.unsure || t.took) hist = await historyOf(cfg, u.dk, 300);   // a disagreement: look further back so an older copy can be recognised
+  const units = new Set([G]); hist.forEach(h => { const d = h.data || {}; if (d.grade) units.add(String(d.grade)); Object.keys(d.progressBy || {}).forEach(g => units.add(g)); });
+  const before = normV({ a: u.progress || {}, b: u.progressBy || {} }), m = mergeInto(u, viewOf(hist, G));
+  u.progressBy = u.progressBy || {}; u.choiceBy = u.choiceBy || {};
+  for (const g of units){ if (!g || g === G) continue;
+    const box = { progress: JSON.parse(JSON.stringify(u.progressBy[g] || {})), flushedAt: u.flushedAt }, r = mergeInto(box, viewOf(hist, g));
+    if (Object.keys(box.progress).length) u.progressBy[g] = box.progress; m.took += r.took; m.kept += r.kept; }
+  for (const g of units){   // the scenario chosen for a unit: keep this device's, or take the newest one saved anywhere
+    const mine = g === G ? u.choice : u.choiceBy[g]; if (mine) continue;
+    for (let i = hist.length - 1; i >= 0; i--){ const d = hist[i].data || {}, c = String(d.grade) === g ? d.choice : (d.choiceBy || {})[g]; if (c){ if (g === G) u.choice = c; else u.choiceBy[g] = c; break; } } }
   stampFields(u, true);   // what was just taken from the cloud is not a new edit on this device
-  if (newest.savedAt > (u.syncedAt || 0)) SYNC_KEYS.forEach(k => { if (k !== "progress" && k !== "last" && newest.data[k] !== undefined) u[k] = newest.data[k]; });
+  const newest = hist[hist.length - 1];
+  // account details (name, class, teacher…) follow the newest copy; which unit this device is on, and the work itself, never do
+  const LOCAL = ["progress", "last", "grade", "group", "progressBy", "choice", "choiceBy"];
+  if (newest.savedAt > (u.syncedAt || 0)) SYNC_KEYS.forEach(k => { if (!LOCAL.includes(k) && newest.data[k] !== undefined) u[k] = newest.data[k]; });
   if (m.took) await fillImages(cfg, u.dk, u);
   u.role = "student"; u.pulledAt = Date.now(); u.seenVer = String(newest.savedAt || "");
-  const changed = normV(u.progress || {}) !== before;
+  const changed = normV({ a: u.progress || {}, b: u.progressBy || {} }) !== before;
   if (changed || m.kept){ u.syncSig = ""; u.touchedAt = Date.now(); syncDirty = true; }   // send the merged copy so every device agrees
   return changed ? "restored" : "";
 }
@@ -4146,7 +4162,7 @@ async function syncIn(u, email, pw){
       }
     }
     if (!u.dk) return "";
-    if (u.syncV !== 5){ u.syncV = 5; u.syncSent = {}; u.syncSig = ""; u.syncedAt = 0; syncDirty = true; save(true); }   // once: send the whole account (with pictures) to the new sync sheet
+    if (u.syncV !== 5){ u.syncV = 5; u.syncSent = {}; u.syncSig = ""; syncDirty = true; save(true); }   // once: send the whole account (with pictures) to the new sync sheet
     out = await pullMerge(u);
   } catch(e){ console.warn("sync in", e); out = "offline"; }
   return out;
