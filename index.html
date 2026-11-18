@@ -4,8 +4,8 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261117dl"></script>
-<script src="/python-pathways/pp-sync.js?v=20261116lv"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261118sy"></script>
+<script src="/python-pathways/pp-sync.js?v=20261118sy"></script>
 <script src="keywords.js?v=20261109f"></script>
 <script src="citybuilder.js?v=20261110a"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
@@ -327,8 +327,9 @@ const CONFIG = {
   "videoLinks": {},
   "studioUrl": "https://claude.ai/artifact/GwxfxmzBWyxbjy18kkdY7Z",
   "roster": null,
-  "syncForm": "https://docs.google.com/forms/d/e/1FAIpQLSdGZGdrzAvN_21zfKHufKcba8003hZIeUhzTKQJ3Mun53trlQ/viewform?usp=pp_url&entry.544835510=x",
-  "syncSheet": "https://docs.google.com/spreadsheets/d/12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0/edit#gid=1433531983",
+  "syncForm": "https://docs.google.com/forms/d/e/1FAIpQLScz4HZXAuqSguFrhRDLAtAV2PxAi6K8uF2Vzx4cPWFCevMYdA/viewform?usp=pp_url&entry.919327250=x",
+  "syncSheet": "https://docs.google.com/spreadsheets/d/1qRTsBkS6MfA7lHEU5ZN3e3cbQAGtjrF8xmSfHGHKEoE/edit#gid=996219689",
+  "syncOld": ["https://docs.google.com/spreadsheets/d/12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0/edit#gid=1433531983"],
   "adminKeys": {
     "sigPub": {
       "key_ops": [
@@ -3791,10 +3792,16 @@ function scheduleSnapshot(c){ clearTimeout(snapTimer); pendingSnap = c; snapTime
    read back from its sheet. The sheet holds only random IDs and locked text. */
 const SYNC_CHUNK = 30000, SYNC_EVERY = 5000, KDF_ROUNDS = 400000;
 const TE = new TextEncoder();
+/* 18 Nov 2026: the first sync sheet (12_g1y…) grew past what Google Sheets can hold and stopped taking new rows on
+   16 Nov at 10:44. Saves now go to a fresh form + sheet; the old sheet is still read for older saves and keys. */
+const OLD_SYNC_IDS = ["12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0", "1FAIpQLSdGZGdrzAvN_21zfKHufKcba8003hZIeUhzTKQJ3Mun53trlQ"];
+const sheetOf = link => { const m = String(link || "").match(/\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]{20,})/); return m && m[1] !== "e" ? { id: m[1], gid: (String(link).match(/[#&?]gid=(\d+)/) || [])[1] || "" } : null; };
 function syncCfg(){
-  const s = settings(), f = parseFormLink(s.syncForm), link = String(s.syncSheet || "");
-  const m = link.match(/\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]{20,})/); if (!f || !m || m[1] === "e") return null;
-  return { form: s.syncForm, id: m[1], gid: (link.match(/[#&?]gid=(\d+)/) || [])[1] || "" };
+  const s = settings(), stale = v => OLD_SYNC_IDS.some(x => String(v || "").includes(x));   // a teacher's saved settings may still hold the old, full links
+  const form = stale(s.syncForm) ? CONFIG.syncForm : s.syncForm, link = stale(s.syncSheet) ? CONFIG.syncSheet : s.syncSheet;
+  const f = parseFormLink(form), sh = sheetOf(link); if (!f || !sh) return null;
+  const old = (CONFIG.syncOld || []).map(sheetOf).filter(o => o && o.id !== sh.id);
+  return { form, id: sh.id, gid: sh.gid, old };
 }
 const hexOf = u8 => [...u8].map(v => v.toString(16).padStart(2, "0")).join("");
 async function sha256(bytes){ return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)); }
@@ -3877,8 +3884,8 @@ function allVersions(cells){
   Object.values(g).forEach(e => { if (Object.keys(e.parts).length !== e.n) return; (out[e.key] = out[e.key] || []).push({ ver: e.ver, text: Array.from({ length: e.n }, (_, i) => e.parts[i]).join("") }); });
   Object.values(out).forEach(a => a.sort((x, y) => y.ver - x.ver)); return out;
 }
-async function pullRows(cfg, kind, idStart, limit){
-  const cells = await gviz(cfg, `select B where B starts with 'DSS2|${kind}|${idStart}' order by A desc${limit ? " limit " + limit : ""}`);
+async function pullRows(cfg, kind, idStart, limit, newOnly){
+  const cells = await gviz(cfg, `select B where B starts with 'DSS2|${kind}|${idStart}' order by A desc${limit ? " limit " + limit : ""}`, newOnly);
   return allVersions(cells);
 }
 async function openWrap(cfg, A){
@@ -3914,10 +3921,24 @@ function afterSave(){ if (syncBusy || !syncable()) return; syncable().touchedAt 
 setInterval(() => { if (syncDirty && !syncBusy) syncNow(); else if ((DB.syncQ || []).length && !syncFlushing) flushSync(); }, SYNC_EVERY);
 /* "Saving… / ✓ Saved" in the top bar */
 try { if (window.SDC && SDC.saveBadge) SDC.saveBadge.watch(() => ({ on: !!(SDCG && syncable()), pending: syncDirty || syncBusy || syncFlushing || (DB.syncQ || []).length > 0 })); } catch(e){}
+/* every answer box carries the time it was last changed on a device (progress[c].fieldAt), so a device that
+   was left behind can tell its old answers from new ones, whatever the size of the history */
+const fKey = (c, id) => c + "|" + id;
+function stampFields(u, baselineOnly){
+  const P = u.progress || {}, first = !u.sentN, now = u.touchedAt || Date.now(), seen = {};
+  for (const c in P){ const p = P[c]; if (!p || !p.fields) continue; p.fieldAt = p.fieldAt || {};
+    for (const id in p.fields){ const h = hash(normV(p.fields[id])).toString(36), k = fKey(c, id); seen[k] = h;
+      if (!first && !baselineOnly && u.sentN[k] !== h) p.fieldAt[id] = now; } }
+  u.sentN = seen;
+}
+const SEND_GAP = 15000;   // one full copy at most every 15 seconds while typing (the old sheet filled up with one every 5 seconds)
+let lastSendAt = 0;
 async function syncNow(force){
   const u = syncable(), email = session.email; if (!u || syncHold) return;
-  syncBusy = true; syncDirty = false;
+  if (!force && Date.now() - lastSendAt < SEND_GAP){ syncDirty = true; return; }
+  syncBusy = true; syncDirty = false; lastSendAt = Date.now();
   try {
+    stampFields(u);
     const { data, imgs, sig } = syncPayload(u);
     if (u.syncSig !== sig){ u.syncSig = sig; u.savedAt = Math.max(u.touchedAt || Date.now(), (u.savedAt || 0) + 1); }
     if (force || u.syncedAt !== u.savedAt){
@@ -3928,6 +3949,7 @@ async function syncNow(force){
         queueRow("I", did + "." + h, ver, await sealText(u.dk, small)); u.syncSent[h] = 1;
       }
       queueRow("D", did, ver, await sealText(u.dk, JSON.stringify({ v: 2, savedAt: u.savedAt, data })));
+      u.ownVers = (u.ownVers || []).concat(ver).slice(-30);
       u.syncedAt = u.savedAt; save(true);
     }
   } catch(e){ console.warn("sync", e); syncDirty = true; }
@@ -3942,7 +3964,9 @@ async function flushSync(){
     while (DB.syncQ.length){
       const item = DB.syncQ[0], ok = await postForm(cfg.form, [item.cell], true);
       if (!ok) break;
-      if (DB.syncQ[0] === item) DB.syncQ.shift(); save(true);
+      if (DB.syncQ[0] === item) DB.syncQ.shift();
+      if (!DB.syncQ.length){ const u = session.email && DB.users[session.email]; if (u) u.flushedAt = Date.now(); }
+      save(true);
       if (DB.syncQ.length) await new Promise(r => setTimeout(r, 250));
     }
   } finally { syncFlushing = false; }
@@ -3962,9 +3986,9 @@ function gvizRaw(cfg, tq, sheet){
   });
 }
 /* find every tab and column that hold sync data (a sheet may be linked to more than one form) */
-let SYNC_COL = null, SYNC_SEEN = "";
+let SYNC_COL = null, SYNC_SEEN = ""; const SYNC_COLS = {};
 async function syncColumn(cfg, strict){
-  const k = cfg.id + "|" + cfg.gid; if (SYNC_COL && SYNC_COL.k === k) return SYNC_COL;
+  const k = cfg.id + "|" + cfg.gid; if (SYNC_COL && SYNC_COL.k === k) return SYNC_COL; if (!strict && SYNC_COLS[k]) return SYNC_COLS[k];
   const tries = cfg.gid ? [""] : ["", ...[1,2,3,4,5,6].map(n => "Form responses " + n), "Form Responses 1", "Form Responses 2", "Form Responses 3"], seen = [], found = [], byLabel = []; let lastErr = null;
   for (const sheet of tries){
     let r; try { r = await gvizRaw(cfg, "select * limit 30", sheet); } catch(e){ lastErr = e; continue; }
@@ -3977,14 +4001,15 @@ async function syncColumn(cfg, strict){
   }
   SYNC_SEEN = seen.join(" · ");
   const locs = found.length ? found : byLabel;
-  if (locs.length) return (SYNC_COL = { k, locs });
+  if (locs.length) return (SYNC_COLS[k] = SYNC_COL = { k, locs });
   if (strict){ throw (lastErr && !seen.length) ? lastErr : new Error("No sync rows found. What the sheet shows — " + (SYNC_SEEN || "nothing")); }
   return { k, locs: [{ col: "B", time: "A", sheet: "" }] };
 }
-async function gviz(cfg, tq){
-  const at = await syncColumn(cfg), out = []; let ok = 0, err = null;
-  for (const l of at.locs){
-    try { const r = await gvizRaw(cfg, tq.replace(/\bselect B where B\b/, `select ${l.col} where ${l.col}`).replace(/order by A\b/, `order by ${l.time}`), l.sheet); ok++;
+async function gviz(cfg, tq, newOnly){
+  const out = []; let ok = 0, err = null, locs = [];
+  for (const c of [cfg].concat(newOnly ? [] : (cfg.old || []))){ try { locs = locs.concat((await syncColumn(c)).locs.map(l => Object.assign({ c }, l))); } catch(e){ err = e; } }
+  for (const l of locs){
+    try { const r = await gvizRaw(l.c, tq.replace(/\bselect B where B\b/, `select ${l.col} where ${l.col}`).replace(/order by A\b/, `order by ${l.time}`), l.sheet); ok++;
       ((r.table && r.table.rows) || []).forEach(row => out.push(((row.c || [])[0] || {}).v || "")); } catch(e){ err = e; }
   }
   if (!ok && err) throw err;
@@ -4022,8 +4047,8 @@ function normV(v){
   return JSON.stringify(v == null ? null : v);
 }
 const emptyN = n => n === '""' || n === "null" || n === "[]" || n === "{}" || n === "false";
-async function historyOf(cfg, dk, limit){
-  const did = await dataId(dk), list = (await pullRows(cfg, "D", did + "|", limit))["D|" + did] || [], out = [];
+async function historyOf(cfg, dk, limit, newOnly){
+  const did = await dataId(dk), list = (await pullRows(cfg, "D", did + "|", limit, newOnly))["D|" + did] || [], out = [];
   for (const v of list){ try { const o = JSON.parse(await openText(dk, v.text)); if (o && o.data) out.push({ savedAt: +o.savedAt || +v.ver || 0, data: o.data }); } catch(e){} }
   return out.sort((a, b) => a.savedAt - b.savedAt);
 }
@@ -4040,24 +4065,45 @@ function resolveFields(hist){
     r.n = best[0]; r.v = r.val.get(best[0]); r.at = best[1]; }
   return res;
 }
-/* merge the cloud's history into this device's copy; returns { took, kept, ask } */
+/* how much work an answer holds: words written, table cells filled, pictures added */
+function workOf(v){
+  if (v == null) return 0;
+  if (typeof v === "string") return v.startsWith("data:image") || v.startsWith("IMG:") ? 40 : (v.trim().match(/\S+/g) || []).length;
+  if (Array.isArray(v)) return v.reduce((a, x) => a + workOf(x), 0);
+  if (typeof v === "object") return Object.keys(v).reduce((a, k) => a + (k === "__n" ? 0 : workOf(v[k])), 0);
+  return v ? 1 : 0;
+}
+/* merge the cloud's history into this device's copy; returns { took, kept, unsure } */
 function mergeInto(u, hist){
   const out = { took:0, kept:0, unsure:0 }; if (!hist.length) return out;
   const newest = hist[hist.length - 1], res = resolveFields(hist), NP = (newest.data && newest.data.progress) || {};
   u.progress = u.progress || {};
   for (const c of new Set([...Object.keys(res), ...Object.keys(NP)])){
     const rp = NP[c] || {}; let p = u.progress[c];
-    if (!p){ u.progress[c] = p = JSON.parse(JSON.stringify(rp)); p.fields = {}; }
-    p.fields = p.fields || {};
+    if (!p){ u.progress[c] = p = JSON.parse(JSON.stringify(rp)); p.fields = {}; p.fieldAt = {}; }
+    p.fields = p.fields || {}; p.fieldAt = p.fieldAt || {};
     if (Array.isArray(rp.done)){ p.done = p.done || []; rp.done.forEach((d, i) => { if (d) p.done[i] = true; }); }
     ["watched"].forEach(k => { if (rp[k]) p[k] = true; });
     ["seen", "bands"].forEach(k => { if (rp[k] && typeof rp[k] === "object") p[k] = Object.assign({}, rp[k], p[k] || {}); });
     if (rp.ex && (!p.ex || (rp.ex.points || 0) > (p.ex.points || 0))) p.ex = rp.ex;
-    for (const id in (res[c] || {})){
-      const r = res[c][id], has = Object.prototype.hasOwnProperty.call(p.fields, id), ln = has ? normV(p.fields[id]) : null;
-      if (ln === r.n) continue;
-      if (!has || emptyN(ln) || r.all.has(ln)){ if (!(has && emptyN(r.n))){ p.fields[id] = r.v; out.took++; } }   // missing, empty or an older value here: take the cloud's
-      else { out.kept++; if (!r.all.has(ln)) out.unsure++; }   // typed on this device and not in the cloud yet: keep it
+    const RF = rp.fields || {}, RA = rp.fieldAt || {}, LA = p.fieldAt;
+    for (const id of new Set([...Object.keys(res[c] || {}), ...Object.keys(RF)])){
+      const r = (res[c] || {})[id];
+      let cv, cat = 0;
+      if (Object.prototype.hasOwnProperty.call(RF, id) && RA[id]){ cv = RF[id]; cat = +RA[id]; }   // the cloud knows when this box was last changed
+      else { cv = r ? r.v : RF[id]; if (Object.prototype.hasOwnProperty.call(RF, id) && workOf(RF[id]) > workOf(cv)) cv = RF[id]; }   // older saves: the fuller of the latest and the newest-typed value
+      const cn = normV(cv), has = Object.prototype.hasOwnProperty.call(p.fields, id), ln = has ? normV(p.fields[id]) : null, lat = +LA[id] || 0;
+      if (ln === cn){ if (cat > lat) LA[id] = cat; continue; }
+      let take;
+      if (!has || emptyN(ln)) take = !emptyN(cn) || cat > lat;                           // nothing here: take the cloud's
+      else if (emptyN(cn)) take = cat > lat && lat > 0;                                  // the cloud's box is empty: only if it was cleared after this device's edit
+      else if (cat && lat){                                                              // both sides know when they were changed
+        if (cat > lat) take = !(lat > (u.flushedAt || 0) && workOf(p.fields[id]) > workOf(cv));   // newer edit elsewhere wins, unless this device holds unsent, fuller work
+        else take = false;                                                               // this device's edit is the newest
+      }
+      else take = workOf(cv) > workOf(p.fields[id]) || (workOf(cv) === workOf(p.fields[id]) && !!(r && r.all.has(ln)));   // can't tell which is newer: the most work wins
+      if (take){ p.fields[id] = cv; if (cat) LA[id] = cat; else delete LA[id]; out.took++; }
+      else { out.kept++; if (!(r && r.all.has(ln))) out.unsure++; }
     }
   }
   return out;
@@ -4071,13 +4117,15 @@ async function fillImages(cfg, dk, u){
 }
 async function pullMerge(u){
   const cfg = syncCfg(); if (!cfg || !u.dk) return "";
-  let hist = await historyOf(cfg, u.dk, 40); if (!hist.length) return "";
+  let hist = await historyOf(cfg, u.dk, 40, true); if (!hist.length) hist = await historyOf(cfg, u.dk, 40); if (!hist.length) return "";   // the new sheet first (small and quick); the old one if nothing is there yet
   const trial = JSON.parse(JSON.stringify({ progress: u.progress || {} })), t = mergeInto(trial, hist);
   if (t.unsure || t.took) hist = await historyOf(cfg, u.dk, 300);   // a disagreement: look further back so an older copy can be recognised
+  stampFields(u);   // edits typed here but not sent yet keep their time
   const before = normV(u.progress || {}), m = mergeInto(u, hist), newest = hist[hist.length - 1];
+  stampFields(u, true);   // what was just taken from the cloud is not a new edit on this device
   if (newest.savedAt > (u.syncedAt || 0)) SYNC_KEYS.forEach(k => { if (k !== "progress" && k !== "last" && newest.data[k] !== undefined) u[k] = newest.data[k]; });
   if (m.took) await fillImages(cfg, u.dk, u);
-  u.role = "student"; u.pulledAt = Date.now();
+  u.role = "student"; u.pulledAt = Date.now(); u.seenVer = String(newest.savedAt || "");
   const changed = normV(u.progress || {}) !== before;
   if (changed || m.kept){ u.syncSig = ""; u.touchedAt = Date.now(); syncDirty = true; }   // send the merged copy so every device agrees
   return changed ? "restored" : "";
@@ -4089,16 +4137,16 @@ async function syncIn(u, email, pw){
   try {
     if (pw){
       const A = await deriveAcct(email, pw);
-      if (u.syncV !== 4){ u.wrapFor = ""; u.syncSent = {}; u.syncSig = ""; }   // once: send everything again (the old Design sync form asked for a Google sign-in, so saves before 4 Nov 2026 never arrived)
+      if (u.wrapV !== 5){ u.wrapFor = ""; u.wrapV = 5; }   // once: check this password still opens the account in the cloud (keys made after 16 Nov 10:44 never reached the full sheet)
       if (!u.dk || u.wrapFor !== A.lookup){
         const dk = await openWrap(cfg, A);
         if (dk) u.dk = dk; else if (!u.dk){ u.dk = b64e(crypto.getRandomValues(new Uint8Array(32))); u.syncSent = {}; u.syncedAt = 0; }
         if (!dk) await publishWrap(u, email, A); else u.wrapFor = A.lookup;
         if (!dk) { syncDirty = true; }
       }
-      if (u.syncV !== 4){ u.syncV = 4; syncDirty = true; save(true); }
     }
     if (!u.dk) return "";
+    if (u.syncV !== 5){ u.syncV = 5; u.syncSent = {}; u.syncSig = ""; u.syncedAt = 0; syncDirty = true; save(true); }   // once: send the whole account (with pictures) to the new sync sheet
     out = await pullMerge(u);
   } catch(e){ console.warn("sync in", e); out = "offline"; }
   return out;
@@ -6078,6 +6126,27 @@ document.addEventListener("visibilitychange", async () => {
   const em = session.email; syncHold = true; let r = "";
   try { if (syncDirty) { syncHold = false; await syncNow(); syncHold = true; } r = await syncIn(u, em, null); } catch(e){} finally { syncHold = false; }
   if (session.email !== em) return; save(true); if (r === "restored"){ toast("Your latest work from another device has been loaded.", 4000); render(); } });
+/* live: when another device saves, bring the work in within about 15 seconds (never while the student is typing here) */
+let liveBusy = false;
+setInterval(async () => {
+  const u = syncable(); if (!u || document.hidden || liveBusy || syncBusy || syncHold || syncDirty || (DB.syncQ || []).length) return;
+  if (Date.now() - (u.touchedAt || 0) < 8000) return;
+  const cfg = syncCfg(); if (!cfg) return;
+  liveBusy = true; const em = session.email;
+  try {
+    const did = await dataId(u.dk), cells = await gviz(cfg, `select B where B starts with 'DSS2|D|${did}|' order by A desc limit 1`, true);
+    const ver = cells.length ? String(cells[0]).split("|")[3] : "";
+    if (!ver || ver === u.seenVer || (u.ownVers || []).includes(ver)) return;
+    const a = document.activeElement; if (a && /^(TEXTAREA|INPUT|SELECT)$/.test(a.tagName) && String(a.value || "").length && Date.now() - (u.touchedAt || 0) < 60000) return;
+    syncHold = true; let r = ""; try { r = await syncIn(u, em, null); } finally { syncHold = false; }
+    u.seenVer = ver; if (session.email !== em) return; save(true);
+    if (r === "restored"){ toast("Updated with your latest work from another device.", 3000); render(); }
+  } catch(e){} finally { liveBusy = false; }
+}, 15000);
+/* leaving the page or switching away: send what is waiting straight away */
+const sendNowLeaving = () => { if (syncDirty && !syncBusy && !syncHold) syncNow(true); else flushSync(); };
+window.addEventListener("pagehide", sendNowLeaving);
+document.addEventListener("visibilitychange", () => { if (document.hidden) sendNowLeaving(); });
 if (lang() !== "en") applyLang(lang(), true);
 setInterval(() => { loadLive(); flushQueue(); flushSync(); }, 60000);
 window.addEventListener("online", flushQueue);
