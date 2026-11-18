@@ -3207,7 +3207,24 @@ const PREVIEW = "teacher.preview@sisd.ae";
 function user(){ return session.email ? DB.users[session.email] : null; }
 function gradeData(g){ return COURSE.grades[g]; }
 function yearKey(myp){ return myp >= 5 ? 5 : myp; }
-function prog(u, c){ u.progress = u.progress || {}; u.progress[c] = u.progress[c] || { watched:false, seen:{}, ex:{correct:0, points:0, done:false, hints:0, attempts:0}, fields:{}, bands:{}, done:[false,false,false,false], finished:false }; return u.progress[c]; }
+const blankProg = () => ({ watched:false, seen:{}, ex:{correct:0, points:0, done:false, hints:0, attempts:0}, fields:{}, bands:{}, done:[false,false,false,false], finished:false });
+/* a criterion's record always has every part (a synced copy could arrive with only its answers) */
+function fixProg(p){
+  if (!p || typeof p !== "object") return blankProg();
+  const b = blankProg();
+  for (const k in b) if (p[k] === undefined || p[k] === null) p[k] = b[k];
+  if (typeof p.seen !== "object") p.seen = {}; if (typeof p.fields !== "object" || Array.isArray(p.fields)) p.fields = {}; if (typeof p.bands !== "object") p.bands = {};
+  if (!p.ex || typeof p.ex !== "object") p.ex = b.ex; else for (const k in b.ex) if (p.ex[k] === undefined) p.ex[k] = b.ex[k];
+  if (!Array.isArray(p.done)) p.done = b.done; while (p.done.length < 4) p.done.push(false);
+  return p;
+}
+function fixUser(u){
+  if (!u || u.role === "teacher") return u;
+  const fixAll = P => { if (!P || typeof P !== "object") return {}; for (const c in P) P[c] = fixProg(P[c]); return P; };
+  u.progress = fixAll(u.progress); if (u.progressBy && typeof u.progressBy === "object") for (const g in u.progressBy) u.progressBy[g] = fixAll(u.progressBy[g]);
+  return u;
+}
+function prog(u, c){ u.progress = u.progress || {}; u.progress[c] = fixProg(u.progress[c]); return u.progress[c]; }
 function fill(str, g, sc){
   const gd = gradeData(g);
   return String(str).replace(/\{client\}/g, sc.client).replace(/\{problem\}/g, sc.problem).replace(/\{user\}/g, sc.user)
@@ -4031,7 +4048,7 @@ async function openData(cfg, dk){
 }
 function applyRemote(u, got){
   SYNC_KEYS.forEach(k => { if (got.data[k] !== undefined) u[k] = got.data[k]; else delete u[k]; });
-  u.role = "student"; u.savedAt = u.syncedAt = u.touchedAt = got.savedAt;
+  u.role = "student"; u.savedAt = u.syncedAt = u.touchedAt = got.savedAt; fixUser(u);
   u.syncSent = Object.assign({}, u.syncSent || {}, got.sent); u.syncSig = syncPayload(u).sig;
 }
 /* ---- keeping the newest answer for every box, whichever computer it was typed on ----
@@ -4081,7 +4098,7 @@ function mergeInto(u, hist){
   u.progress = u.progress || {};
   for (const c of new Set([...Object.keys(res), ...Object.keys(NP)])){
     const rp = NP[c] || {}; let p = u.progress[c];
-    if (!p){ u.progress[c] = p = JSON.parse(JSON.stringify(rp)); p.fields = {}; p.fieldAt = {}; }
+    if (!p){ u.progress[c] = p = fixProg(Object.assign(blankProg(), JSON.parse(JSON.stringify(rp)))); p.fields = {}; p.fieldAt = {}; }
     p.fields = p.fields || {}; p.fieldAt = p.fieldAt || {};
     if (Array.isArray(rp.done)){ p.done = p.done || []; rp.done.forEach((d, i) => { if (d) p.done[i] = true; }); }
     ["watched"].forEach(k => { if (rp[k]) p[k] = true; });
@@ -4135,6 +4152,7 @@ async function pullMerge(u){
   for (const g of units){   // the scenario chosen for a unit: keep this device's, or take the newest one saved anywhere
     const mine = g === G ? u.choice : u.choiceBy[g]; if (mine) continue;
     for (let i = hist.length - 1; i >= 0; i--){ const d = hist[i].data || {}, c = String(d.grade) === g ? d.choice : (d.choiceBy || {})[g]; if (c){ if (g === G) u.choice = c; else u.choiceBy[g] = c; break; } } }
+  fixUser(u);
   stampFields(u, true);   // what was just taken from the cloud is not a new edit on this device
   const newest = hist[hist.length - 1];
   // account details (name, class, teacher…) follow the newest copy; which unit this device is on, and the work itself, never do
@@ -6130,6 +6148,7 @@ if (DB.session && DB.users[DB.session] && DB.session !== PREVIEW && DB.users[DB.
 if (SDCG && SDCG.mode !== "staff" && session.email){ const u0 = DB.users[session.email]; if (u0 && u0.role !== "teacher" && u0.course && u0.course !== SDCG.course){ session.email = null; DB.session = null; save(true); } }
 try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
 new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = requestAnimationFrame(() => addListenButtons(document.getElementById("app"))); }).observe(document.getElementById("app"), { childList:true, subtree:true });
+try { Object.values(DB.users || {}).forEach(fixUser); } catch(e){}   // repair records that a sync left incomplete (18 Nov 2026)
 render(); loadLive(); flushQueue(); flushSync();
 if (SDCG && SDCG.link && SDCG.link.design && !user()) linkIn().catch(() => {});   // came from Computer Science
 (async () => { const u = syncable(); if (!u){ syncHold = false; return; } const em = session.email; let r = "";
