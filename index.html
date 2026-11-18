@@ -4,7 +4,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261118sy"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261118g10"></script>
 <script src="/python-pathways/pp-sync.js?v=20261118sy"></script>
 <script src="keywords.js?v=20261109f"></script>
 <script src="citybuilder.js?v=20261110a"></script>
@@ -6046,6 +6046,30 @@ function sdcUnits(u, units){
   const c = u.course || SDCG.course, out = units.filter(x => (c === "it" ? IT_UNITS.includes(x) : !IT_UNITS.includes(x)) && (x !== "10" || hasUnitWork(u, "10")));
   return out.length ? out : units;
 }
+/* ---------- Grade 10: one login for both Design and IT ----------
+   A Grade 10 student uses the same username and password for Design and IT, and switches with
+   "Change course" at the top without signing in again. Each course keeps its own units and work
+   (progress is saved per unit), and the unit last open in each course is remembered (u.unitBy). */
+function g10Both(u, c){
+  if (!u || u.role === "teacher" || !SDCG) return false;
+  const a = u.course || "design", b = c || SDCG.course;
+  if (a === b || !["design", "it"].includes(a) || !["design", "it"].includes(b)) return false;
+  if (isTester()) return true;
+  return String(u.group || groupOf(u.grade)) === "10";
+}
+/* move a Grade 10 student to course c (Design or IT): remember where they were, open where they left off in c */
+function g10Switch(u, c){
+  if (!u || !c) return;
+  const was = u.course || "design";
+  u.unitBy = u.unitBy || {};
+  if (u.grade) u.unitBy[was] = u.grade;
+  u.course = c;
+  const allowed = sdcUnits(u, (COURSE.groups[u.group || groupOf(u.grade)] || { units:[u.grade] }).units);
+  const back = u.unitBy[c];
+  const to = back && allowed.includes(back) ? back : (allowed.find(x => hasUnitWork(u, x)) || allowed[0]);
+  if (to && to !== u.grade) setUnit(u, to);
+  if (!u.courses || !u.courses.includes(c)) u.courses = Array.from(new Set((u.courses || [was]).concat([c])));
+}
 function sdcFirstUnit(g){ const units = COURSE.groups[g].units; return (SDCG && SDCG.course === "it" && units.includes("10GD")) ? "10GD" : (SDCG && SDCG.course === "it" && units.includes("10IT")) ? "10IT" : units.filter(x => !IT_UNITS.includes(x))[0] || units[0]; }
 const SDC_W = { "Practice passed":1, "Criterion submitted":2 };
 function sdcTask(u, crit, event){
@@ -6089,7 +6113,7 @@ function sdcApply(u, A){
 }
 // a teacher moved this student (🔀 Move teacher / class) while the course is open: apply it without waiting for the next sign-in
 try { if (window.SDC && SDC.watchAssign) SDC.watchAssign(A => { const u = user(); if (!u || u.role === "teacher" || session.preview || isTester()) return;
-  const c = u.course || "design"; if (A.c !== c && !(c === "design" && A.also)) return; sdcApply(u, A); save(true); }); } catch(e){}
+  const c = u.course || "design"; if (A.c !== c && !(c === "design" && A.also) && !g10Both(Object.assign({}, u, { course:A.c }), c)) return; sdcApply(u, A); save(true); }); } catch(e){}
 /* after a student signs in or signs up: is this the course they are registered for? */
 /* did a teacher set this password on the staff dashboard (and the student hasn't chosen their own since)? */
 async function teacherTemp(key, pw, u){
@@ -6120,12 +6144,15 @@ async function sdcAfter(u, email, signup){
   }
   const fail = (m, v) => { session = { email:null, preview:false, back:null }; DB.session = null; save(true); SDC.signedOutNotice(m, v ? "warn" : "bad"); SDC.leave("blocked"); return false; };
   let A0 = null; try { A0 = (await SDC.lookup(email, u.name)).assign; } catch(e){}
-  if (A0 && A0.c === c){ u.course = c; sdcApply(u, A0); }   // the admin has moved this student: their setting wins
+  if (A0 && A0.c === c){ if (g10Both(u, c)) g10Switch(u, c); u.course = c; sdcApply(u, A0); }   // the admin has moved this student: their setting wins
+  else if (A0 && g10Both(Object.assign({}, u, { course:A0.c }), c)) sdcApply(u, A0);   // Grade 10 Design + IT: the admin's grade / teacher change still applies
   const grp1 = u.group || groupOf(u.grade);
+  if (u.course && u.course !== c && g10Both(u, c)) g10Switch(u, c);   // Grade 10: the same login opens Design and IT
   if (!A0 && u.course && u.course !== c) { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { registered:u.course }); return fail(`This account is registered for <b>${esc(SDC.course(u.course).name)}</b>, not ${esc(SDC.course(c).name)}. You can only see the course you are registered for. If this is wrong, ask your teacher: only they can change your course.`); }
   if (c === "it" && grp1 !== "10" && !(u.history || []).some(h => (h.units || []).some(x => IT_UNITS.includes(x)))) { SDC.log("wrongcourse", sdcAcct(Object.assign({}, u, { course:c }), email), { reason:"grade" }); return fail(`IT is only for Grade 10, and this account is for ${esc(groupLabel(u))}. Choose Design instead.`); }
   let ck = { ok:true }; try { ck = await SDC.confirm(sdcAcct(Object.assign({}, u, { course:c }), email), signup); } catch(e){}
   if (!ck.ok) return fail(ck.msg, ck.verify);
+  if (g10Both(u, c)) g10Switch(u, c);
   u.course = c; sdcApply(u, ck.assign);
   const allowed = sdcUnits(u, (COURSE.groups[u.group || groupOf(u.grade)] || { units:[u.grade] }).units);
   if (!allowed.includes(u.grade)) setUnit(u, allowed[0]);
@@ -6138,6 +6165,10 @@ if (SDCG){
     () => { if (!user()) render(); const t = $("#tIn"); if (t) t.click(); const e = $("#lEmail"); if (e){ e.focus(); e.scrollIntoView({ block:"center" }); } }); } catch(e){}
   { const st = document.createElement("style"); st.textContent = "#mastRight #signOut{display:none!important}"; document.head.appendChild(st); }   // Sign out is in the platform bar
   window.SDC_beforeRead = () => stopReading();
+  window.SDC_beforeSwitch = () => { try { stopReading(); } catch(e){} const u = user(); if (!u) return;   // Grade 10 Design ⇄ IT: save and send this course's work, stay signed in
+    if (pendingSnap){ clearTimeout(snapTimer); const pc = pendingSnap; pendingSnap = null; sendWork(pc, "snapshot"); }
+    if (u.grade){ u.unitBy = u.unitBy || {}; u.unitBy[u.course || SDCG.course] = u.grade; }
+    save(true); if (syncable()) syncNow(); };
   try { if (SDC.listen) SDC.listen("#pane:not(:has(#player)):not(:has(#dlPdf)):not(:has(#strandCard))", "", "bar"); } catch(e){}   // Read to me only on the steps that explain or set work: example, method, rubric, practice, task
   { const st = document.createElement("style"); st.textContent = ".listen{display:none!important}[data-read]:not(.brief)>*:nth-child(2){padding-right:0!important}.brief[data-read]{padding-right:22px!important}"; document.head.appendChild(st); }   // the page has one Read to me button instead
   { const st = document.createElement("style"); st.textContent = "#mastRight .chip.lang{display:none!important}"; document.head.appendChild(st); }   // one language menu: the one in the platform bar
@@ -6145,7 +6176,10 @@ if (SDCG){
   if (!SDCG.entered){ DB.session = null; save(true); SDC.patchGate({ entered:true }); }   // arriving from the portal: always sign in
 }
 if (DB.session && DB.users[DB.session] && DB.session !== PREVIEW && DB.users[DB.session].hash) session.email = DB.session;
-if (SDCG && SDCG.mode !== "staff" && session.email){ const u0 = DB.users[session.email]; if (u0 && u0.role !== "teacher" && u0.course && u0.course !== SDCG.course){ session.email = null; DB.session = null; save(true); } }
+if (SDCG && SDCG.mode !== "staff" && session.email){ const u0 = DB.users[session.email];
+  if (u0 && u0.role !== "teacher" && u0.course && u0.course !== SDCG.course){
+    if (g10Both(u0, SDCG.course)){ g10Switch(u0, SDCG.course); save(true); if (syncable()) syncNow(); }   // Grade 10 switched Design ⇄ IT from the course menu: still signed in, now in the other course
+    else { session.email = null; DB.session = null; save(true); } } }
 try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch(e){}
 new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = requestAnimationFrame(() => addListenButtons(document.getElementById("app"))); }).observe(document.getElementById("app"), { childList:true, subtree:true });
 try { Object.values(DB.users || {}).forEach(fixUser); } catch(e){}   // repair records that a sync left incomplete (18 Nov 2026)
