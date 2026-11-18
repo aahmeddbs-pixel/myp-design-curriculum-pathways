@@ -14,7 +14,7 @@
 <style>
 /* Layout: a design-journal workspace — navy masthead, criterion ring, strand tabs on graph paper */
 :root{
-  --navy:#1B2D4E; --red:#DC2B3E; --bg:#F3F5F9; --paper:#FFFFFF; --ink:#16223A; --muted:#5B6782;
+  --navy:#1B2D4E; --task:#1452C8; --red:#DC2B3E; --bg:#F3F5F9; --paper:#FFFFFF; --ink:#16223A; --muted:#5B6782;
   --line:#D8DEEA; --grid:rgba(27,45,78,.045); --soft:#E9EDF5; --ok:#1E8A55; --okbg:#E3F4EA; --warn:#B26A00; --warnbg:#FFF2DC; --bad:#C0283A; --badbg:#FBE5E8;
   --accent:#DC2B3E; --mast:#1B2D4E; --mastfg:#FFFFFF;
   --f-body: Arial, "Helvetica Neue", Helvetica, sans-serif;
@@ -24,10 +24,10 @@
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0E1626; --paper:#16213A; --ink:#E7ECF6; --muted:#9AA7C2; --line:#2A3858; --grid:rgba(255,255,255,.035); --soft:#1D2A47;
-  --ok:#47C487; --okbg:#143326; --warn:#F0B44C; --warnbg:#3A2C10; --bad:#FF6B7C; --badbg:#3E1820; --accent:#FF5468; --mast:#0A1220; --mastfg:#FFFFFF; --navy:#8FB0E8; color-scheme:dark}}
+  --ok:#47C487; --okbg:#143326; --warn:#F0B44C; --warnbg:#3A2C10; --bad:#FF6B7C; --badbg:#3E1820; --accent:#FF5468; --mast:#0A1220; --mastfg:#FFFFFF; --navy:#8FB0E8; --task:#7FB2FF; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0E1626; --paper:#16213A; --ink:#E7ECF6; --muted:#9AA7C2; --line:#2A3858; --grid:rgba(255,255,255,.035); --soft:#1D2A47;
-  --ok:#47C487; --okbg:#143326; --warn:#F0B44C; --warnbg:#3A2C10; --bad:#FF6B7C; --badbg:#3E1820; --accent:#FF5468; --mast:#0A1220; --mastfg:#FFFFFF; --navy:#8FB0E8; color-scheme:dark}
+  --ok:#47C487; --okbg:#143326; --warn:#F0B44C; --warnbg:#3A2C10; --bad:#FF6B7C; --badbg:#3E1820; --accent:#FF5468; --mast:#0A1220; --mastfg:#FFFFFF; --navy:#8FB0E8; --task:#7FB2FF; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
@@ -204,6 +204,9 @@ table.tin td{vertical-align:top}
 .strand-tabs button.done::after{content:" ✓";color:var(--ok)}
 .field{display:flex;flex-direction:column;gap:6px}
 .field .lbl{font-weight:bold}
+/* main task questions in blue (exercise and practice questions stay in the normal text colour) */
+.field.mainQ .lbl{color:var(--task)}
+.field.mainQ .lbl .muted{color:var(--muted)}
 .counter{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .counter.ok{color:var(--ok)}
 .counter.bad{color:var(--bad,#B3261E);font-family:inherit;font-size:13px}
@@ -4959,7 +4962,10 @@ function videoBox(el, f, ctx, label){
 /* Grade 10 ePortfolio: students can write as much as they like (boxes grow, tables can get more rows), never less */
 const deepUnit = g => String(g) === "10";
 const autoGrow = ta => { const fit = () => { ta.style.height = "auto"; ta.style.height = Math.max(ta.scrollHeight + 2, ta.classList.contains("tcell") ? 44 : 110) + "px"; }; ta.addEventListener("input", fit); requestAnimationFrame(fit); };
-function buildField(f, ctx){
+/* a short exercise inside a strand ("Exercise · …"): practice, not the main task */
+const isExField = f => /^Exercise\b/i.test(String(f.label || "")) || /ex\d*$/.test(String(f.id || ""));
+function buildField(f, ctx){ const el = buildField0(f, ctx); try { el.classList.add(isExField(f) ? "exQ" : "mainQ"); } catch(e){} return el; }
+function buildField0(f, ctx){
   const { p, g, sc } = ctx, el = document.createElement("div"); el.className = "field";
   const label = fill(f.label, g, sc);
   if (f.t === "video"){ videoBox(el, f, ctx, label); return el; }
@@ -5122,7 +5128,7 @@ function answersText(ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
   let out = `Scenario: ${sc.title}\n`;   // practice questions are not part of the assessed work
   F.forEach((fs,i) => { out += `\n== Strand ${ROMAN[i]} (self-rating ${p.bands[i]||"-"}) ==\n`;
-    fs.forEach(f => { const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
+    fs.forEach(f => { if (isExField(f)) return; const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
       if (f.t === "shots") out += ((v || []).length) + " screenshots\n"; else if (f.t === "evlist") out += "Evidence for " + ((v && v.__n) || 0) + " tests\n"; else if (f.grp === "video" && p.fields.__skipVideo) out += "SKIPPED (video task)\n"; else if (f.t === "video") out += (v && v.url ? v.url : "") + "\n"; else if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
   return out;
 }
@@ -5160,6 +5166,7 @@ function reportBlocks(u, only, full){
       const sec = []; let lastImg = false;
       fs.forEach(f => {
         if (f.grp === "video" && p.fields.__skipVideo) return;
+        if (isExField(f)) return;   // strand exercises are practice: not downloaded or handed in
         const v = p.fields[f.id], label = fill(f.label, g, sc), rhOf = full ? taskHead : rhOf0;
         if (f.t === "sketch"){ if (v){ sec.push({ k:"h3", t:rhOf(f, label) }); sec.push({ k:"img", src:v, cap:rhOf(f, label) }); lastImg = true; } return; }
         if (f.t === "video"){ if (v && v.url) sec.push({ k:"h3", t:"Finished video" }, { k:"p", t:v.url }); return; }
@@ -5207,7 +5214,7 @@ async function reportPDF(R){
   for (const b of R.blocks){
     if (b.k === "h1"){ doc.addPage(); y = M; text(b.t, 18, "bold", NAVY, 2); doc.setDrawColor(...RED); doc.setLineWidth(0.6); doc.line(M, y, M + 40, y); y += 6; }
     else if (b.k === "h2"){ need(16); y += 2; text(b.t, 13, "bold", NAVY, 2); }
-    else if (b.k === "h3"){ need(12); y += 1; text(b.t, 11, "bold", [22,34,58], 1); }
+    else if (b.k === "h3"){ need(12); y += 1; text(b.t, 11, "bold", [20,82,200], 1); }
     else if (b.k === "p") text(b.t, 10.5, "normal", [22,34,58], 2.5);
     else if (b.k === "table"){ need(20); doc.autoTable({ startY:y, head:[b.head.map(clean)], body:b.rows.map(r => b.head.map((_, k) => clean(r[k] || ""))), margin:{ left:M, right:M, top:M }, styles:{ fontSize:9, cellPadding:2, lineColor:[216,222,234], lineWidth:0.2 }, headStyles:{ fillColor:NAVY } }); y = doc.lastAutoTable.finalY + 5; }
     else if (b.k === "img"){ try { const pr = doc.getImageProperties(b.src), w = W - 2*M, h = Math.min(110, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h + 8); doc.addImage(b.src, "JPEG", M, y, ww, h); y += h + 2; text(b.cap, 9, "italic", [91,103,130], 3); } catch(e){} }
@@ -5261,7 +5268,7 @@ async function reportDOCX(R){
     st("Normal", "Normal", "") + st("Title", "Title", `<w:b/><w:sz w:val="52"/><w:color w:val="1B2D4E"/>`, `<w:spacing w:after="240"/>`) + st("Subtitle", "Subtitle", `<w:caps/><w:sz w:val="22"/><w:color w:val="DC2B3E"/>`) +
     st("Heading1", "heading 1", `<w:b/><w:sz w:val="36"/><w:color w:val="1B2D4E"/>`, `<w:keepNext/><w:spacing w:before="240" w:after="160"/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="DC2B3E"/></w:pBdr><w:outlineLvl w:val="0"/>`) +
     st("Heading2", "heading 2", `<w:b/><w:sz w:val="28"/><w:color w:val="1B2D4E"/>`, `<w:keepNext/><w:spacing w:before="280" w:after="100"/><w:outlineLvl w:val="1"/>`) +
-    st("Heading3", "heading 3", `<w:b/><w:sz w:val="23"/>`, `<w:keepNext/><w:spacing w:before="180" w:after="60"/><w:outlineLvl w:val="2"/>`) +
+    st("Heading3", "heading 3", `<w:b/><w:sz w:val="23"/><w:color w:val="1452C8"/>`, `<w:keepNext/><w:spacing w:before="180" w:after="60"/><w:outlineLvl w:val="2"/>`) +
     st("Caption", "caption", `<w:i/><w:sz w:val="18"/><w:color w:val="5B6782"/>`, `<w:jc w:val="center"/>`) +
     `<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style><w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:basedOn w:val="TableNormal"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tblBorders></w:tblPr></w:style></w:styles>`;
   const files = [
@@ -5359,7 +5366,7 @@ function buildPDF(ctx){
   const { c, g, gd, cd, p, sc } = ctx, u = user(), Y = yearKey(gd.myp), F = fieldsFor(c, gd);
   if (!window.jspdf) throw new Error("PDF tool not loaded — check the internet connection");
   const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit:"mm", format:"a4" });
-  const W = 210, M = 16, NAVY = [27,45,78], RED = [220,43,62];
+  const W = 210, M = 16, NAVY = [27,45,78], RED = [220,43,62], TASK = [20,82,200];   // TASK: main task questions in blue
   let y = 0;
   const bar = () => { doc.setFillColor(...NAVY); doc.rect(0,0,W,22,"F"); doc.setFillColor(...RED); doc.rect(0,22,W,1.6,"F");
     doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.text(`SISD Design Studio · MYP ${gd.subject||"Design"} Year ${gd.myp}`, M, 10);
@@ -5380,17 +5387,18 @@ function buildPDF(ctx){
     para(strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[i], 9.5, "italic", [91,103,130]);
     let skipNoted = false;
     fs.forEach(f => {
+      if (isExField(f)) return;   // strand exercises are practice: not handed in
       const v = p.fields[f.id];
       if (f.grp === "video" && p.fields.__skipVideo){ if (!skipNoted){ skipNoted = true; need(12); para("Task 2 (the video): SKIPPED by the student. Marks are lost for this task.", 10.5, "bold", RED); } return; }
-      if (f.t === "video"){ need(14); para(fill(f.label, g, sc), 10, "bold", NAVY); para(v && v.url ? "Finished video: " + v.url : "(no video link submitted)", 10.5); return; }
-      if (f.t === "shots"){ need(12); para(fill(f.label, g, sc), 10, "bold", NAVY); (v || []).forEach(im => { const pr = doc.getImageProperties(im), w = W-2*M, h = Math.min(100, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h+4); doc.addImage(im, "JPEG", M, y, ww, h); y += h + 5; }); if (!(v || []).length) para("(no screenshots)", 10, "italic"); return; }
-      if (f.t === "evlist"){ need(12); para(fill(f.label, g, sc), 10, "bold", NAVY); const ts = testsOf(p, f.src);
+      if (f.t === "video"){ need(14); para(fill(f.label, g, sc), 10, "bold", TASK); para(v && v.url ? "Finished video: " + v.url : "(no video link submitted)", 10.5); return; }
+      if (f.t === "shots"){ need(12); para(fill(f.label, g, sc), 10, "bold", TASK); (v || []).forEach(im => { const pr = doc.getImageProperties(im), w = W-2*M, h = Math.min(100, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h+4); doc.addImage(im, "JPEG", M, y, ww, h); y += h + 5; }); if (!(v || []).length) para("(no screenshots)", 10, "italic"); return; }
+      if (f.t === "evlist"){ need(12); para(fill(f.label, g, sc), 10, "bold", TASK); const ts = testsOf(p, f.src);
         ts.forEach((t, n) => { const im = v && v[n]; para(`Test ${n + 1}${t.name ? ": " + t.name : ""}`, 10, "bold");
           if (im){ const pr = doc.getImageProperties(im), w = W-2*M, h = Math.min(100, w * pr.height / pr.width), ww = h * pr.width / pr.height; need(h+4); doc.addImage(im, "JPEG", M, y, ww, h); y += h + 5; } else para("(no evidence)", 10, "italic"); });
         return; }
       if (f.t === "sketch" && v){ const pr = doc.getImageProperties(v); need(Math.min(120, (W-2*M) * pr.height / pr.width) + 12); }
       else if (f.t === "table") need(24); else need(12);
-      para(fill(f.label, g, sc), 10, "bold", NAVY);
+      para(fill(f.label, g, sc), 10, "bold", TASK);
       if (f.t === "text" || f.t === "choice") para(v || "(not answered)", 10.5);
       else if (f.t === "checklist") para((v||[]).map(x => "[x] " + x).join("\n") || "(none ticked)", 10);
       else if (f.t === "table"){
