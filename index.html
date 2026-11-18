@@ -4221,7 +4221,7 @@ function historyBlock(u){
     ${H.map(h => (h.units || []).filter(g => COURSE.grades[g]).map(g => { const P = (u.progressBy || {})[g] || {};
       return `<div class="card stack" style="gap:6px"><div class="eyebrow">${esc((COURSE.groups[h.group] && COURSE.groups[h.group].label) || "Grade " + h.group)}${yr(h.year)}</div><b>${esc(gradeData(g).unit)}</b>
         ${["A","B","C","D"].filter(c => P[c]).map(c => { const p = P[c], done = (p.done || []).filter(Boolean).length;
-          return `<div class="row" style="justify-content:space-between"><span>Criterion ${c}: ${esc(COURSE.criteria[c].name)} · ${done}/4 strands${p.finished ? " · handed in ✓" : ""}</span><button class="btn ghost sm" data-hpdf="${esc(g)}|${c}">${ICON.dl} Download (PDF)</button></div>`; }).join("") || `<span class="muted" style="font-size:13px">No saved work.</span>`}</div>`; }).join("")).join("")}
+          return `<div class="row" style="justify-content:space-between"><span>Criterion ${c}: ${esc(COURSE.criteria[c].name)} · ${done}/4 strands${p.finished ? " · handed in ✓" : ""}</span><button class="btn ghost sm" data-hpdf="${esc(g)}|${c}">${ICON.dl} Download (PDF)</button></div>`; }).join("") || `<span class="muted" style="font-size:13px">No saved work.</span>`}${hasUnitWork(u, g) ? `<div class="row"><button class="btn sm ok" type="button" data-dlall="${esc(g)}">${ICON.dl} Download all my work (Word)</button></div>` : ""}</div>`; }).join("")).join("")}
   </section>`;
 }
 function renderExplore(app){
@@ -4258,6 +4258,7 @@ function unitBlock(u, g, multi){
         <h3>${esc(cd.name)}</h3>
         <ol style="margin:0;padding-left:18px;font-size:12.5px;color:var(--muted)">${strandsFor(cd, typeof gd === "undefined" ? null : gd, Y).map(st => `<li>${esc(st)}</li>`).join("")}</ol>
         <div class="state" style="color:var(--muted)">View only — not open yet</div></div>`; }).join("")}</div>
+    ${u.role !== "teacher" ? dlAllBar(u, g) : ""}
   </section>`;
 }
 /* ---------- unit introduction & expectations (Game Development): always open, read before Criterion A ---------- */
@@ -4316,6 +4317,7 @@ function renderHome(app){
     <div id="rankBox"></div>
     <div class="row" style="justify-content:space-between"><p class="muted" style="margin:0;font-size:13px">You can come back here at any time to see Criteria A to D, and go back into an open criterion to change your work.</p><button class="btn ghost sm" id="exploreBtn">See what other grades are learning →</button></div>
   </div>`;
+  bindDlAll(app, u);
   app.querySelectorAll("[data-hpdf]").forEach(b => b.onclick = async () => { const [g, c] = b.dataset.hpdf.split("|"), p = ((u.progressBy || {})[g] || {})[c];
     if (!p) return; b.disabled = true; try { await buildPDF({ u, c, g, gd: gradeData(g), cd: COURSE.criteria[c], p, sc: scenarioFor(session.email, g) }); } catch(e){ toast("The PDF could not be made: " + e.message, 4000); } b.disabled = false; });
   app.querySelectorAll(".crit.open[data-c]").forEach(b => b.onclick = () => { const g = b.dataset.g, c = b.dataset.c;
@@ -5118,7 +5120,7 @@ function shrink(cv){ const c2 = document.createElement("canvas"); c2.width = 900
 /* ---------- 7. SUBMIT ---------- */
 function answersText(ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
-  let out = `Scenario: ${sc.title} | Practice: ${p.ex.correct} correct, ${p.ex.points} pts, ${p.ex.hints} hints\n`;
+  let out = `Scenario: ${sc.title}\n`;   // practice questions are not part of the assessed work
   F.forEach((fs,i) => { out += `\n== Strand ${ROMAN[i]} (self-rating ${p.bands[i]||"-"}) ==\n`;
     fs.forEach(f => { const v = p.fields[f.id]; out += `# ${fill(f.label,g,sc)}\n`;
       if (f.t === "shots") out += ((v || []).length) + " screenshots\n"; else if (f.t === "evlist") out += "Evidence for " + ((v && v.__n) || 0) + " tests\n"; else if (f.grp === "video" && p.fields.__skipVideo) out += "SKIPPED (video task)\n"; else if (f.t === "video") out += (v && v.url ? v.url : "") + "\n"; else if (f.t==="text" || f.t==="choice") out += (v||"") + "\n"; else if (f.t==="checklist") out += (v||[]).join("; ") + "\n"; else if (f.t==="table") out += (v||[]).filter(r=>rowDone(f, r) || r.slice(f.rowLabels?1:0).some(x=>String(x).trim())).map(r=>r.join(" ; ")).join("\n") + "\n"; else out += v ? "[sketch included in student's PDF]\n" : "[no sketch]\n"; }); });
@@ -5138,6 +5140,8 @@ const RH = { a1what:"The problem", a1why:"Why this is a problem", a1who:"Who is 
   c3t:"Following the plan", c3f:"Does the solution work as intended?", c4t:"Changes made", c4o:"Effect of the changes",
   d1t:"Test plan", d2t:"Testing results", d2e:"Testing evidence", d3t:"Suggested improvements", d4s:"The improved solution", d4shots:"The improved solution", d4h:"How the improved solution works", d4i:"Impact on the client and users" };
 const RH_UNDER = /^(b2n\d|c2q\d)$/;   // a description that belongs to the picture just before it: no heading of its own
+const taskHead = (f, label) => String(label || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+function rhOf0(f, label){ return rhOf(f, label); }
 function rhOf(f, label){
   if (RH[f.id]) return RH[f.id];
   const m = /^c2m(\d)$/.exec(f.id); if (m) return "Making evidence " + (+m[1] + 1) + (label.includes(":") ? ": " + label.split(":").slice(1).join(":").trim() : "");
@@ -5145,7 +5149,7 @@ function rhOf(f, label){
   return t.length > 70 ? t.slice(0, 67).replace(/\s+\S*$/, "") + "…" : t;
 }
 /* the report as a list of blocks: { k:"h1"|"h2"|"h3"|"p"|"table"|"img"|"meta", ... } */
-function reportBlocks(u, only){
+function reportBlocks(u, only, full){
   const g = u.grade, gd = gradeData(g), sc = scenarioFor(session.email, g), Y = yearKey(gd.myp), added = u.reportAdded || {};
   const crits = (only ? [only] : ["A","B","C","D"].filter(c => added[c]));
   const out = [];
@@ -5156,7 +5160,7 @@ function reportBlocks(u, only){
       const sec = []; let lastImg = false;
       fs.forEach(f => {
         if (f.grp === "video" && p.fields.__skipVideo) return;
-        const v = p.fields[f.id], label = fill(f.label, g, sc);
+        const v = p.fields[f.id], label = fill(f.label, g, sc), rhOf = full ? taskHead : rhOf0;
         if (f.t === "sketch"){ if (v){ sec.push({ k:"h3", t:rhOf(f, label) }); sec.push({ k:"img", src:v, cap:rhOf(f, label) }); lastImg = true; } return; }
         if (f.t === "video"){ if (v && v.url) sec.push({ k:"h3", t:"Finished video" }, { k:"p", t:v.url }); return; }
         if (f.t === "shots"){ const l = (v || []).filter(Boolean); if (!l.length) return; sec.push({ k:"h3", t:rhOf(f, label) }); l.forEach((im, n) => sec.push({ k:"img", src:im, cap:`${rhOf(f, label)}: screenshot ${n + 1}` })); lastImg = true; return; }
@@ -5165,7 +5169,7 @@ function reportBlocks(u, only){
         if (f.t === "table"){ const rows = (v || []).filter(r => r && r.slice(f.rowLabels ? 1 : 0).some(x => String(x || "").trim())); if (!rows.length) return;
           sec.push({ k:"h3", t:rhOf(f, label) }, { k:"table", head:f.cols, rows }); lastImg = false; return; }
         let txt = f.t === "checklist" ? (v || []).join(", ") : String(v || "").trim(); if (!txt || /^n\/?a$/i.test(txt)) return;
-        if (!(RH_UNDER.test(f.id) && lastImg)) sec.push({ k:"h3", t:rhOf(f, label) });
+        if (full || !(RH_UNDER.test(f.id) && lastImg)) sec.push({ k:"h3", t:rhOf(f, label) });
         txt.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(x => sec.push({ k:"p", t:x })); lastImg = false;
       });
       if (sec.length) out.push({ k:"h2", t:`${ROMAN[i]}. ${strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[i]}` }, ...sec);
@@ -5298,6 +5302,33 @@ function bindReportCard(ctx){
     $("#rpDl").disabled = false;
   };
 }
+/* ================= DOWNLOAD ALL MY WORK (Word) =================
+   Every strand of Criteria A to D for one unit: the task, then the student's own answers, tables and pictures.
+   Only the student's tasks: the worked example, the method/rubric pages and the practice questions are never included. */
+function allWorkReport(u, g){
+  const gd = gradeData(g), P = g === u.grade ? (u.progress || {}) : ((u.progressBy || {})[g] || {});
+  const R = reportBlocks(Object.assign({}, u, { grade:g, progress:P, reportAdded:{ A:1, B:1, C:1, D:1 } }), null, true);
+  R.year = `MYP ${gd.subject || "Design"} · Year ${gd.myp} · All my work`;
+  R.blocks = R.blocks.filter((b, i, A) => b.k !== "h1" || (A[i + 1] && A[i + 1].k !== "h1"));   // a criterion with nothing answered yet is left out
+  R.crits = R.blocks.filter(b => b.k === "h1").map(b => (/Criterion ([A-D])/.exec(b.t) || [])[1]).filter(Boolean);
+  return R;
+}
+async function downloadAllWork(u, g, btn){
+  const R = allWorkReport(u, g);
+  if (!R.blocks.length){ toast("There is no work to download yet. Answer the tasks in a strand first.", 3500); return; }
+  const base = (u.name + " - " + gradeData(g).unit + " - All my work").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  const t0 = btn ? btn.innerHTML : ""; if (btn){ btn.disabled = true; btn.textContent = "Making your Word document…"; }
+  try { saveBlob(await reportDOCX(R), base + ".docx"); toast("Downloaded: Criteria " + R.crits.join(", ") + ". Worked examples and practice questions are not included.", 4000); try { logEvent(R.crits[R.crits.length - 1] || "A", "Downloaded all work (Word)", R.crits.join(", ")); } catch(e){} }
+  catch(e){ toast("The Word document could not be made: " + e.message, 4000); }
+  if (btn){ btn.disabled = false; btn.innerHTML = t0; }
+}
+function dlAllBar(u, g){
+  if (!hasUnitWork(u, g)) return "";
+  return `<div class="card row" style="gap:12px;justify-content:space-between;align-items:center;border-left:6px solid var(--ok,#1E8A55)">
+    <div class="stack" style="gap:2px;flex:1;min-width:220px"><b>Download all my work</b><span class="muted" style="font-size:13px">One Word document with your answers to every strand, Criteria A to D. Worked examples and practice questions are not included.</span></div>
+    <button class="btn ok" type="button" data-dlall="${esc(g)}">${ICON.dl} Download my work (Word)</button></div>`;
+}
+function bindDlAll(root, u){ (root || document).querySelectorAll("[data-dlall]").forEach(b => b.onclick = () => downloadAllWork(u, b.dataset.dlall, b)); }
 function paneSubmit(pane, ctx){
   const { c, p } = ctx, s = settings();
   pane.innerHTML = `<div class="card stack">
@@ -5305,11 +5336,12 @@ function paneSubmit(pane, ctx){
     <div class="scroll"><table class="tbl"><tr><th>Strand</th><th>Status</th><th>Your self-rating</th><th></th></tr>${ROMAN.map((r,i)=>`<tr><td>${r}</td><td>${p.done[i]?"Complete ✓":"Not complete"}</td><td>${p.bands[i]||"—"}</td><td><button class="btn ghost sm" data-back="${i}" title="Go back to strand ${r} to improve your answers">← Back to strand ${r}</button></td></tr>`).join("")}</table></div>
     <p style="margin:0"><b>Before you download:</b> read your work again. Want to improve something? Press <b>← Back to strand …</b> for that strand, make your changes and press <b>Save changes</b>. You come straight back here to download your PDF.</p>
     <p style="margin:0">Your PDF includes all your answers, tables and sketches. Upload it wherever your teacher asks (for example ManageBac or Teams). A copy is also saved for your teacher automatically.</p>
-    <div class="row"><button class="btn" id="dlPdf">${ICON.dl} Download my work (PDF)</button><button class="btn sec" id="saveCopy">Save a copy for my teacher</button><button class="btn ghost" id="edit">Edit my answers</button></div>
+    <div class="row"><button class="btn" id="dlPdf">${ICON.dl} Download my work (PDF)</button><button class="btn ok" type="button" data-dlall="${esc(ctx.g)}" title="Every strand of Criteria A to D in one Word document">${ICON.dl} Download all my work (Word)</button><button class="btn sec" id="saveCopy">Save a copy for my teacher</button><button class="btn ghost" id="edit">Edit my answers</button></div>
     <div id="subMsg">${p.finished?`<div class="notice ok">Copy saved for your teacher on ${new Date(p.savedAt).toLocaleString()}.</div>`:""}</div>
     ${!s.logForm?`<p class="muted" style="font-size:12px;margin:0">Teacher copy: this course has not been connected to a teacher log yet, so the copy stays on this device.</p>`:""}</div>
     ${isReportUnit(ctx.g) ? reportCard(ctx) : ""}`;
   if (isReportUnit(ctx.g)) bindReportCard(ctx);
+  bindDlAll(pane, ctx.u);
   const saveCopy = () => {
     logEvent(c, "Criterion submitted", answersText(ctx).slice(0, 45000));
     sendWork(c, "submission");
@@ -5339,7 +5371,7 @@ function buildPDF(ctx){
     doc.splitTextToSize(clean(t), W-2*M).forEach(line => { need(5.4); doc.text(line, M, y); y += size*0.47; }); y += 1.5; };
   header();
   para(gd.unit, 16, "bold"); para(`${gd.choose ? (g==="6"?"Building":"Cause") : "Design challenge"}: ${sc.title} — ${sc.client}: ${sc.problem}.`, 10.5); para(sc.brief, 10, "italic", [91,103,130]);
-  para(`Email: ${session.email}${classLabel(u) ? `   ·   Class: ${classLabel(u)}` : ""}   ·   Date: ${new Date().toLocaleDateString("en-GB")}   ·   Practice: ${p.ex.correct} correct, ${p.ex.points} points`, 9, "normal", [91,103,130]);
+  para(`Email: ${session.email}${classLabel(u) ? `   ·   Class: ${classLabel(u)}` : ""}   ·   Date: ${new Date().toLocaleDateString("en-GB")}`, 9, "normal", [91,103,130]);
   y += 2;
   F.forEach((fs,i) => {
     need(20); doc.setFillColor(233,237,245); doc.rect(M, y-5, W-2*M, 10.5, "F"); doc.setTextColor(...RED); doc.setFont("helvetica","bold"); doc.setFontSize(11.5);
