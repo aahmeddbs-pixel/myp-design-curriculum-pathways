@@ -3632,6 +3632,7 @@ function renderTeacherHome(app){
       <div class="crit locked"><span class="L">${Object.keys(COURSE.grades).filter(g=>["A","B","C","D"].some(c=>unlocks()[g]?.[c])).length}</span><h3>Grades with open criteria</h3><p class="muted" style="margin:0;font-size:13px">${Object.keys(COURSE.grades).map(g=>`${uLabel(g)}: ${["A","B","C","D"].filter(c=>unlocks()[g]?.[c]).join(", ")||"none"}`).join(" · ")}</p></div>
     </div></div>`;
   app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => b.dataset.go === "preview" ? previewGradePicker() : staffPanel(b.dataset.go, "teacher"));
+  sheetWarning(app.querySelector(".stack"));
 }
 
 /* ================= FOCUS CHOICE (G6 building, G7 cause) ================= */
@@ -3937,7 +3938,7 @@ let syncTimer = null, syncBusy = false, syncDirty = false, syncHold = !!DB.sessi
 function afterSave(){ if (syncBusy || !syncable()) return; syncable().touchedAt = Date.now(); syncDirty = true; }
 setInterval(() => { if (syncDirty && !syncBusy) syncNow(); else if ((DB.syncQ || []).length && !syncFlushing) flushSync(); }, SYNC_EVERY);
 /* "Saving… / ✓ Saved" in the top bar */
-try { if (window.SDC && SDC.saveBadge) SDC.saveBadge.watch(() => ({ on: !!(SDCG && syncable()), pending: syncDirty || syncBusy || syncFlushing || (DB.syncQ || []).length > 0 })); } catch(e){}
+try { if (window.SDC && SDC.saveBadge) SDC.saveBadge.watch(() => ({ on: !!(SDCG && syncable()), pending: syncDirty || syncBusy || syncFlushing || (DB.syncQ || []).length > 0 || !!(syncable() && syncable().checkMiss) })); } catch(e){}
 /* every answer box carries the time it was last changed on a device (progress[c].fieldAt), so a device that
    was left behind can tell its old answers from new ones, whatever the size of the history */
 function stampFields(u, baselineOnly){
@@ -3962,11 +3963,13 @@ async function syncNow(force){
     if (force || u.syncedAt !== u.savedAt){
       const did = await dataId(u.dk), ver = String(u.savedAt || Date.now());
       u.syncSent = u.syncSent || {};
+      const newImgs = [];
       for (const [h, url] of Object.entries(imgs)) if (!u.syncSent[h]){
         const small = (url.length > 160000 ? await shrinkData(url, 1100) : null) || url;
-        queueRow("I", did + "." + h, ver, await sealText(u.dk, small)); u.syncSent[h] = 1;
+        queueRow("I", did + "." + h, ver, await sealText(u.dk, small)); u.syncSent[h] = 1; newImgs.push(h);
       }
       queueRow("D", did, ver, await sealText(u.dk, JSON.stringify({ v: 2, savedAt: u.savedAt, data })));
+      u.checkVer = ver; u.checkImgs = Array.from(new Set((u.checkImgs || []).concat(newImgs))).slice(-40);
       u.ownVers = (u.ownVers || []).concat(ver).slice(-30);
       u.syncedAt = u.savedAt; save(true);
     }
@@ -3980,7 +3983,7 @@ async function flushSync(){
   syncFlushing = true;
   try {
     while (DB.syncQ.length){
-      const item = DB.syncQ[0], ok = await postForm(cfg.form, [item.cell], true);
+      const item = DB.syncQ[0], u0 = session.email && DB.users[session.email], ok = (u0 && u0.syncBoth) ? await postForm(cfg.form, [item.cell], true) : await postOnce(cfg.form, item.cell);
       if (!ok) break;
       if (DB.syncQ[0] === item) DB.syncQ.shift();
       if (!DB.syncQ.length){ const u = session.email && DB.users[session.email]; if (u) u.flushedAt = Date.now(); }
@@ -3988,6 +3991,56 @@ async function flushSync(){
       if (DB.syncQ.length) await new Promise(r => setTimeout(r, 250));
     }
   } finally { syncFlushing = false; }
+}
+/* ---- 20 Nov 2026: a save only counts once it can be read back from the sync sheet ----
+   From 16 to 18 Nov the old sheet was full and quietly threw saves away, while every computer believed they had
+   arrived (a Google Form never says no to the page). Now each computer checks its latest save really reached the
+   sheet; if it hasn't after about a minute, it sends the whole account again (pictures included) until it has.
+   Each row is also sent once instead of twice, so the sheet fills half as fast. */
+function postOnce(link, cell){
+  const f = parseFormLink(link); if (!f) return Promise.resolve(false);
+  const p = new URLSearchParams(), z = "-" + Math.floor(Math.random() * 9e18).toString();
+  p.append(f.entries[0], cell); p.append("fvv", "1"); p.append("pageHistory", "0"); p.append("fbzx", z); p.append("partialResponse", JSON.stringify([null, null, z]));
+  return fetch(f.action, { method:"POST", mode:"no-cors", body:p }).then(() => true, () => postForm(link, [cell], true));
+}
+let syncChecking = false;
+async function checkSync(){
+  const u = syncable(), cfg = syncCfg();
+  if (!u || !cfg || !u.checkVer || syncChecking || syncBusy || syncFlushing || syncHold || (DB.syncQ || []).length) return;
+  if (Date.now() - (u.flushedAt || 0) < 25000 || offlineNow()) return;   // give the sheet a moment to show new rows
+  syncChecking = true;
+  try {
+    const did = await dataId(u.dk), ver = u.checkVer, missing = [];
+    const has = async pre => (await gviz(cfg, `select B where B starts with '${pre}' limit 1`, true)).length > 0;
+    if (!(await has(`DSS2|D|${did}|${ver}|`))) missing.push("D");
+    for (const h of (u.checkImgs || [])) if (!(await has(`DSS2|I|${did}.${h}|`))) missing.push(h);
+    if (u.checkVer !== ver) return;   // a newer save went out while checking: check that one next time
+    if (!missing.length){ u.checkVer = ""; u.checkImgs = []; if (u.checkMiss){ u.checkMiss = 0; toast("✓ Your work is saved online again."); } save(true); return; }
+    u.checkMiss = (u.checkMiss || 0) + 1;
+    if (u.checkMiss === 2 || (u.checkMiss > 2 && u.checkMiss % 10 === 0)){   // still not there a minute later: send everything again (then every 5 minutes), both ways from now on
+      u.syncBoth = true; u.syncSent = {}; u.syncedAt = 0; u.checkImgs = [];
+      if (u.checkMiss === 2) toast("Your latest work hasn't reached the online copy yet. Keep this page open: it is being sent again.", 6000);
+      save(true); syncNow(true);
+    } else save(true);
+  } catch(e){ /* the sheet couldn't be read just now: try again later */ }
+  finally { syncChecking = false; }
+}
+function offlineNow(){ return typeof navigator !== "undefined" && navigator.onLine === false; }
+setInterval(checkSync, 30000);
+/* staff: warn before the sync sheet fills up (the first one stopped at about 74,000 rows) */
+const SHEET_WARN = 50000, SHEET_FULL = 70000;
+async function sheetFill(){
+  const cfg = syncCfg(); if (!cfg) return null;
+  try { const r = await gvizRaw(cfg, "select count(A)"); const n = +(((r.table.rows[0] || {}).c || [])[0] || {}).v || 0; return n; } catch(e){ return null; }
+}
+async function sheetWarning(box){
+  const n = await sheetFill(); if (n == null || n < SHEET_WARN || !box || !box.isConnected) return;
+  const d = document.createElement("div"); d.className = "card";
+  d.style.cssText = "border:2px solid #DC2B3E;background:#fdecee;color:#5a0f18;padding:14px 16px;border-radius:12px";
+  d.innerHTML = `<strong>${n >= SHEET_FULL ? "The sync sheet is almost full" : "The sync sheet is filling up"}: ${n.toLocaleString()} rows.</strong>
+    The last one stopped saving at about 74,000 rows, and students' work then stopped syncing between computers.
+    Make a new sync form and sheet now, and ask Claude to switch the course to them (the current sheet stays readable).`;
+  box.prepend(d);
 }
 function gvizRaw(cfg, tq, sheet){
   return new Promise((res, rej) => {
