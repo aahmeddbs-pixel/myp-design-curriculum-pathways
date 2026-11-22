@@ -4480,6 +4480,99 @@ function dsCounts(u){
 function rankReport(u){ try { if (SDCG && u && u.role !== "teacher" && !session.preview && SDC.rank) SDC.rank.report(sdcAcct(u, session.email), dsCounts(u)); } catch(e){} }
 function rankShow(u){ try { const box = $("#rankBox"); if (!box) return; if (!SDCG || !u || u.role === "teacher" || session.preview || !SDC.rank){ box.innerHTML = ""; return; } rankReport(u); setTimeout(() => SDC.rank.mount($("#rankBox"), sdcAcct(u, session.email)), 1200); } catch(e){} }
 
+/* ================= GRADE 10 DESIGN: ePortfolio guidance, download reminder, front page, deadline countdown ================= */
+const isG10Des = g => ["10RD", "10"].includes(String(g));
+const G10_DEADLINES = { A: Date.UTC(2026, 10, 27, 19, 59, 59), B: Date.UTC(2027, 0, 29, 19, 59, 59), C: Date.UTC(2027, 2, 5, 19, 59, 59), D: Date.UTC(2027, 4, 7, 19, 59, 59) };   // 11:59:59 pm Dubai time (UTC+4) on the day
+const dlDay = c => new Date(G10_DEADLINES[c]).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric", timeZone:"Asia/Dubai" });
+function dlLeftText(ms){
+  if (ms <= 0) return "Deadline passed";
+  const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60, z = n => String(n).padStart(2, "0");
+  return (d ? d + (d === 1 ? " day " : " days ") : "") + z(h) + ":" + z(m) + ":" + z(x) + " left";
+}
+/* the one criterion whose countdown is shown: the one being worked on, otherwise the first open criterion that is not handed in yet */
+function dlActive(u){
+  if (!u || !isG10Des(u.grade)) return null;
+  if (view && view.name === "crit" && view.crit && G10_DEADLINES[view.crit] && isOpen(u.grade, view.crit)) return view.crit;
+  return ["A", "B", "C", "D"].find(c => isOpen(u.grade, c) && !(((u.progress || {})[c]) || {}).finished) || null;
+}
+function dlTick(){
+  let bar = document.getElementById("desDeadline"); const u = desTimerUser(), mast = document.querySelector("header.mast"), c = u ? dlActive(u) : null;
+  if (!u || !mast || !c){ if (bar) bar.remove(); return; }
+  if (!bar){ bar = document.createElement("div"); bar.id = "desDeadline"; bar.setAttribute("role", "timer"); bar.setAttribute("aria-live", "off");
+    bar.style.cssText = "color:#fff;border-top:1px solid rgba(255,255,255,.14);font:600 13px Inter,Arial,sans-serif"; mast.appendChild(bar); }
+  const left = G10_DEADLINES[c] - Date.now();
+  bar.style.background = left <= 0 ? "#5B1220" : left < 2 * 86400e3 ? "#8E1B2C" : left < 7 * 86400e3 ? "#8A5A00" : "#24407A";
+  bar.innerHTML = `<div class="wrap" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;padding-block:6px"><span>📅 Criterion ${c} deadline: <b>${dlDay(c)}</b></span><span style="font-variant-numeric:tabular-nums;font-size:17px;font-weight:800">${dlLeftText(left)}</span></div>`;
+}
+setInterval(dlTick, 1000); setTimeout(dlTick, 500);
+/* the pop-up shown whenever a Grade 10 Design student presses a download button */
+function g10Reminder(c, proceed){
+  const u = user(); if (!u || !isG10Des(u.grade)) return proceed();
+  const bg = document.createElement("div"); bg.className = "kw-pop-bg"; bg.style.zIndex = 9999; bg.style.alignItems = "flex-start"; bg.style.overflow = "auto";
+  const dl = c && G10_DEADLINES[c] ? `<div class="notice warn" style="margin:0"><b>Criterion ${c} deadline: ${dlDay(c)}</b><br><span id="g10Left" style="font-variant-numeric:tabular-nums;font-weight:800;font-size:1.1em">${dlLeftText(G10_DEADLINES[c] - Date.now())}</span></div>` : "";
+  bg.innerHTML = `<div class="kw-pop" role="dialog" aria-modal="true" aria-label="Before you download" style="max-width:660px;margin:auto;border-top-color:#DC2B3E">
+    <div class="eyebrow">Before you download${c ? " · Criterion " + esc(c) : ""}</div>
+    <h3 style="font-size:23px;margin:0">Is this a report, or a list of answers?</h3>
+    <p style="margin:0">Your ePortfolio must read as <b>one report</b>, not as questions and answers to tasks. Before you download, check that you have:</p>
+    <ul style="margin:0;padding-left:20px;line-height:1.6">
+      <li><b>Read your work through.</b> Does it flow like a report, from one point to the next?</li>
+      <li><b>Added sub-headings</b> to every section, so the reader can find each part.</li>
+      <li><b>Removed the questions</b> that guided your write-up. Keep only your own responses, written as report text.</li></ul>
+    <div style="background:var(--soft,#F1F4FA);border-radius:12px;padding:12px 14px"><b>Putting your ePortfolio together</b>
+      <ul style="margin:6px 0 0;padding-left:20px;line-height:1.55;font-size:14.5px">
+        <li><b>Front page</b> (everything centred): your project title, <i>2026 - 2027</i>, <i>ePortfolio</i>, then your name underneath.</li>
+        <li><b>Contents page:</b> create it after you download your first criterion, then update it after every criterion you add (in Word: References → Update Table).</li>
+        <li><b>Bibliography</b> in MLA format on the last page of the report. After you add each criterion's content, move the bibliography to the end again.</li></ul></div>
+    ${dl}
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn ok" type="button" id="g10Go">⬇ I have checked my work · Download</button><button class="btn ghost" type="button" id="g10No">Go back and check my work</button></div></div>`;
+  document.body.appendChild(bg);
+  const tm = setInterval(() => { const e = bg.querySelector("#g10Left"); if (e && c) e.textContent = dlLeftText(G10_DEADLINES[c] - Date.now()); }, 1000);
+  const close = () => { clearInterval(tm); document.removeEventListener("keydown", onKey); bg.remove(); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  bg.querySelector("#g10No").onclick = close;
+  bg.querySelector("#g10Go").onclick = () => { close(); try { logEvent(c || "A", "Download reminder read", ""); } catch(e){} proceed(); };
+  setTimeout(() => { const b = bg.querySelector("#g10Go"); if (b) b.focus(); }, 50);
+}
+/* Criterion A: a "Front page" tab just before strand i, with guidance on the front page, contents page and MLA bibliography */
+const frontOn = ctx => ctx.c === "A" && isG10Des(ctx.g);
+function frontTab(ctx, on){ return frontOn(ctx) ? `<button role="tab" data-front="1" aria-selected="${!!on}" class="${(ctx.p.fields || {}).__frontSeen ? "done" : ""}">📄 Front page</button>` : ""; }
+const frontTitleOf = (gd, p) => p && p.fields && p.fields.__frontTitle != null ? String(p.fields.__frontTitle) : String(gd.unit || "").replace(/\s*\(.*\)\s*$/, "");
+function paneFront(pane, ctx){
+  const { u, gd, p } = ctx; p.fields = p.fields || {};
+  const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
+  pane.innerHTML = `<div class="stack">
+    <p class="muted" style="margin:0;font-size:13.5px">Set up the front page of your ePortfolio, then start strand i. You can come back to this tab at any time.</p>
+    <div class="strand-tabs" role="tablist"><button role="tab" data-brief="1" aria-selected="false" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>${frontTab(ctx, true)}${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
+    <div class="card stack" style="gap:12px;border-left:6px solid #E5484D">
+      <span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">Your ePortfolio · front page</span>
+      <h2 style="margin:0">Start your report with a front page</h2>
+      <p style="margin:0;line-height:1.6">Your ePortfolio is one report. Its first page is a front page with these four things, one under the other, <b>everything centred</b>:</p>
+      <ol style="margin:0;padding-left:22px;line-height:1.7"><li>Your <b>project title</b></li><li><b>2026 - 2027</b></li><li><b>ePortfolio</b></li><li>Your <b>name</b>, underneath</li></ol>
+      <div id="fpPrev" style="background:#fff;color:#16223A;border:1px solid #D8DEEA;border-radius:12px;padding:40px 18px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:14px;min-height:250px">
+        <div id="fpT" style="font-size:26px;font-weight:800;line-height:1.25"></div><div style="font-size:18px">2026 - 2027</div><div style="font-size:20px;font-weight:700">ePortfolio</div><div style="font-size:18px" id="fpN"></div></div>
+      <label class="f" style="font-weight:700">Your project title (you can change it later, for example once you have named your design in strand iv)<input id="fpIn" maxlength="120" autocomplete="off"></label>
+      <p class="muted" style="margin:0;font-size:13.5px">Your Word downloads use this front page. Check it when you build your ePortfolio document.</p></div>
+    <div class="card stack" style="gap:10px">
+      <b style="font-size:17px">How your whole ePortfolio is put together</b>
+      <ol style="margin:0;padding-left:22px;line-height:1.65">
+        <li><b>Front page</b>, as above.</li>
+        <li><b>Contents page.</b> Create it after you download your first criterion. Update it after every criterion you add (in Word: References → Update Table).</li>
+        <li><b>Your criteria, as a report.</b> Read it through so it flows from one point to the next. Add sub-headings to each section and remove the questions that guided your write-up, so only your responses are left. It is a report, not questions and answers to tasks.</li>
+        <li><b>Bibliography</b>, in MLA format, on the last page. After you add each criterion's content, move the bibliography to the end again.</li></ol>
+      <div style="background:var(--soft,#F1F4FA);border-radius:12px;padding:12px 14px;font-size:14.5px"><b>MLA example (website):</b><br>Author Last Name, First Name. "Title of the Page." <i>Name of Website</i>, Publisher, Day Month Year, www.link.com. Accessed Day Month Year.</div>
+      <div style="background:var(--soft,#F1F4FA);border-radius:12px;padding:12px 14px;font-size:14.5px"><b>Criterion deadlines:</b> A: ${dlDay("A")} · B: ${dlDay("B")} · C: ${dlDay("C")} · D: ${dlDay("D")}. The countdown at the top of the screen shows the criterion you are working on.</div></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" id="frontGo">I understand · start strand i →</button></div></div>`;
+  const inp = pane.querySelector("#fpIn"), paint = () => { pane.querySelector("#fpT").textContent = inp.value.trim() || "Your project title"; pane.querySelector("#fpN").textContent = u.name || "Your name"; };
+  inp.value = frontTitleOf(gd, p); paint();
+  inp.oninput = paint; inp.onchange = () => { p.fields.__frontTitle = inp.value.trim(); save(); };
+  const leave = fn => { p.fields.__frontTitle = inp.value.trim(); p.fields.__frontSeen = p.fields.__frontSeen || Date.now(); save(); fn(); };
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled || b.dataset.front) return;
+    if (b.dataset.brief) return leave(() => { view.front = false; view.brief = true; render(); });
+    leave(() => { view.front = false; view.brief = false; view.strand = +b.dataset.i; render(); }); });
+  pane.querySelector("#frontGo").onclick = () => leave(() => { view.front = false; view.brief = false; view.strand = 0; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+}
+
 /* ================= CRITERION FLOW ================= */
 const STEPS = [
   { k:"video", t:"Introduction", s:"Watch the video" },
@@ -4840,7 +4933,7 @@ function paneBrief(pane, ctx){
   const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
   pane.innerHTML = `<div class="stack">
     <p class="muted" style="margin:0;font-size:13.5px">Read the scenario brief first, then start strand i. You can come back to this tab at any time.</p>
-    <div class="strand-tabs" role="tablist"><button role="tab" data-brief="1" aria-selected="true" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
+    <div class="strand-tabs" role="tablist"><button role="tab" data-brief="1" aria-selected="true" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>${frontTab(ctx, false)}${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
     ${B.paras ? `<div class="card stack" style="gap:12px;border-left:6px solid #E5484D">
         <span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">Scenario brief</span>
         <h2 style="margin:0">${esc(B.title)}</h2>
@@ -4849,8 +4942,8 @@ function paneBrief(pane, ctx){
       </div>` : scenarioBriefCard(B, true).replace("<details", "<div").replace("</details>", "</div>").replace(/<summary[^]*?<\/summary>/, `<b style="font-size:19px">📜 ${esc(B.title)}</b>`)}
     <div class="row" style="justify-content:flex-end"><button class="btn" id="briefGo">I have read the brief · start strand i →</button></div>
   </div>`;
-  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled || b.dataset.brief) return; p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; view.strand = +b.dataset.i; render(); });
-  pane.querySelector("#briefGo").onclick = () => { p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; view.strand = 0; render(); window.scrollTo({ top: pane.getBoundingClientRect().top + scrollY - 90, behavior: "smooth" }); };
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled || b.dataset.brief) return; p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; if (b.dataset.front){ view.front = true; render(); return; } view.front = false; view.strand = +b.dataset.i; render(); });
+  pane.querySelector("#briefGo").onclick = () => { p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; view.front = frontOn(ctx) && !(p.fields || {}).__frontSeen; view.strand = 0; render(); window.scrollTo({ top: pane.getBoundingClientRect().top + scrollY - 90, behavior: "smooth" }); };
 }
 function paneTask(pane, ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
@@ -4859,11 +4952,12 @@ function paneTask(pane, ctx){
   const si = view.strand;
   const hasBrief = c === "A" && !!gd.scenarioBrief, showBrief = hasBrief && (view.brief === true || (view.brief !== false && !p.briefSeen && !p.done[0]));
   if (showBrief){ paneBrief(pane, ctx); return; }
+  if (view.front === true && frontOn(ctx)){ paneFront(pane, ctx); return; }
   try { itStrandSeen(c, si, p); } catch(e){}
   try { if (SDCG && window.SDC && SDC.slow && !session.preview && ctx.u.role !== "teacher"){ if (p.done[si]) SDC.slow.stop(); else SDC.slow.start("ds|" + g + "|" + c + "|" + si, uLabel(g) + " · Criterion " + c + " · Strand " + ROMAN[si], sdcAcct(ctx.u, session.email), [12, 20, 30]); } } catch(e){}   // taking too long on one strand
   pane.innerHTML = `<div class="stack">
     <p class="muted" style="margin:0;font-size:13.5px">Work through the strands in order. Each one opens when the one before it is complete, and you can download your work once all four are done.</p>
-    <div class="strand-tabs" role="tablist">${hasBrief ? `<button role="tab" data-brief="1" aria-selected="${showBrief}" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>` : ""}${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
+    <div class="strand-tabs" role="tablist">${hasBrief ? `<button role="tab" data-brief="1" aria-selected="${showBrief}" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>` : ""}${frontTab(ctx, false)}${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[si])}</h3><div id="strandVoice" class="sdcNoRead"></div></div>
       <div id="kwBox"></div>
@@ -4884,7 +4978,7 @@ function paneTask(pane, ctx){
         <button class="btn sec" id="spellBtn" type="button">Check spelling and grammar</button></div>
         <div class="row">${p.done.every(Boolean) ? `<button class="btn ghost" id="toSub" type="button" title="Go to Download &amp; hand in without changing this strand">Back to Download &amp; hand in</button>` : ""}<button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button></div>
       </div></div></div>`;
-  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; if (b.dataset.brief){ view.brief = true; render(); return; } view.brief = false; view.strand = +b.dataset.i; render(); });
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; if (b.dataset.brief){ view.brief = true; view.front = false; render(); return; } if (b.dataset.front){ view.brief = false; view.front = true; render(); return; } view.brief = false; view.front = false; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
   let vg = null;
   const fs = F[si];
@@ -5363,11 +5457,11 @@ function reportBlocks(u, only, full){
       if (sec.length) out.push({ k:"h2", t:`${ROMAN[i]}. ${strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[i]}` }, ...sec);
     });
   });
-  return { title: sc && sc.chosen && sc.title ? sc.title : gd.unit, unit: gd.unit, name: u.name, teacher: u.teacher || "", year: `MYP Design · Year ${gd.myp}`, blocks: out, crits };
+  return { title: sc && sc.chosen && sc.title ? sc.title : gd.unit, unit: gd.unit, name: u.name, teacher: u.teacher || "", year: `MYP Design · Year ${gd.myp}`, blocks: out, crits, ePort: isG10Des(g), frontTitle: frontTitleOf(gd, (u.progress || {}).A) };
 }
 function reportHTML(R){
   const e = esc;
-  return `<div class="rpt"><div class="rpt-title"><div class="eyebrow">${e(R.year)}</div><h1>${e(R.title)}</h1><p class="muted">${e(R.name)}${R.teacher ? " · " + e(R.teacher) : ""}${R.unit !== R.title ? " · " + e(R.unit) : ""}</p></div>` +
+  return `<div class="rpt">${R.ePort ? `<div class="rpt-title" style="text-align:center;padding:30px 0"><h1>${e(R.frontTitle)}</h1><p>2026 - 2027</p><p><b>ePortfolio</b></p><p>${e(R.name)}</p></div>` : `<div class="rpt-title"><div class="eyebrow">${e(R.year)}</div><h1>${e(R.title)}</h1><p class="muted">${e(R.name)}${R.teacher ? " · " + e(R.teacher) : ""}${R.unit !== R.title ? " · " + e(R.unit) : ""}</p></div>`}` +
     R.blocks.map(b => b.k === "h1" ? `<h2 class="rpt-h1">${e(b.t)}</h2>` : b.k === "h2" ? `<h3 class="rpt-h2">${e(b.t)}</h3>` : b.k === "h3" ? `<h4 class="rpt-h3">${e(b.t)}</h4>` : b.k === "p" ? `<p>${e(b.t)}</p>`
       : b.k === "img" ? `<figure><img src="${b.src}" alt="${e(b.cap)}"><figcaption>${e(b.cap)}</figcaption></figure>`
       : `<div class="scroll"><table class="tbl"><tr>${b.head.map(h => `<th>${e(h)}</th>`).join("")}</tr>${b.rows.map(r => `<tr>${b.head.map((_, k) => `<td>${e(r[k] || "")}</td>`).join("")}</tr>`).join("")}</table></div>`).join("") + `</div>`;
@@ -5389,9 +5483,14 @@ async function reportPDF(R){
     lines.forEach(l => { need(size * 0.45); doc.text(l, M, y); y += size * 0.45; }); y += gap; };
   // title page
   doc.setFillColor(...NAVY); doc.rect(0, 0, W, 6, "F"); doc.setFillColor(...RED); doc.rect(0, 6, W, 1.5, "F");
+  if (R.ePort){   // front page: everything centred
+    const mid = (t, size, style, gap) => { doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...NAVY); doc.splitTextToSize(clean(t), W - 2*M).forEach(l => { doc.text(l, W / 2, y, { align:"center" }); y += size * 0.5; }); y += gap; };
+    y = 100; mid(R.frontTitle, 26, "bold", 10); mid("2026 - 2027", 16, "normal", 8); mid("ePortfolio", 20, "bold", 8); mid(R.name, 16, "normal", 0);
+  } else {
   y = 95; text(R.year, 11, "normal", [91,103,130], 4); text(R.title, 24, "bold", NAVY, 6); text(R.name + (R.teacher ? "  ·  " + R.teacher : ""), 12, "normal", [22,34,58], 2);
   if (R.unit !== R.title) text(R.unit, 11, "italic", [91,103,130], 2);
   text(new Date().toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" }), 10, "normal", [91,103,130], 0);
+  }
   for (const b of R.blocks){
     if (b.k === "h1"){ doc.addPage(); y = M; text(b.t, 18, "bold", NAVY, 2); doc.setDrawColor(...RED); doc.setLineWidth(0.6); doc.line(M, y, M + 40, y); y += 6; }
     else if (b.k === "h2"){ need(16); y += 2; text(b.t, 13, "bold", NAVY, 2); }
@@ -5423,7 +5522,9 @@ async function reportDOCX(R){
   const run = (t, o) => `<w:r>${o ? `<w:rPr>${o}</w:rPr>` : ""}<w:t xml:space="preserve">${XE(t)}</w:t></w:r>`;
   const par = (t, style, o) => `<w:p>${style ? `<w:pPr><w:pStyle w:val="${style}"/></w:pPr>` : ""}${run(t, o)}</w:p>`;
   let body = "";
-  body += `<w:p><w:pPr><w:spacing w:before="3600"/></w:pPr></w:p>` + par(R.year, "Subtitle") + par(R.title, "Title") + par(R.name + (R.teacher ? "  ·  " + R.teacher : ""), null, `<w:sz w:val="26"/>`) + (R.unit !== R.title ? par(R.unit, null, `<w:i/>`) : "") + par(new Date().toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" }), null, `<w:color w:val="5B6782"/>`);
+  const parC = (t, o, style) => `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ""}<w:spacing w:before="240" w:after="240"/><w:jc w:val="center"/></w:pPr>${run(t, o)}</w:p>`;
+  if (R.ePort) body += `<w:p><w:pPr><w:spacing w:before="3600"/></w:pPr></w:p>` + parC(R.frontTitle, "", "Title") + parC("2026 - 2027", `<w:sz w:val="32"/>`) + parC("ePortfolio", `<w:b/><w:sz w:val="40"/>`) + parC(R.name, `<w:sz w:val="32"/>`);
+  else body += `<w:p><w:pPr><w:spacing w:before="3600"/></w:pPr></w:p>` + par(R.year, "Subtitle") + par(R.title, "Title") + par(R.name + (R.teacher ? "  ·  " + R.teacher : ""), null, `<w:sz w:val="26"/>`) + (R.unit !== R.title ? par(R.unit, null, `<w:i/>`) : "") + par(new Date().toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" }), null, `<w:color w:val="5B6782"/>`);
   let id = 1;
   for (const b of R.blocks){
     if (b.k === "h1") body += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>` + par(b.t, "Heading1");
@@ -5481,14 +5582,14 @@ function bindReportCard(ctx){
   const { u, c } = ctx; if (!$("#rptCard")) return;
   $("#rpView").onclick = () => reportModal(u, u.reportAdded && Object.keys(u.reportAdded).length ? null : c);
   $("#rpAdd").onclick = () => { u.reportAdded = Object.assign({}, u.reportAdded || {}, { [c]: Date.now() }); save(); logEvent(c, "Added to report", ""); render(); toast("Criterion " + c + " is in your report."); };
-  $("#rpDl").onclick = async () => {
+  $("#rpDl").onclick = () => g10Reminder(c, async () => {
     const fmt = $("#rpFmt").value, R = reportBlocks(u); if (!R.blocks.length) return;
     const base = (u.name + " - " + R.title + " - Report").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
     $("#rpDl").disabled = true; $("#rpMsg").innerHTML = `<div class="notice">Making your report…</div>`;
     try { const blob = fmt === "docx" ? await reportDOCX(R) : await reportPDF(R); saveBlob(blob, base + (fmt === "docx" ? ".docx" : ".pdf")); $("#rpMsg").innerHTML = `<div class="notice ok">Downloaded (Criteria ${R.crits.join(", ")}).</div>`; }
     catch(e){ $("#rpMsg").innerHTML = `<div class="notice bad">The report could not be made: ${esc(e.message)}</div>`; }
     $("#rpDl").disabled = false;
-  };
+  });
 }
 /* ================= DOWNLOAD ALL MY WORK (Word) =================
    Every strand of Criteria A to D for one unit: the task, then the student's own answers, tables and pictures.
@@ -5516,7 +5617,7 @@ function dlAllBar(u, g){
     <div class="stack" style="gap:2px;flex:1;min-width:220px"><b>Download all my work</b><span class="muted" style="font-size:13px">One Word document with your answers to every strand, Criteria A to D. Worked examples and practice questions are not included.</span></div>
     <button class="btn ok" type="button" data-dlall="${esc(g)}">${ICON.dl} Download my work (Word)</button></div>`;
 }
-function bindDlAll(root, u){ (root || document).querySelectorAll("[data-dlall]").forEach(b => b.onclick = () => downloadAllWork(u, b.dataset.dlall, b)); }
+function bindDlAll(root, u){ (root || document).querySelectorAll("[data-dlall]").forEach(b => b.onclick = () => g10Reminder((view && view.name === "crit" && view.crit) || dlActive(u), () => downloadAllWork(u, b.dataset.dlall, b))); }
 function paneSubmit(pane, ctx){
   const { c, p } = ctx, s = settings();
   pane.innerHTML = `<div class="card stack">
@@ -5537,7 +5638,7 @@ function paneSubmit(pane, ctx){
     $("#subMsg").innerHTML = `<div class="notice ok">Copy saved for your teacher. Well done!</div>`;
   };
   $("#saveCopy").onclick = () => { saveCopy(); speak(P().copy); };
-  $("#dlPdf").onclick = async () => { try { await buildPDF(ctx); if (!p.finished) saveCopy(); speak(P().pdf); } catch(e){ $("#subMsg").innerHTML = `<div class="notice bad">The PDF could not be created on this device (${esc(e.message)}). Open the course in Chrome or Edge and try again.</div>`; } };
+  $("#dlPdf").onclick = () => g10Reminder(c, async () => { try { await buildPDF(ctx); if (!p.finished) saveCopy(); speak(P().pdf); } catch(e){ $("#subMsg").innerHTML = `<div class="notice bad">The PDF could not be created on this device (${esc(e.message)}). Open the course in Chrome or Edge and try again.</div>`; } });
   $("#edit").onclick = () => { view.step = 5; view.strand = 0; render(); };
   pane.querySelectorAll("[data-back]").forEach(b => b.onclick = () => { view.step = 5; view.strand = +b.dataset.back; render(); window.scrollTo({ top:0, behavior:"smooth" }); });
 }
