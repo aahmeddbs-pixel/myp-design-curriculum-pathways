@@ -4482,34 +4482,61 @@ function rankShow(u){ try { const box = $("#rankBox"); if (!box) return; if (!SD
 
 /* ================= GRADE 10 DESIGN: ePortfolio guidance, download reminder, front page, deadline countdown ================= */
 const isG10Des = g => ["10RD", "10"].includes(String(g));
-const G10_DEADLINES = { A: Date.UTC(2026, 10, 27, 19, 59, 59), B: Date.UTC(2027, 0, 29, 19, 59, 59), C: Date.UTC(2027, 2, 5, 19, 59, 59), D: Date.UTC(2027, 4, 7, 19, 59, 59) };   // 11:59:59 pm Dubai time (UTC+4) on the day
+/* Grade 10 Design AND Grade 10 IT criterion deadlines (Dubai time, UTC+4).
+   A: Friday 27 November 2026 at 11:55 pm. B, C and D: the dates given before, 11:59 pm on the day. */
+const G10_DEADLINES = { A: Date.UTC(2026, 10, 27, 19, 55), B: Date.UTC(2027, 0, 29, 19, 59, 59), C: Date.UTC(2027, 2, 5, 19, 59, 59), D: Date.UTC(2027, 4, 7, 19, 59, 59) };
 const dlDay = c => new Date(G10_DEADLINES[c]).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric", timeZone:"Asia/Dubai" });
+const dlTime = c => new Date(G10_DEADLINES[c]).toLocaleTimeString("en-GB", { hour:"numeric", minute:"2-digit", hour12:true, timeZone:"Asia/Dubai" });
+const dlFull = c => dlDay(c) + ", " + dlTime(c);
+const dlShort = c => new Date(G10_DEADLINES[c]).toLocaleDateString("en-GB", { weekday:"short", day:"numeric", month:"short", timeZone:"Asia/Dubai" }) + " " + dlTime(c);
 function dlLeftText(ms){
   if (ms <= 0) return "Deadline passed";
   const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60, z = n => String(n).padStart(2, "0");
   return (d ? d + (d === 1 ? " day " : " days ") : "") + z(h) + ":" + z(m) + ":" + z(x) + " left";
 }
+/* who sees the deadline bar: Grade 10 Design and Grade 10 IT students (not teachers, not staff previews) */
+function dlUser(){ const u = user(); return u && u.role !== "teacher" && !session.preview && (DES_UNITS.includes(u.grade) || IT_UNITS.includes(u.grade)) ? u : null; }
+const dlCfg = u => IT_UNITS.includes(u.grade) ? ITT : DTT;   // each course counts its own lesson timetable
+const dlSubj = u => IT_UNITS.includes(u.grade) ? "IT" : "Design";
+/* lessons still to come before a deadline (a lesson happening now counts; school holidays are skipped) */
+function dlLessons(deadline, cfg, now){
+  now = now || Date.now(); if (deadline <= now) return 0;
+  const d0 = new Date(now + DXB); let n = 0;
+  for (let day = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), d0.getUTCDate()) - DXB; day < deadline; day += 86400e3){
+    const L = lessonsOn(day, cfg); if (L && L[1] > now && L[0] < deadline) n++; }
+  return n;
+}
 /* the one criterion whose countdown is shown: the one being worked on, otherwise the first open criterion that is not handed in yet */
 function dlActive(u){
-  if (!u || !isG10Des(u.grade)) return null;
+  if (!u) return null;
   if (view && view.name === "crit" && view.crit && G10_DEADLINES[view.crit] && isOpen(u.grade, view.crit)) return view.crit;
   return ["A", "B", "C", "D"].find(c => isOpen(u.grade, c) && !(((u.progress || {})[c]) || {}).finished) || null;
 }
 function dlTick(){
-  let bar = document.getElementById("desDeadline"); const u = desTimerUser(), mast = document.querySelector("header.mast"), c = u ? dlActive(u) : null;
+  let bar = document.getElementById("desDeadline"); const u = dlUser(), mast = document.querySelector("header.mast"), c = u ? dlActive(u) : null;
   if (!u || !mast || !c){ if (bar) bar.remove(); return; }
   if (!bar){ bar = document.createElement("div"); bar.id = "desDeadline"; bar.setAttribute("role", "timer"); bar.setAttribute("aria-live", "off");
     bar.style.cssText = "color:#fff;border-top:1px solid rgba(255,255,255,.14);font:600 13px Inter,Arial,sans-serif"; mast.appendChild(bar); }
-  const left = G10_DEADLINES[c] - Date.now();
-  bar.style.background = left <= 0 ? "#5B1220" : left < 2 * 86400e3 ? "#8E1B2C" : left < 7 * 86400e3 ? "#8A5A00" : "#24407A";
-  bar.innerHTML = `<div class="wrap" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;padding-block:6px"><span>📅 Criterion ${c} deadline: <b>${dlDay(c)}</b></span><span style="font-variant-numeric:tabular-nums;font-size:17px;font-weight:800">${dlLeftText(left)}</span></div>`;
+  const now = Date.now(), left = G10_DEADLINES[c] - now, cfg = dlCfg(u), n = dlLessons(G10_DEADLINES[c], cfg, now), inLesson = !!lessonNow(now, cfg);
+  bar.style.background = left <= 0 ? "#5B1220" : (n <= 1 || left < 2 * 86400e3) ? "#8E1B2C" : (n <= 3 || left < 7 * 86400e3) ? "#8A5A00" : "#24407A";
+  const lessons = left <= 0 ? "" : n === 0 ? "No " + dlSubj(u) + " lessons left: finish and hand in at home"
+    : n === 1 ? (inLesson ? "This is your last " + dlSubj(u) + " lesson" : "1 " + dlSubj(u) + " lesson left")
+    : n + " " + dlSubj(u) + " lessons left" + (inLesson ? " (including this one)" : "");
+  const others = ["A", "B", "C", "D"].filter(x => x !== c).map(x => {
+    const done = (((u.progress || {})[x]) || {}).finished, past = G10_DEADLINES[x] <= now;
+    return `<span style="opacity:${done || past ? ".7" : ".95"}">${x}: ${dlShort(x)}${done ? " ✓ handed in" : past ? " (passed)" : ""}</span>`; }).join(" · ");
+  bar.innerHTML = `<div class="wrap" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;padding-block:6px">
+    <span>📅 Criterion ${c} deadline: <b>${dlFull(c)}</b></span>
+    ${lessons ? `<span style="font-size:17px;font-weight:800">${lessons}</span>` : ""}
+    <span style="font-variant-numeric:tabular-nums;font-size:17px;font-weight:800">${dlLeftText(left)}</span>
+    <span style="font-size:12.5px;margin-left:auto">Other criteria: ${others}</span></div>`;
 }
 setInterval(dlTick, 1000); setTimeout(dlTick, 500);
 /* the pop-up shown whenever a Grade 10 Design student presses a download button */
 function g10Reminder(c, proceed){
   const u = user(); if (!u || !isG10Des(u.grade)) return proceed();
   const bg = document.createElement("div"); bg.className = "kw-pop-bg"; bg.style.zIndex = 9999; bg.style.alignItems = "flex-start"; bg.style.overflow = "auto";
-  const dl = c && G10_DEADLINES[c] ? `<div class="notice warn" style="margin:0"><b>Criterion ${c} deadline: ${dlDay(c)}</b><br><span id="g10Left" style="font-variant-numeric:tabular-nums;font-weight:800;font-size:1.1em">${dlLeftText(G10_DEADLINES[c] - Date.now())}</span></div>` : "";
+  const dl = c && G10_DEADLINES[c] ? `<div class="notice warn" style="margin:0"><b>Criterion ${c} deadline: ${dlFull(c)}</b><br><span id="g10Left" style="font-variant-numeric:tabular-nums;font-weight:800;font-size:1.1em">${dlLeftText(G10_DEADLINES[c] - Date.now())}</span></div>` : "";
   bg.innerHTML = `<div class="kw-pop" role="dialog" aria-modal="true" aria-label="Before you download" style="max-width:660px;margin:auto;border-top-color:#DC2B3E">
     <div class="eyebrow">Before you download${c ? " · Criterion " + esc(c) : ""}</div>
     <h3 style="font-size:23px;margin:0">Is this a report, or a list of answers?</h3>
@@ -4561,7 +4588,7 @@ function paneFront(pane, ctx){
         <li><b>Your criteria, as a report.</b> Read it through so it flows from one point to the next. Add sub-headings to each section and remove the questions that guided your write-up, so only your responses are left. It is a report, not questions and answers to tasks.</li>
         <li><b>Bibliography</b>, in MLA format, on the last page. After you add each criterion's content, move the bibliography to the end again.</li></ol>
       <div style="background:var(--soft,#F1F4FA);border-radius:12px;padding:12px 14px;font-size:14.5px"><b>MLA example (website):</b><br>Author Last Name, First Name. "Title of the Page." <i>Name of Website</i>, Publisher, Day Month Year, www.link.com. Accessed Day Month Year.</div>
-      <div style="background:var(--soft,#F1F4FA);border-radius:12px;padding:12px 14px;font-size:14.5px"><b>Criterion deadlines:</b> A: ${dlDay("A")} · B: ${dlDay("B")} · C: ${dlDay("C")} · D: ${dlDay("D")}. The countdown at the top of the screen shows the criterion you are working on.</div></div>
+      <div style="background:var(--soft,#F1F4FA);border-radius:12px;padding:12px 14px;font-size:14.5px"><b>Criterion deadlines:</b> A: ${dlFull("A")} · B: ${dlFull("B")} · C: ${dlFull("C")} · D: ${dlFull("D")}. The countdown at the top of the screen shows the criterion you are working on.</div></div>
     <div class="row" style="justify-content:flex-end"><button class="btn" id="frontGo">I understand · start strand i →</button></div></div>`;
   const inp = pane.querySelector("#fpIn"), paint = () => { pane.querySelector("#fpT").textContent = inp.value.trim() || "Your project title"; pane.querySelector("#fpN").textContent = u.name || "Your name"; };
   inp.value = frontTitleOf(gd, p); paint();
