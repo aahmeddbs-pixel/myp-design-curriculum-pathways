@@ -6041,8 +6041,8 @@ const DTT = { start: Date.UTC(2026, 10, 14) - DXB, total: 20 * 3600, strand: 360
     const len = (x[1] - x[0]) / 1000; L.push(x); if (t + len >= DTT.total){ DTT.end = x[0] + (DTT.total - t) * 1000; } t += len; }
   DTT.list = L; DTT.lessons = L.length;
 })();
-/* Criterion A project time: 2 hours 30 minutes of Design lesson time, set on Monday 23 November 2026 (counts only during Design lessons) */
-const CRIT_A_TIME = { start: Date.UTC(2026, 10, 23) - DXB, total: 2.5 * 3600 };
+/* Criterion A project time: 2 hours 10 minutes of Design lesson time (runs out at the end of Friday 27 Nov lesson), set on Monday 23 November 2026 (counts only during Design lessons) */
+const CRIT_A_TIME = { start: Date.UTC(2026, 10, 23) - DXB, total: (2 * 60 + 10) * 60 };
 function desTimerUser(){ const u = user(); return u && u.role !== "teacher" && !session.preview && DES_UNITS.includes(u.grade) ? u : null; }
 function desTimerTick(){
   let bar = document.getElementById("desTimer"); const u = desTimerUser(), mast = document.querySelector("header.mast");
