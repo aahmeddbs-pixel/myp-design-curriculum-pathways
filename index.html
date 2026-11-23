@@ -6041,6 +6041,8 @@ const DTT = { start: Date.UTC(2026, 10, 14) - DXB, total: 20 * 3600, strand: 360
     const len = (x[1] - x[0]) / 1000; L.push(x); if (t + len >= DTT.total){ DTT.end = x[0] + (DTT.total - t) * 1000; } t += len; }
   DTT.list = L; DTT.lessons = L.length;
 })();
+/* Criterion A project time: 2 hours 30 minutes of Design lesson time, set on Monday 23 November 2026 (counts only during Design lessons) */
+const CRIT_A_TIME = { start: Date.UTC(2026, 10, 23) - DXB, total: 2.5 * 3600 };
 function desTimerUser(){ const u = user(); return u && u.role !== "teacher" && !session.preview && DES_UNITS.includes(u.grade) ? u : null; }
 function desTimerTick(){
   let bar = document.getElementById("desTimer"); const u = desTimerUser(), mast = document.querySelector("header.mast");
@@ -6055,11 +6057,18 @@ function desTimerTick(){
   if (cur){ const p = (u.progress || {})[cur.c]; if (p && p.tStart && p.tStart[cur.si]){
     const end = p.done[cur.si] ? (p.tDone && p.tDone[cur.si]) || now : now, sl = DTT.strand - lessonSecs(p.tStart[cur.si], end, DTT);
     st = `<span style="color:${p.done[cur.si] ? "#9BE3B7" : sl < 0 ? "#FFB4B4" : sl < 600 ? "#FFD58A" : "#C9D6F0"}">🎯 Strand ${cur.c}.${["i", "ii", "iii", "iv"][cur.si]} target: <b style="font-variant-numeric:tabular-nums">${p.done[cur.si] ? "✓ done in " + hms(DTT.strand - sl) : sl < 0 ? hms(sl) + " over" : hms(sl) + " left"}</b></span>`; } }
-  const status = finished ? "■ Project lessons finished: submit your ePortfolio"
+  /* while Criterion A is the criterion in progress (before its deadline), the bar shows Criterion A project time instead of the whole ePortfolio */
+  const onA = (typeof dlActive === "function" ? dlActive(u) : null) === "A" && now < G10_DEADLINES.A;
+  const aLeft = onA ? Math.max(0, CRIT_A_TIME.total - lessonSecs(CRIT_A_TIME.start, now, DTT)) : 0;
+  const status = onA ? (aLeft <= 0 ? "■ Criterion A time is up: finish and hand in Criterion A"
+      : L ? "▶ Design lesson: counting down until " + dxbTime(L[1])
+      : "⏸ Paused" + (nx ? " · next Design lesson " + dxbDay(nx[0]) + " " + dxbTime(nx[0]) : ""))
+    : finished ? "■ Project lessons finished: submit your ePortfolio"
     : L ? "▶ Design lesson " + n + " of " + DTT.lessons + ": counting down until " + dxbTime(L[1])
     : "⏸ Paused" + (nx ? " · next Design lesson " + dxbDay(nx[0]) + " " + dxbTime(nx[0]) + " (lesson " + (n + 1) + " of " + DTT.lessons + ")" : "");
+  const tLab = onA ? "Criterion A time left" : "ePortfolio time left", tVal = onA ? aLeft : left, tLow = onA ? 30 * 60 : 3 * 3600;
   bar.innerHTML = `<div class="wrap" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding-block:7px">
-    <span>⏱ ePortfolio time left <b style="font-size:19px;margin-left:6px;font-variant-numeric:tabular-nums;color:${left < 3 * 3600 ? "#FFB4B4" : "#fff"}">${hms(left)}</b></span>
+    <span>⏱ ${tLab} <b style="font-size:19px;margin-left:6px;font-variant-numeric:tabular-nums;color:${tVal < tLow ? "#FFB4B4" : "#fff"}">${hms(tVal)}</b></span>
     <span style="font-size:12.5px;color:${L ? "#9BE3B7" : "#C9D6F0"}">${status}</span>${st ? `<span style="font-size:12.5px;margin-left:auto">${st}</span>` : ""}</div>`;
 }
 setInterval(desTimerTick, 1000); setTimeout(desTimerTick, 300);
