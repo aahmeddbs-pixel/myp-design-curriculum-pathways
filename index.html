@@ -4489,10 +4489,19 @@ const dlDay = c => new Date(G10_DEADLINES[c]).toLocaleDateString("en-GB", { week
 const dlTime = c => new Date(G10_DEADLINES[c]).toLocaleTimeString("en-GB", { hour:"numeric", minute:"2-digit", hour12:true, timeZone:"Asia/Dubai" });
 const dlFull = c => dlDay(c) + ", " + dlTime(c);
 const dlShort = c => new Date(G10_DEADLINES[c]).toLocaleDateString("en-GB", { weekday:"short", day:"numeric", month:"short", timeZone:"Asia/Dubai" }) + " " + dlTime(c);
+/* time left counted only between 7:00 am and midnight (Dubai) each day: the hours students can work on it */
+function dlAwake(from, to){
+  if (!(to > from)) return 0; const H = 3600e3, D = 4 * H; let t = 0;
+  const d0 = new Date(from + D);
+  for (let day = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), d0.getUTCDate()) - D; day < to; day += 24 * H){
+    const s0 = day + 7 * H, e0 = day + 24 * H; t += Math.max(0, Math.min(to, e0) - Math.max(from, s0)); }
+  return t;
+}
+/* ms = deadline − now (the deadline is Date.now() + ms) */
 function dlLeftText(ms){
   if (ms <= 0) return "Deadline passed";
-  const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60, z = n => String(n).padStart(2, "0");
-  return (d ? d + (d === 1 ? " day " : " days ") : "") + z(h) + ":" + z(m) + ":" + z(x) + " left";
+  const now = Date.now(), s = Math.floor(dlAwake(now, now + ms) / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60, z = n => String(n).padStart(2, "0");
+  return h + ":" + z(m) + ":" + z(x) + " left";
 }
 /* who sees the deadline bar: Grade 10 Design and Grade 10 IT students (not teachers, not staff previews) */
 function dlUser(){ const u = user(); return u && u.role !== "teacher" && !session.preview && (DES_UNITS.includes(u.grade) || IT_UNITS.includes(u.grade)) ? u : null; }
@@ -4518,7 +4527,7 @@ function dlTick(){
   if (!bar){ bar = document.createElement("div"); bar.id = "desDeadline"; bar.setAttribute("role", "timer"); bar.setAttribute("aria-live", "off");
     bar.style.cssText = "color:#fff;border-top:1px solid rgba(255,255,255,.14);font:600 13px Inter,Arial,sans-serif"; mast.appendChild(bar); }
   const now = Date.now(), left = G10_DEADLINES[c] - now, cfg = dlCfg(u), n = dlLessons(G10_DEADLINES[c], cfg, now), inLesson = !!lessonNow(now, cfg);
-  bar.style.background = left <= 0 ? "#5B1220" : (n <= 1 || left < 2 * 86400e3) ? "#8E1B2C" : (n <= 3 || left < 7 * 86400e3) ? "#8A5A00" : "#24407A";
+  bar.style.background = left <= 0 ? "#5B1220" : "#FFD60A"; bar.style.color = left <= 0 ? "#fff" : "#1B1B1B";   // bright yellow so it stands out
   const lessons = left <= 0 ? "" : n === 0 ? "No " + dlSubj(u) + " lessons left: finish and hand in at home"
     : n === 1 ? (inLesson ? "This is your last " + dlSubj(u) + " lesson" : "1 " + dlSubj(u) + " lesson left")
     : n + " " + dlSubj(u) + " lessons left" + (inLesson ? " (including this one)" : "");
@@ -4529,6 +4538,7 @@ function dlTick(){
     <span>📅 Criterion ${c} deadline: <b>${dlFull(c)}</b></span>
     ${lessons ? `<span style="font-size:17px;font-weight:800">${lessons}</span>` : ""}
     <span style="font-variant-numeric:tabular-nums;font-size:17px;font-weight:800">${dlLeftText(left)}</span>
+    <span style="font-size:12px;opacity:.85">(counted 7 am to midnight each day)</span>
     <span style="font-size:12.5px;margin-left:auto">Other criteria: ${others}</span></div>`;
 }
 setInterval(dlTick, 1000); setTimeout(dlTick, 500);
