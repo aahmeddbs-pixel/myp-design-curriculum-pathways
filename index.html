@@ -4,7 +4,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261118g10"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261123ul"></script>
 <script src="/python-pathways/pp-sync.js?v=20261118sy"></script>
 <script src="keywords.js?v=20261109f"></script>
 <script src="citybuilder.js?v=20261110a"></script>
@@ -3484,6 +3484,11 @@ function renderLogin(app){
   $("#lGrade").onchange = () => { const grp = COURSE.groups[$("#lGrade").value], cl = grp ? (grp.classes || []) : [];
     unUpd(); $("#lClassRow").hidden = cl.length < 2; $("#lClass").innerHTML = (cl.length > 1 ? `<option value="">Choose…</option>` : "") + cl.map(k => `<option value="${k.id}">${esc(k.label)}</option>`).join(""); };
   const msg = (t, kind="bad") => $("#lMsg").innerHTML = `<div class="notice ${kind}">${t}</div>`;
+  /* locked out: say how long, and offer "ask my teacher to unlock now" (the teacher unlocks on the staff dashboard) */
+  const showLock = email => { const lk = lockLeft(email), u = DB.users[email] || {};
+    msg(`Too many wrong passwords. Wait ${lk} minute${lk > 1 ? "s" : ""} and try again, or ask your teacher to unlock your account now.`);
+    try { if (window.SDC && SDC.lockHelp) SDC.lockHelp($("#lMsg"), { course: (SDCG && SDCG.course) || "design", email, name: u.name || "", teacher: u.teacher || "", grade: u.group || "",
+      since: lockState(email).until - 16 * 60000, onUnlock: () => { clearFails(email); setTimeout(() => msg("✅ Your teacher has unlocked your account. Type your password again and press Sign in.", "ok"), 2500); } }); } catch(e){} };
   if (SDCG && SDCG.mode === "staff"){ setRole("teacher"); $("#roleRow").hidden = true; }   // staff door: teacher accounts only
   if (SDCG && SDCG.mode !== "staff"){
     const C = SDC.course(SDCG.course), tabs = app.querySelector(".tabs"); if (tabs) tabs.hidden = true;
@@ -3510,7 +3515,7 @@ function renderLogin(app){
     try {
       if (mode === "in"){
         if (!pw) return msg("Enter your password.");
-        { const lk = lockLeft(email); if (lk) return msg(`Too many wrong passwords. Wait ${lk} minute${lk > 1 ? "s" : ""} and try again, or ask your teacher.`); }
+        if (lockLeft(email)) return showLock(email);
         if (window.SDC && SDC.testerPw && await SDC.testerPw(email, pw)){   // the teacher's test student: works on any computer
           let t0 = DB.users[email];
           if (!t0 || t0.role === "teacher"){ const g0 = SDCG && SDCG.course === "it" ? "10" : "6";
@@ -3528,7 +3533,7 @@ function renderLogin(app){
           else if (syncCfg()){
             msg("Finding your saved work…", "ok");
             let r = null; try { r = await restoreAccount(email, pw); } catch(err){ return msg("Your saved work could not be reached. Check the internet connection and try again."); }
-            if (!r){ noteFail(email); if (asUser) return msg("We could not find an account with that username and password. Check both (the username is your first and last name with no spaces). If you forgot your password, ask your teacher for a temporary one."); return msg("We could not find an account with that email and password. Check both, or choose <b>Sign up</b> if this is your first time. If you forgot your password, ask your teacher to reset it."); }
+            if (!r){ noteFail(email); if (lockLeft(email)) return showLock(email); if (asUser) return msg("We could not find an account with that username and password. Check both (the username is your first and last name with no spaces). If you forgot your password, ask your teacher for a temporary one."); return msg("We could not find an account with that email and password. Check both, or choose <b>Sign up</b> if this is your first time. If you forgot your password, ask your teacher to reset it."); }
             clearFails(email);
             DB.users[email] = u = r.u; session.email = email; DB.session = email; save(true); flushQueue();
             escrowPw(u, email, pw);
@@ -3544,7 +3549,7 @@ function renderLogin(app){
           if (!(await checkPw(pw, u))){
             let ok = false;   // the password may have been reset by the admin: the synced copy knows the new one
             if (u.role !== "teacher" && syncCfg()){ msg("Checking…", "ok"); try { const A = await deriveAcct(email, pw), dk = await openWrap(syncCfg(), A); if (dk){ Object.assign(u, await hashPw(pw)); u.dk = dk; u.wrapFor = A.lookup; save(true); ok = true; } } catch(err){} }
-            if (!ok){ noteFail(email); return msg("That password is not right. If you have forgotten it, ask your teacher to reset it."); }
+            if (!ok){ noteFail(email); if (lockLeft(email)) return showLock(email); return msg("That password is not right. If you have forgotten it, ask your teacher to reset it."); }
           }
           clearFails(email); escrowPw(u, email, pw);
           if (u.role === "teacher"){
