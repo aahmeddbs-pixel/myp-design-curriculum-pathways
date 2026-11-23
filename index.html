@@ -6012,6 +6012,7 @@ function itStrandSeen(c, si, p){
   if (p.done[si] && !p.tDone[si]){ p.tDone[si] = Date.now(); save(true); }
   u.itCur = { g: u.grade, c, si }; 
 }
+const CRIT_A_TIME_IT = { start: Date.UTC(2026, 10, 23) - DXB, total: 2 * 3600 };
 function itTimerTick(){
   let bar = document.getElementById("itTimer"); const u = itTimerUser();
   if (!u){ if (bar) bar.remove(); return; }
@@ -6019,12 +6020,15 @@ function itTimerTick(){
     bar.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:9000;background:#1B2D4E;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 26px rgba(0,0,0,.28);font:600 13px Inter,Arial,sans-serif;display:flex;flex-direction:column;gap:4px;min-width:230px;max-width:calc(100vw - 28px)";
     document.body.appendChild(bar); }
   const now = Date.now(), used = lessonSecs(ITT.start, now), left = ITT.total - used, L = lessonNow(now), nx = L ? null : nextLesson(now);
+  /* while Criterion A is in progress (before its deadline): Criterion A time, 2 hours of IT lesson time from Monday 23 Nov 2026 (zero at the end of Thursday 26 Nov lesson) */
+  const onA = (typeof dlActive === "function" ? dlActive(u) : null) === "A" && now < G10_DEADLINES.A;
+  const tLeft = onA ? CRIT_A_TIME_IT.total - lessonSecs(CRIT_A_TIME_IT.start, now) : left, tLab = onA ? "Criterion A time left" : "Project time left", tLow = onA ? 30 * 60 : 3 * 3600;
   let st = "";
   const cur = u.itCur && u.itCur.g === u.grade ? u.itCur : null;
   if (cur){ const p = (u.progress || {})[cur.c]; if (p && p.tStart && p.tStart[cur.si]){
     const end = p.done[cur.si] ? (p.tDone && p.tDone[cur.si]) || now : now, sl = ITT.strand - lessonSecs(p.tStart[cur.si], end);
     st = `<div style="display:flex;justify-content:space-between;gap:10px;color:${p.done[cur.si] ? "#9BE3B7" : sl < 0 ? "#FFB4B4" : sl < 600 ? "#FFD58A" : "#C9D6F0"}"><span>🎯 Strand ${cur.c}.${["i", "ii", "iii", "iv"][cur.si]} target</span><b style="font-variant-numeric:tabular-nums">${p.done[cur.si] ? "✓ done in " + hms(ITT.strand - sl) : sl < 0 ? hms(sl) + " over" : hms(sl) + " left"}</b></div>`; } }
-  bar.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span>⏱ Project time left</span><b style="font-size:20px;font-variant-numeric:tabular-nums;color:${left < 3 * 3600 ? "#FFB4B4" : "#fff"}">${hms(Math.max(0, left))}</b></div>
+  bar.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span>⏱ ${tLab}</span><b style="font-size:20px;font-variant-numeric:tabular-nums;color:${tLeft < tLow ? "#FFB4B4" : "#fff"}">${hms(Math.max(0, tLeft))}</b></div>
     <div style="font-size:12px;color:${L ? "#9BE3B7" : "#C9D6F0"}">${L ? "▶ Lesson time: counting down until " + dxbTime(L[1]) : "⏸ Paused" + (nx ? " · next IT lesson " + dxbDay(nx[0]) + " " + dxbTime(nx[0]) : "")}</div>${st}`;
 }
 setInterval(itTimerTick, 1000); setTimeout(itTimerTick, 300);
