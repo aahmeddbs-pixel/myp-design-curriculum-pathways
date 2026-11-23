@@ -2924,6 +2924,8 @@ const LIT = (() => {
   let LOW = null, CAP = null, loading = null; const waiters = [];
   const SHORT = new Set("a i am an as at be by do go he if in is it me my no of oh ok on or so to up us we eg ie tv pc ai id 2d 3d".split(" "));
   const ABBR = /\b(e\.g|i\.e|etc|Mr|Mrs|Ms|Dr|vs|approx|no)\./gi;
+  /* font names from Word, Google Docs, Canva, Adobe, Apple, Windows and Google Fonts: accepted in any letter case (Arial, montserrat, Playfair, DejaVu) */
+  const FONTS = new Set("abril acumin agency akzidenz alegreya algerian alice allura almarai amatic amiri anton aptos archivo arial arimo arvo asap assistant audiowide avenir bahnschrift baloo bangers barlow baskerville bauhaus bebas berlin bitter blackadder bodoni bookman bradley brandon britannic brittany broadway brush bungee cabin cairo caladea calibri calisto calligraffitti cambria candara cantarell carlito cascadia caslon castellar catamaran caveat cen century chalkboard chalkduster changa charter chewy chiller chivo cinzel clarendon clash coco codec colonna comfortaa consolas constantia cooper copperplate corbel cormorant courgette courier cousine creepster crimson curlz damion didot domine dosis eater ebrima edwardian elephant epilogue eurostile exo fatface felix figtree fira footlight forte franklin fraunces fredoka freestyle frutiger futura gadugi gaegu garamond garet geist gelasio geneva georgia gigi gilroy glacial gloock gloucester gochi gotham gothic goudy grotesk grotesque haas haettenschweiler handlee hanken harmattan harrington heebo helvetica herculanum hind hoefler impact imprint inconsolata informal inria inter iowan itim jokerman josefin jost juice kalam kanit karla kaushan kollektif kristen kunstler lalezar lateef latin lato leckerli leelawadee lexend livvic lobster lora lucida magneto mali mangal manrope matura maven menlo merriweather minion mistral modern monaco mono monoton montserrat mt mukta mulish myriad neucha neue neutra niagara niconne nirmala nosifer noteworthy noto nova nunito onest onyx optima orbitron oswald outfit overpass oxygen pacifico palatino papyrus parisienne patrick perpetua philosopher pinyon plantagenet playbill playfair plex poor poppins prata pristina proxima questrial quicksand raavi rage rakkas raleway rancho ravie readex recoleta richard righteous roboto rockwell rouge rubik sacramento sans satisfy satoshi scheherazade script segoe sen serif showcard shrikhand signika sitka skia snap sniglet sofia sora spartan spectral stencil syne tahoma tajawal tangerine teko tempus tinos titillium trajan trebuchet tw ubuntu unbounded univers urbanist varela verdana vibes viner vivaldi vladimir vollkorn wallpoet webdings wide wingdings yantramanav yellowtail zapfino zilla dejavu opensans worksans firasans spacegrotesk dmsans ptsans ptserif sfpro".split(" "));
   function load(){
     if (LOW) return Promise.resolve(true);
     return loading = loading || fetch(URL_W, { cache:"force-cache" }).then(r => { if (!r.ok) throw new Error("words " + r.status); return r.text(); }).then(t => {
@@ -2937,7 +2939,8 @@ const LIT = (() => {
   /* is this (letters only, maybe with ' or -) a real word? capital = written with a capital letter */
   function known(w){
     const lw = w.toLowerCase().replace(/[’‘]/g, "'");
-    if (/^[a-z']+(?:-[a-z']+)+$/.test(lw)) return true;   // any hyphenated word counts: e-waste, eco-friendly, re-use, x-ray
+    if (/^[a-z']+(?:-[a-z']+)+$/.test(lw)) return true;
+    if (FONTS.has(lw) || FONTS.has(lw.replace(/'s$/, ""))) return true;   // a font name (see FONTS)   // any hyphenated word counts: e-waste, eco-friendly, re-use, x-ray
     if (lw.length <= 2) return SHORT.has(lw) || (w.length === 2 && w === w.toUpperCase() && CAP && CAP.has(lw));
     if (!LOW) return looksReal(lw);
     if (LOW.has(lw) || CAP.has(lw)) return true;
@@ -3018,6 +3021,7 @@ const LIT = (() => {
     t.replace(/[A-Za-z][A-Za-z'’\-]*/g, (w, i) => {
       const bare = w.replace(/['’\-]+$/, "");
       if (/^[A-Za-z']+(?:-[A-Za-z']+)+$/.test(bare)) return w;          // hyphenated words are always accepted (e-waste, eco-friendly)
+      if (FONTS.has(bare.toLowerCase())) return w;                    // a font name: Arial, Calibri, montserrat
       const f = SPELL.fix(bare);
       if (f) return add(i, bare, f, "spelling"), w;
       if (/^[A-Z]{2,6}s?$/.test(bare)) return w;                      // MYP, UAE, PDFs
