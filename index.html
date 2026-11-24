@@ -6017,15 +6017,25 @@ var SDCG = window.SDC ? SDC.gate() : null;
 window.SDC_ownLang = true;   // this page runs its own language switch (the masthead menu)
 const IT_UNITS = ["10GD", "10IT", "10HH"];   // the G10 IT course: Game Development, Networks and Harvest Hub
 /* ---------- Grade 10 IT: project countdown (lesson time only, Dubai time) ----------
-   The project has 5.5 hours left (from 16 Nov 2026). Time only runs during IT lessons: Monday 8:20–8:55 am, Wednesday 1:45–2:35 pm and Thursday 8:20–8:55 am
-   (Dubai). Each strand has a 1-hour target, counted in lesson time from when the student opens it. */
-const ITT = { start: Date.UTC(2026, 10, 16, 4, 45), total: 5.5 * 3600, strand: 3600,   // reset: 5.5 hours left from Monday 16 Nov 2026, 8:45 am Dubai
-  slots: { 1: [[8, 20], [8, 55]], 3: [[13, 45], [14, 35]], 4: [[8, 20], [8, 55]] } };   // 0 = Sunday
+   IT runs on a two-week timetable that alternates every week (Dubai time):
+     Week 1 (e.g. the week of Monday 23 Nov 2026): Monday 8:15–9:00 am, Tuesday 12:10–1:00 pm, Thursday 8:15–9:00 am
+     Week 2 (e.g. the week of Monday 30 Nov 2026): Monday 8:15–9:00 am, Wednesday 1:45–2:30 pm, Thursday 8:15–9:00 am
+   After each school holiday the timetable starts again at Week 1.
+   Restarted at 12:10 pm on Tuesday 24 Nov 2026 with the project time students had left then (3 h 20 min).
+   Each strand has a 1-hour target, counted in lesson time from when the student opens it. */
+const ITT = { start: Date.UTC(2026, 10, 24, 8, 10), total: 200 * 60, strand: 3600,   // 3:20:00 left from Tuesday 24 Nov 2026, 12:10 pm Dubai
+  weekRefs: [Date.UTC(2026, 10, 23), Date.UTC(2027, 0, 4), Date.UTC(2027, 3, 12)],   // Week 1 starts on each of these Mondays (23 Nov 2026, and the first Monday back after each school holiday); the weeks then alternate
+  weeks: [ { 1: [[8, 15], [9, 0]], 2: [[12, 10], [13, 0]], 4: [[8, 15], [9, 0]] },     // Week 1   (0 = Sunday)
+           { 1: [[8, 15], [9, 0]], 3: [[13, 45], [14, 30]], 4: [[8, 15], [9, 0]] } ] }; // Week 2
 const DXB = 4 * 3600e3;
 /* school holidays (Dubai 2026–27, KHDA): no lessons, so the countdowns pause. [first day, last day] as "YYYY-MM-DD" */
 const SCHOOL_OFF = [["2026-12-14", "2027-01-03"], ["2027-04-05", "2027-04-11"]];
 function lessonsOn(dayMs, cfg){   // [start, end] of the lesson on that Dubai day (ms), or null
-  const d = new Date(dayMs + DXB), sl = (cfg || ITT).slots[d.getUTCDay()]; if (!sl) return null;
+  cfg = cfg || ITT; const d = new Date(dayMs + DXB);
+  let slots = cfg.slots;
+  if (cfg.weeks){ const day0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()), ref = cfg.weekRefs.filter(r => r <= day0).pop() || cfg.weekRefs[0], wk = Math.floor((day0 - ref) / (7 * 86400e3));
+    slots = cfg.weeks[((wk % cfg.weeks.length) + cfg.weeks.length) % cfg.weeks.length]; }
+  const sl = slots[d.getUTCDay()]; if (!sl) return null;
   const iso = d.toISOString().slice(0, 10); if (SCHOOL_OFF.some(r => iso >= r[0] && iso <= r[1])) return null;
   const y = d.getUTCFullYear(), m = d.getUTCMonth(), dd = d.getUTCDate();
   return [Date.UTC(y, m, dd, sl[0][0], sl[0][1]) - DXB, Date.UTC(y, m, dd, sl[1][0], sl[1][1]) - DXB];
@@ -6051,7 +6061,8 @@ function itStrandSeen(c, si, p){
   if (p.done[si] && !p.tDone[si]){ p.tDone[si] = Date.now(); save(true); }
   u.itCur = { g: u.grade, c, si }; 
 }
-const CRIT_A_TIME_IT = { start: Date.UTC(2026, 10, 23) - DXB, total: 2 * 3600 };
+/* Criterion A IT time: restarted at 12:10 pm Tuesday 24 Nov 2026; 1 h 35 min = today's lesson (50 min) + Thursday 26 Nov lesson (45 min), so it reaches zero at 9:00 am Thursday */
+const CRIT_A_TIME_IT = { start: Date.UTC(2026, 10, 24, 8, 10), total: 95 * 60 };
 function itTimerTick(){
   let bar = document.getElementById("itTimer"); const u = itTimerUser();
   if (!u){ if (bar) bar.remove(); return; }
@@ -6059,7 +6070,7 @@ function itTimerTick(){
     bar.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:9000;background:#1B2D4E;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 26px rgba(0,0,0,.28);font:600 13px Inter,Arial,sans-serif;display:flex;flex-direction:column;gap:4px;min-width:230px;max-width:calc(100vw - 28px)";
     document.body.appendChild(bar); }
   const now = Date.now(), used = lessonSecs(ITT.start, now), left = ITT.total - used, L = lessonNow(now), nx = L ? null : nextLesson(now);
-  /* while Criterion A is in progress (before its deadline): Criterion A time, 2 hours of IT lesson time from Monday 23 Nov 2026 (zero at the end of Thursday 26 Nov lesson) */
+  /* while Criterion A is in progress (before its deadline): Criterion A time, from 12:10 pm Tuesday 24 Nov 2026 (zero at the end of Thursday 26 Nov lesson) */
   const onA = (typeof dlActive === "function" ? dlActive(u) : null) === "A" && now < G10_DEADLINES.A;
   const tLeft = onA ? CRIT_A_TIME_IT.total - lessonSecs(CRIT_A_TIME_IT.start, now) : left, tLab = onA ? "Criterion A time left" : "Project time left", tLow = onA ? 30 * 60 : 3 * 3600;
   let st = "";
