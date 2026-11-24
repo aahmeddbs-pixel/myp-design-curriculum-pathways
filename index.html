@@ -5466,7 +5466,24 @@ const RH = { a1what:"The problem", a1why:"Why this is a problem", a1who:"Who is 
   c1t:"Logical plan", c1tot:"Time plan", c2tool:"Software and tools", c2k:"Technical skills used", c2f1:"The finished solution", c2f2:"The finished solution: second view",
   c3t:"Following the plan", c3f:"Does the solution work as intended?", c4t:"Changes made", c4o:"Effect of the changes",
   d1t:"Test plan", d2t:"Testing results", d2e:"Testing evidence", d3t:"Suggested improvements", d4s:"The improved solution", d4shots:"The improved solution", d4h:"How the improved solution works", d4i:"Impact on the client and users" };
-const RH_UNDER = /^(b2n\d|c2q\d)$/;   // a description that belongs to the picture just before it: no heading of its own
+const RH_UNDER = /^(b2n\d|c2q\d)$/;
+/* Grade 10 Design ePortfolio (10RD): a report heading for every answer, so the download never shows the task questions */
+const RH_EP = { a1aud:"Target audience", a1type:"Type of solution", a1title:"Project title", a1p:"Problem statement", a1why:"Why this is a problem",
+  a1whyS1:"Evidence 1", a1whyS2:"Evidence 2", a1whyS3:"Evidence 3", a1e:"The need for a solution", a1r:"Resilience, adaptation and fairness", a1soi:"Statement of inquiry",
+  a2t:"Research plan", a2j:"Research priorities", a2s:"Primary research method", a2ev:"Primary research evidence", a2f:"Research findings", a2c:"Evaluation of the research",
+  a3t:"Analysis of existing products", a3img:"Existing products", a3c:"Comparison of existing products", a3o:"Design opportunities",
+  a4brief:"Design brief", a4con:"Constraints", a4what:"Type of solution",
+  b1t:"Design specification", b1j:"Justification of the key specifications", b2c1:"Concept 1", b2c2:"Concept 2", b2c3:"Concept 3", b2n1:"Concept 1", b2n2:"Concept 2", b2n3:"Concept 3",
+  b2p:"Feasibility and peer check", b3t:"Client feedback on the design principles", b3w:"Weighted totals", b3u:"Target audience feedback", b3ch:"The chosen design",
+  b3j:"Justification of the chosen design", b4d1:"Planning drawing 1", b4d2:"Planning drawing 2", b4p:"Parts and components", b4r:"What is needed to create it", b4c:"Resilient and adaptive features",
+  c1t:"Logical plan", c1time:"Time plan", c1risk:"Contingency plan", c2tool:"Software and tools", c2k:"Technical skills used",
+  c2m0:"Making evidence 1: preparation", c2m1:"Making evidence 2: first working part", c2m2:"Making evidence 3: main structure complete", c2m3:"Making evidence 4: resilient and adaptive features",
+  c2m4:"Making evidence 5: refinement and finishing", c2m5:"Making evidence 6: the final solution", c2q0:"Annotation 1", c2q1:"Annotation 2", c2q2:"Annotation 3", c2q3:"Annotation 4", c2q4:"Annotation 5", c2q5:"Annotation 6",
+  c3t:"Following the plan", c3f:"Does the solution work as intended?", c3w:"How the solution functions", c3q:"How well the plan was followed",
+  c4t:"Changes made", c4ba:"Before and after evidence", c4j:"Justification of the changes",
+  d1t:"Test plan", d1j:"Relevance and reliability of the testing methods", d1s:"Test materials", d2ev:"Testing evidence", d2t:"Testing results", d2c:"Critical evaluation of the testing",
+  d3t:"Suggested improvements", d3s:"The most important improvement", d3p:"Prioritised improvements",
+  d4a:"Who benefits from the solution", d4b:"Meeting the users' needs", d4t:"Impact evaluation", d4f:"Supporting a fairer future" };   // a description that belongs to the picture just before it: no heading of its own
 const taskHead = (f, label) => String(label || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 function rhOf0(f, label){ return rhOf(f, label); }
 function rhOf(f, label){
@@ -5488,7 +5505,9 @@ function reportBlocks(u, only, full){
       fs.forEach(f => {
         if (f.grp === "video" && p.fields.__skipVideo) return;
         if (isExField(f)) return;   // strand exercises are practice: not downloaded or handed in
-        const v = p.fields[f.id], label = fill(f.label, g, sc), rhOf = full ? taskHead : rhOf0;
+        const ep = !full && String(g) === "10RD";
+        if (ep && f.t === "checklist" && /chk$/.test(f.id)) return;   // ePortfolio: the tick-box checklists are for the student, not the report
+        const v = p.fields[f.id], label = fill(f.label, g, sc), rhOf = full ? taskHead : ep ? ((f2, l) => RH_EP[f2.id] || rhOf0(f2, l)) : rhOf0;
         if (f.t === "sketch"){ if (v){ sec.push({ k:"h3", t:rhOf(f, label) }); sec.push({ k:"img", src:v, cap:rhOf(f, label) }); lastImg = true; } return; }
         if (f.t === "video"){ if (v && v.url) sec.push({ k:"h3", t:"Finished video" }, { k:"p", t:v.url }); return; }
         if (f.t === "shots"){ const l = (v || []).filter(Boolean); if (!l.length) return; sec.push({ k:"h3", t:rhOf(f, label) }); l.forEach((im, n) => sec.push({ k:"img", src:im, cap:`${rhOf(f, label)}: screenshot ${n + 1}` })); lastImg = true; return; }
@@ -5596,7 +5615,7 @@ async function reportDOCX(R){
     st("Normal", "Normal", "") + st("Title", "Title", `<w:b/><w:sz w:val="52"/><w:color w:val="1B2D4E"/>`, `<w:spacing w:after="240"/>`) + st("Subtitle", "Subtitle", `<w:caps/><w:sz w:val="22"/><w:color w:val="DC2B3E"/>`) +
     st("Heading1", "heading 1", `<w:b/><w:sz w:val="36"/><w:color w:val="1B2D4E"/>`, `<w:keepNext/><w:spacing w:before="240" w:after="160"/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="DC2B3E"/></w:pBdr><w:outlineLvl w:val="0"/>`) +
     st("Heading2", "heading 2", `<w:b/><w:sz w:val="28"/><w:color w:val="1B2D4E"/>`, `<w:keepNext/><w:spacing w:before="280" w:after="100"/><w:outlineLvl w:val="1"/>`) +
-    st("Heading3", "heading 3", `<w:b/><w:sz w:val="23"/><w:color w:val="1452C8"/>`, `<w:keepNext/><w:spacing w:before="180" w:after="60"/><w:outlineLvl w:val="2"/>`) +
+    st("Heading3", "heading 3", `<w:b/><w:sz w:val="23"/><w:color w:val="${R.ePort ? "1B2D4E" : "1452C8"}"/>`, `<w:keepNext/><w:spacing w:before="180" w:after="60"/><w:outlineLvl w:val="2"/>`) +
     st("Caption", "caption", `<w:i/><w:sz w:val="18"/><w:color w:val="5B6782"/>`, `<w:jc w:val="center"/>`) +
     `<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style><w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:basedOn w:val="TableNormal"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tblBorders></w:tblPr></w:style></w:styles>`;
   const files = [
@@ -5642,7 +5661,8 @@ function bindReportCard(ctx){
    Only the student's tasks: the worked example, the method/rubric pages and the practice questions are never included. */
 function allWorkReport(u, g){
   const gd = gradeData(g), P = g === u.grade ? (u.progress || {}) : ((u.progressBy || {})[g] || {});
-  const R = reportBlocks(Object.assign({}, u, { grade:g, progress:P, reportAdded:{ A:1, B:1, C:1, D:1 } }), null, true);
+  // Grade 10 Design ePortfolio: the student's answers under short section headings only, never the blue task questions
+  const R = reportBlocks(Object.assign({}, u, { grade:g, progress:P, reportAdded:{ A:1, B:1, C:1, D:1 } }), null, !isG10Des(g));
   R.year = `MYP ${gd.subject || "Design"} · Year ${gd.myp} · All my work`;
   R.blocks = R.blocks.filter((b, i, A) => b.k !== "h1" || (A[i + 1] && A[i + 1].k !== "h1"));   // a criterion with nothing answered yet is left out
   R.crits = R.blocks.filter(b => b.k === "h1").map(b => (/Criterion ([A-D])/.exec(b.t) || [])[1]).filter(Boolean);
