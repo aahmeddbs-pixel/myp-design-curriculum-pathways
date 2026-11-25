@@ -4,7 +4,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261123eye"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261125help"></script>
 <script src="/python-pathways/pp-sync.js?v=20261123fast"></script>
 <script src="keywords.js?v=20261109f"></script>
 <script src="citybuilder.js?v=20261110a"></script>
@@ -2777,6 +2777,37 @@ RD.scenarioBrief = {
   ],
   focus: ["Purposeful and inclusive design", "Resilience", "Adaptation", "Evidence-based decisions", "Technical skill", "Impact on the client or audience"]
 };
+RD.solutionIdeas = {
+  title: "Suggested solutions",
+  lead: "Suggested solutions may be, but are not limited to, the following ideas:",
+  groups: [
+    { h: "To inform and influence behaviour (to support adaptive decisions), such as:", icon: "📣", items: [
+      "an informative video with nutritional guidance of alternative sustainable food types such as seaweed, lab grown meat and kombucha",
+      "a label or tag added to products to explain how to use, repair or reuse them",
+      "a video/animation encouraging responsible consumer behaviour",
+      "an application for product information",
+      "a manual for safe disassembly of a common product",
+      "an interactive/digital repair manual to extend the life of a common product (e.g. bicycle)"] },
+    { h: "To adapt and extend use (to make solutions flexible over time), such as:", icon: "🔁", items: [
+      "a solution that provides ways to re-use everyday products",
+      "a recipe book that provides dishes or options for using leftover foods",
+      "an object that can function beyond its original purpose",
+      "a product that can be disassembled and repurposed",
+      "a physical product that has multiple uses",
+      "a flexible living module that adapts to family size or use over time",
+      "a garment adapted or upcycled to alternative uses"] },
+    { h: "To rethink systems (more ambitious, near-future ideas), such as:", icon: "🌍", items: [
+      "a \u201cfuture\u201d meal based upon sustainable eating habits",
+      "a food-sharing system for a neighbourhood or school",
+      "a common high-use product re-manufactured/reinvented with alternative materials",
+      "a common high-use product with reconfiguration and repairability as part of its functionality",
+      "an e-commerce platform for local or independent producers to reach consumers",
+      "private living quarters considering changing populations and energy solutions",
+      "a means to repurpose household waste, sewage, grey water and refuse",
+      "a garment that can evolve and adapt over time and seasons",
+      "an architectural design for accommodation modules"] }
+  ]
+};
 RD.strands = {
   A: ["Explain and justify the need for a solution for your chosen target audience", "Identify and prioritise the primary and secondary research needed", "Analyse a range of existing products that inspire a solution", "Develop a detailed design brief that summarises your research"],
   B: ["Develop design specifications with measurable success criteria", "Develop a range of feasible design ideas others can interpret", "Present the chosen design and justify its selection", "Develop accurate, detailed planning drawings and requirements"],
@@ -3558,6 +3589,7 @@ function renderLogin(app){
           }
         }
         let synced = "";
+        if (u.role !== "teacher" && SDCG && window.SDC && SDC.lookup){ try { SDC.lookup(email, u.name).catch(() => {}); } catch(e){} }   // the course check starts now, alongside loading the work (it used to wait until the work had loaded)
         if (u.role !== "teacher" && syncCfg()){ msg("Loading your latest work…", "ok"); synced = await syncIn(u, email, pw); }
         session.email = email; DB.session = email; save(true); flushQueue();
         if (u.role !== "teacher"){
@@ -3959,7 +3991,7 @@ function stampFields(u, baselineOnly){
       if (known && !baselineOnly && old[k] !== h) p.fieldAt[id] = now; } }
   u.sentN = seen; u.sentG = Object.assign({}, u.sentG || {}, { [G]: 1 });
 }
-const SEND_GAP = 15000;   // one full copy at most every 15 seconds while typing (the old sheet filled up with one every 5 seconds)
+const SEND_GAP = 10000;   // one full copy at most every 15 seconds while typing (the old sheet filled up with one every 5 seconds)
 let lastSendAt = 0;
 async function syncNow(force){
   const u = syncable(), email = session.email; if (!u || syncHold) return;
@@ -4085,13 +4117,13 @@ async function syncColumn(cfg, strict){
   if (strict){ throw (lastErr && !seen.length) ? lastErr : new Error("No sync rows found. What the sheet shows — " + (SYNC_SEEN || "nothing")); }
   return { k, locs: [{ col: "B", time: "A", sheet: "" }] };
 }
+/* 25 Nov 2026: the new and the old sheet are read at the same time (they used to be read one after the other,
+   which made signing in and catching up with another device slow) */
 async function gviz(cfg, tq, newOnly){
-  const out = []; let ok = 0, err = null, locs = [];
-  for (const c of [cfg].concat(newOnly ? [] : (cfg.old || []))){ try { locs = locs.concat((await syncColumn(c)).locs.map(l => Object.assign({ c }, l))); } catch(e){ err = e; } }
-  for (const l of locs){
-    try { const r = await gvizRaw(l.c, tq.replace(/\bselect B where B\b/, `select ${l.col} where ${l.col}`).replace(/order by A\b/, `order by ${l.time}`), l.sheet); ok++;
-      ((r.table && r.table.rows) || []).forEach(row => out.push(((row.c || [])[0] || {}).v || "")); } catch(e){ err = e; }
-  }
+  const out = []; let ok = 0, err = null;
+  const sets = await Promise.all([cfg].concat(newOnly ? [] : (cfg.old || [])).map(c => syncColumn(c).then(x => x.locs.map(l => Object.assign({ c }, l)), e => { err = e; return []; })));
+  const res = await Promise.all([].concat(...sets).map(l => gvizRaw(l.c, tq.replace(/\bselect B where B\b/, `select ${l.col} where ${l.col}`).replace(/order by A\b/, `order by ${l.time}`), l.sheet).then(r => ({ r }), e => ({ e }))));
+  for (const { r, e } of res){ if (e){ err = e; continue; } ok++; ((r.table && r.table.rows) || []).forEach(row => out.push(((row.c || [])[0] || {}).v || "")); }
   if (!ok && err) throw err;
   return out;
 }
@@ -4582,6 +4614,31 @@ function g10Reminder(c, proceed){
 }
 /* Criterion A: a "Front page" tab just before strand i, with guidance on the front page, contents page and MLA bibliography */
 const frontOn = ctx => ctx.c === "A" && isG10Des(ctx.g);
+/* the "Suggested solutions" tab, straight after the Scenario brief (units with gd.solutionIdeas, Criterion A) */
+const ideasOn = ctx => ctx && ctx.c === "A" && !!(ctx.gd && ctx.gd.solutionIdeas);
+function ideasTab(ctx, on){ return ideasOn(ctx) ? `<button role="tab" data-ideas="1" aria-selected="${!!on}" class="${(ctx.p.fields || {}).__ideasSeen ? "done" : ""}">💡 Suggested solutions</button>` : ""; }
+function paneIdeas(pane, ctx){
+  const { gd, p } = ctx, S = gd.solutionIdeas; p.fields = p.fields || {};
+  const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
+  pane.innerHTML = `<div class="stack">
+    <p class="muted" style="margin:0;font-size:13.5px">Use these ideas to start thinking about your own solution. You can come back to this tab at any time.</p>
+    <div class="strand-tabs" role="tablist">${gd.scenarioBrief ? `<button role="tab" data-brief="1" aria-selected="false" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>` : ""}${ideasTab(ctx, true)}${frontTab(ctx, false)}${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
+    <div class="card stack" data-read style="gap:12px;border-left:6px solid #E5484D">
+      <span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">${esc(S.title)}</span>
+      <h2 style="margin:0">${esc(S.lead)}</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px">
+        ${S.groups.map(gr => `<div style="background:var(--soft);border-radius:12px;padding:12px 14px"><b>${gr.icon} ${esc(gr.h)}</b><ul style="margin:8px 0 0;padding-left:20px;line-height:1.55;font-size:14.5px">${gr.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`).join("")}
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" id="ideasGo">Next →</button></div>
+  </div>`;
+  const seen = () => { p.fields.__ideasSeen = p.fields.__ideasSeen || Date.now(); save(); view.ideas = false; };
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled || b.dataset.ideas) return; seen();
+    if (b.dataset.brief){ view.brief = true; view.front = false; render(); return; }
+    if (b.dataset.front){ view.brief = false; view.front = true; render(); return; }
+    view.brief = false; view.front = false; view.strand = +b.dataset.i; render(); });
+  pane.querySelector("#ideasGo").onclick = () => { seen(); view.brief = false; view.front = frontOn(ctx) && !p.fields.__frontSeen; view.strand = 0; render(); window.scrollTo({ top: pane.getBoundingClientRect().top + scrollY - 90, behavior: "smooth" }); };
+}
 function frontTab(ctx, on){ return frontOn(ctx) ? `<button role="tab" data-front="1" aria-selected="${!!on}" class="${(ctx.p.fields || {}).__frontSeen ? "done" : ""}">📄 Front page</button>` : ""; }
 const frontTitleOf = (gd, p) => p && p.fields && p.fields.__frontTitle != null ? String(p.fields.__frontTitle) : String(gd.unit || "").replace(/\s*\(.*\)\s*$/, "");
 function paneFront(pane, ctx){
@@ -4589,7 +4646,7 @@ function paneFront(pane, ctx){
   const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
   pane.innerHTML = `<div class="stack">
     <p class="muted" style="margin:0;font-size:13.5px">Set up the front page of your ePortfolio, then start strand i. You can come back to this tab at any time.</p>
-    <div class="strand-tabs" role="tablist"><button role="tab" data-brief="1" aria-selected="false" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>${frontTab(ctx, true)}${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
+    <div class="strand-tabs" role="tablist"><button role="tab" data-brief="1" aria-selected="false" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>${ideasTab(ctx, false)}${frontTab(ctx, true)}${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" style="gap:12px;border-left:6px solid #E5484D">
       <span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">Your ePortfolio · front page</span>
       <h2 style="margin:0">Start your report with a front page</h2>
@@ -4614,13 +4671,14 @@ function paneFront(pane, ctx){
   inp.oninput = paint; inp.onchange = () => { p.fields.__frontTitle = inp.value.trim(); save(); };
   const leave = fn => { p.fields.__frontTitle = inp.value.trim(); p.fields.__frontSeen = p.fields.__frontSeen || Date.now(); save(); fn(); };
   pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled || b.dataset.front) return;
+    if (b.dataset.ideas) return leave(() => { view.front = false; view.brief = false; view.ideas = true; render(); });
     if (b.dataset.brief) return leave(() => { view.front = false; view.brief = true; render(); });
     leave(() => { view.front = false; view.brief = false; view.strand = +b.dataset.i; render(); }); });
   pane.querySelector("#frontGo").onclick = () => leave(() => { view.front = false; view.brief = false; view.strand = 0; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
 }
 
 /* ================= CRITERION FLOW ================= */
-const STEPS = [
+const STEPS_BASE = [
   { k:"video", t:"Introduction", s:"Watch the video" },
   { k:"ex",    t:"Worked example", s:"A different problem" },
   { k:"me",    t:"How to solve it", s:"Method & starters" },
@@ -4629,16 +4687,60 @@ const STEPS = [
   { k:"task",  t:"Your task", s:"Strands i–iv" },
   { k:"sub",   t:"Download & hand in", s:"PDF + teacher copy" }
 ];
+/* 25 Nov 2026: Grade 10 Design (the ePortfolio units) has an extra step between "Your task" and "Download & hand in":
+   real ePortfolio samples students can open at any time while they work on Criteria A to D */
+const STEP_EXEM = { k:"exem", t:"ePortfolio samples", s:"Real examples to view" };
+let STEPS = STEPS_BASE;
+function useSteps(g){ STEPS = exemOn(g) ? STEPS_BASE.slice(0, 6).concat(STEP_EXEM, STEPS_BASE.slice(6)) : STEPS_BASE; return STEPS; }
+const exemOn = g => ["10RD", "10"].includes(String(g || ""));
+const stepIdx = k => Math.max(0, STEPS.findIndex(s => s.k === k));
+const EXEMPLARS = [
+  { f:"ePortfolio_Sample_8866.pdf", t:"The Stress Breaker", kind:"Product design", lv:"8866", pages:41 },
+  { f:"ePortfolio_Sample_7887.pdf", t:"2 Person Icebreaker Challenge Board", kind:"Product design", lv:"7887", pages:43 },
+  { f:"DD_ePortfolio_Sample_1_7887.pdf", t:"Providing a Sense of Belonging", kind:"Digital design", lv:"7887", pages:47 },
+  { f:"DD_ePortfolio_Sample_2_7887.pdf", t:"Creating a Sense of Belonging", kind:"Digital design", lv:"7887", pages:48 },
+  { f:"ePortfolio_Sample_7768.pdf", t:"Sense of Belonging", kind:"Product design", lv:"7768", pages:49 },
+  { f:"ePortfolio_Sample_7687_Boardgame_Sample.pdf", t:"Play to Belong (board game)", kind:"Product design", lv:"7687", pages:45 },
+  { f:"DD_ePortfolio_Sample_3_7778.pdf", t:"Welcome to Jumeirah Beach Residence (JBR)", kind:"Digital design", lv:"7778", pages:59 },
+  { f:"ePortfolio_Sample_6778.pdf", t:"Product Design ePortfolio", kind:"Product design", lv:"6778", pages:43 }
+];
+function paneExem(pane, ctx){
+  const { c, p } = ctx, lvl = x => ["A","B","C","D"].map((k, i) => `<span class="exLv${k === c ? " on" : ""}" title="Criterion ${k}">${k} ${x.lv[i]}</span>`).join("");
+  pane.innerHTML = `<div class="stack">
+    <style>.exGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}.exCard{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--card)}
+    .exLv{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12.5px;font-weight:700;margin:0 4px 4px 0}.exLv.on{background:#E5484D;border-color:#E5484D;color:#fff}
+    .exView{width:100%;height:80vh;border:1px solid var(--line);border-radius:12px;background:#fff}</style>
+    <div class="card stack" style="gap:10px;border-left:6px solid #E5484D">
+      <span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">ePortfolio samples · Criterion ${esc(c)}</span>
+      <h2 style="margin:0">See how other students did it</h2>
+      <p style="margin:0;line-height:1.6">These are real MYP Design ePortfolios. You can open them at any time while you work on Criteria A, B, C and D. Find the <b>Criterion ${esc(c)}</b> section in each one and look at how much detail, evidence and justification it gives. The numbers show the level each criterion was given (out of 8); Criterion ${esc(c)} is highlighted.</p>
+      <p class="notice warn" style="margin:0"><b>Use them for ideas, never copy.</b> Your research, ideas, making and testing must be your own work. Copying from a sample is plagiarism.</p>
+    </div>
+    <div class="exGrid">${EXEMPLARS.map((x, i) => `<div class="exCard"><b style="font-size:16px">${esc(x.t)}</b><span class="muted" style="font-size:13px">${esc(x.kind)} · ${x.pages} pages</span><div>${lvl(x)}</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:auto"><button class="btn sm" type="button" data-exv="${i}">👁 View here</button><a class="btn ghost sm" href="exemplars/${encodeURIComponent(x.f)}" target="_blank" rel="noopener" data-exo="${i}">↗ Open in a new tab</a></div></div>`).join("")}</div>
+    <div id="exBox"></div>
+    <div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">${p.done.every(Boolean) ? `<button class="btn" type="button" id="exSub">Go to Download &amp; hand in →</button>` : ""}</div>
+  </div>`;
+  const seen = i => { p.seen = p.seen || {}; if (!p.seen.exem){ p.seen.exem = true; save(); } try { logEvent(c, "Viewed ePortfolio sample", EXEMPLARS[i].t); } catch(e){} };
+  pane.querySelectorAll("[data-exv]").forEach(b => b.onclick = () => { const i = +b.dataset.exv, x = EXEMPLARS[i], box = pane.querySelector("#exBox"); seen(i);
+    box.innerHTML = `<div class="card stack" style="gap:8px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><b>${esc(x.t)}</b><button class="btn ghost sm" type="button" id="exClose">✕ Close</button></div>
+      <iframe class="exView" src="exemplars/${encodeURIComponent(x.f)}#view=FitH" title="${esc(x.t)}"></iframe><p class="muted" style="margin:0;font-size:13px">Can't see it? Press <b>Open in a new tab</b> on the card above.</p></div>`;
+    box.querySelector("#exClose").onclick = () => { box.innerHTML = ""; };
+    box.scrollIntoView({ behavior:"smooth", block:"start" }); });
+  pane.querySelectorAll("[data-exo]").forEach(a => a.addEventListener("click", () => seen(+a.dataset.exo)));
+  if (pane.querySelector("#exSub")) pane.querySelector("#exSub").onclick = () => { view.step = stepIdx("sub"); render(); window.scrollTo({ top:0, behavior:"smooth" }); };
+}
 function stepDone(p, i){
-  switch(STEPS[i].k){ case "video": return p.watched; case "ex": return !!p.seen.ex; case "me": return !!p.seen.me; case "ru": return !!p.seen.ru;
+  switch(STEPS[i].k){ case "exem": return true; case "video": return p.watched; case "ex": return !!p.seen.ex; case "me": return !!p.seen.me; case "ru": return !!p.seen.ru;
     case "prac": return p.ex.done || !!p.ex.skipped; case "task": return p.done.every(Boolean); case "sub": return p.finished; }
 }
-function stepUnlocked(p, i){ if (isTester()) return true; for (let j=0;j<i;j++) if (!stepDone(p,j)) return false; return true; }   // the test student can open every step
-function firstStep(c){ const p = prog(user(), c); for (let i=0;i<STEPS.length;i++) if (!stepDone(p,i)) return i; return STEPS.length-1; }
+function stepUnlocked(p, i){ if (isTester() || (STEPS[i] && STEPS[i].k === "exem")) return true; for (let j=0;j<i;j++) if (!stepDone(p,j)) return false; return true; }   // the test student can open every step
+function firstStep(c){ useSteps(user().grade); const p = prog(user(), c); for (let i=0;i<STEPS.length;i++) if (!stepDone(p,i)) return i; return STEPS.length-1; }
 
 function renderCrit(app){
   const u = user(), c = view.crit, g = u.grade, gd = gradeData(g), cd = COURSE.criteria[c], p = prog(u,c), sc = scenarioFor(session.email, g);
   if (!isOpen(g,c)) return go({ name:"home" });
+  useSteps(g); if (!(view.step >= 0 && view.step < STEPS.length)) view.step = 0;
   const head = `<div class="row" style="justify-content:space-between">
       <button class="btn ghost sm" id="back">← Project overview: Criteria A–D</button>
       <div class="muted" style="font-size:13px">${esc(gLabel(g))} · ${esc(gd.unit)}</div>
@@ -4653,7 +4755,7 @@ function renderCrit(app){
       ${sc.chosen ? `<div class="eyebrow" style="color:var(--muted);margin-top:10px">Your design (from your Criterion A design brief)</div><h3 style="margin:4px 0">${esc(sc.title)}</h3>${sc.brief && sc.brief !== sc.challenge ? `<p class="muted notranslate" style="margin:0">${esc(sc.brief.length > 320 ? sc.brief.slice(0, 320) + "…" : sc.brief)}</p>` : ""}`
         : (c !== "A" ? `<p class="notice warn" style="margin-top:10px">You decide what you will design in Criterion A, strand iv (your design brief). Complete it first so the rest of your project builds on it.</p>` : `<p class="muted" style="margin:.5em 0 0;font-size:13px">You will decide exactly what to design in strand iv, after your research.</p>`)}
     </div>
-    <nav class="steps" aria-label="Steps">${STEPS.map((s,i)=>`<button class="step ${stepDone(p,i)?"done":""}" data-i="${i}" ${stepUnlocked(p,i)?"":"disabled"} aria-current="${view.step===i}"><span class="n">${i+1} / ${STEPS.length}</span><b>${s.t}</b><span class="muted">${s.s}</span></button>`).join("")}</nav>
+    <nav class="steps" aria-label="Steps">${STEPS.map((s,i)=>`<button class="step ${(s.k === "exem" ? !!(p.seen || {}).exem : stepDone(p,i))?"done":""}" data-i="${i}" ${stepUnlocked(p,i)?"":"disabled"} aria-current="${view.step===i}"><span class="n">${i+1} / ${STEPS.length}</span><b>${s.t}</b><span class="muted">${s.s}</span></button>`).join("")}</nav>
     <section class="pane" id="pane"></section></div>`;
   $("#back").onclick = () => go({ name:"home" });
   app.querySelectorAll(".step").forEach(b => b.onclick = () => { if (!b.disabled){ view.step = +b.dataset.i; stopVideo(); try{speechSynthesis.cancel()}catch(e){} render(); } });
@@ -4665,7 +4767,7 @@ function renderCrit(app){
     pane.appendChild(bar);
     $("#backStep").onclick = () => { stopVideo(); stopReading(); view.step -= 1; render(); window.scrollTo({top:0, behavior:"smooth"}); };
   }, 0);
-  ({ video:paneVideo, ex:paneExample, me:paneMethod, ru:paneRubric, prac:panePractice, task:paneTask, sub:paneSubmit })[STEPS[view.step].k](pane, { u, c, g, gd, cd, p, sc });
+  ({ video:paneVideo, ex:paneExample, me:paneMethod, ru:paneRubric, prac:panePractice, task:paneTask, exem:paneExem, sub:paneSubmit })[STEPS[view.step].k](pane, { u, c, g, gd, cd, p, sc });
   const sk = STEPS[view.step].k; gateNext(pane, p, sk);
   try { if (SDCG && window.SDC && SDC.live && !session.preview && u.role !== "teacher"){   // live view for the teacher + a "Need help" button on every task
     const lab = uLabel(g) + " · Criterion " + c + " · " + STEPS[view.step].t + (sk === "task" && !pane.querySelector("#briefGo") ? " · Strand " + ROMAN[view.strand] : "");
@@ -4979,7 +5081,7 @@ function paneBrief(pane, ctx){
   const reach = i => isTester() || i === 0 || p.done.slice(0, i).every(Boolean);
   pane.innerHTML = `<div class="stack">
     <p class="muted" style="margin:0;font-size:13.5px">Read the scenario brief first, then start strand i. You can come back to this tab at any time.</p>
-    <div class="strand-tabs" role="tablist"><button role="tab" data-brief="1" aria-selected="true" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>${frontTab(ctx, false)}${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
+    <div class="strand-tabs" role="tablist"><button role="tab" data-brief="1" aria-selected="true" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>${ideasTab(ctx, false)}${frontTab(ctx, false)}${ROMAN.map((r, i) => `<button role="tab" data-i="${i}" class="${p.done[i] ? "done" : ""}" aria-selected="false" ${reach(i) ? "" : "disabled"}>${reach(i) ? "" : "🔒 "}Strand ${r}</button>`).join("")}</div>
     ${B.paras ? `<div class="card stack" style="gap:12px;border-left:6px solid #E5484D">
         <span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">Scenario brief</span>
         <h2 style="margin:0">${esc(B.title)}</h2>
@@ -4988,8 +5090,8 @@ function paneBrief(pane, ctx){
       </div>` : scenarioBriefCard(B, true).replace("<details", "<div").replace("</details>", "</div>").replace(/<summary[^]*?<\/summary>/, `<b style="font-size:19px">📜 ${esc(B.title)}</b>`)}
     <div class="row" style="justify-content:flex-end"><button class="btn" id="briefGo">I have read the brief · start strand i →</button></div>
   </div>`;
-  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled || b.dataset.brief) return; p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; if (b.dataset.front){ view.front = true; render(); return; } view.front = false; view.strand = +b.dataset.i; render(); });
-  pane.querySelector("#briefGo").onclick = () => { p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; view.front = frontOn(ctx) && !(p.fields || {}).__frontSeen; view.strand = 0; render(); window.scrollTo({ top: pane.getBoundingClientRect().top + scrollY - 90, behavior: "smooth" }); };
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled || b.dataset.brief) return; p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; if (b.dataset.ideas){ view.front = false; view.ideas = true; render(); return; } if (b.dataset.front){ view.front = true; render(); return; } view.front = false; view.strand = +b.dataset.i; render(); });
+  pane.querySelector("#briefGo").onclick = () => { p.briefSeen = p.briefSeen || Date.now(); save(); view.brief = false; if (ideasOn(ctx) && !(p.fields || {}).__ideasSeen){ view.front = false; view.ideas = true; render(); window.scrollTo({ top: pane.getBoundingClientRect().top + scrollY - 90, behavior: "smooth" }); return; } view.front = frontOn(ctx) && !(p.fields || {}).__frontSeen; view.strand = 0; render(); window.scrollTo({ top: pane.getBoundingClientRect().top + scrollY - 90, behavior: "smooth" }); };
 }
 function paneTask(pane, ctx){
   const { c, g, gd, cd, p, sc } = ctx, Y = yearKey(gd.myp), F = fieldsFor(c, gd);
@@ -4997,13 +5099,15 @@ function paneTask(pane, ctx){
   if (!reach(view.strand)) view.strand = Math.max(0, p.done.findIndex(d => !d));
   const si = view.strand;
   const hasBrief = c === "A" && !!gd.scenarioBrief, showBrief = hasBrief && (view.brief === true || (view.brief !== false && !p.briefSeen && !p.done[0]));
+  if (view.ideas === true && ideasOn(ctx)){ paneIdeas(pane, ctx); return; }
+  view.ideas = false;
   if (showBrief){ paneBrief(pane, ctx); return; }
   if (view.front === true && frontOn(ctx)){ paneFront(pane, ctx); return; }
   try { itStrandSeen(c, si, p); } catch(e){}
   try { if (SDCG && window.SDC && SDC.slow && !session.preview && ctx.u.role !== "teacher"){ if (p.done[si]) SDC.slow.stop(); else SDC.slow.start("ds|" + g + "|" + c + "|" + si, uLabel(g) + " · Criterion " + c + " · Strand " + ROMAN[si], sdcAcct(ctx.u, session.email), [12, 20, 30]); } } catch(e){}   // taking too long on one strand
   pane.innerHTML = `<div class="stack">
     <p class="muted" style="margin:0;font-size:13.5px">Work through the strands in order. Each one opens when the one before it is complete, and you can download your work once all four are done.</p>
-    <div class="strand-tabs" role="tablist">${hasBrief ? `<button role="tab" data-brief="1" aria-selected="${showBrief}" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>` : ""}${frontTab(ctx, false)}${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
+    <div class="strand-tabs" role="tablist">${hasBrief ? `<button role="tab" data-brief="1" aria-selected="${showBrief}" class="${p.briefSeen ? "done" : ""}">📜 Scenario brief</button>` : ""}${ideasTab(ctx, false)}${frontTab(ctx, false)}${ROMAN.map((r,i)=>`<button role="tab" data-i="${i}" class="${p.done[i]?"done":""}" aria-selected="${i===si}" ${reach(i)?"":"disabled"} ${reach(i)?"":'title="Complete the strand before this one first"'}>${reach(i)?"":ICON.lock+" "}Strand ${r}</button>`).join("")}</div>
     <div class="card stack" id="strandCard" data-read>
       <div class="strand-h"><span class="roman">${ROMAN[si]}</span><h3>${esc(strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[si])}</h3><div id="strandVoice" class="sdcNoRead"></div></div>
       <div id="kwBox"></div>
@@ -5024,7 +5128,7 @@ function paneTask(pane, ctx){
         <button class="btn sec" id="spellBtn" type="button">Check spelling and grammar</button></div>
         <div class="row">${p.done.every(Boolean) ? `<button class="btn ghost" id="toSub" type="button" title="Go to Download &amp; hand in without changing this strand">Back to Download &amp; hand in</button>` : ""}<button class="btn ok" id="doneS">${p.done[si]?"Save changes to strand "+ROMAN[si]:(si<3?"Complete strand "+ROMAN[si]+" and continue →":"Complete strand iv")}</button></div>
       </div></div></div>`;
-  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; if (b.dataset.brief){ view.brief = true; view.front = false; render(); return; } if (b.dataset.front){ view.brief = false; view.front = true; render(); return; } view.brief = false; view.front = false; view.strand = +b.dataset.i; render(); });
+  pane.querySelectorAll(".strand-tabs button").forEach(b => b.onclick = () => { if (b.disabled) return; if (b.dataset.ideas){ view.brief = false; view.front = false; view.ideas = true; render(); return; } if (b.dataset.brief){ view.brief = true; view.front = false; render(); return; } if (b.dataset.front){ view.brief = false; view.front = true; render(); return; } view.brief = false; view.front = false; view.strand = +b.dataset.i; render(); });
   const box = $("#fields");
   let vg = null;
   const fs = F[si];
@@ -5037,7 +5141,7 @@ function paneTask(pane, ctx){
   const cbBtn = pane.querySelector("[data-cityopen]"); if (cbBtn) cbBtn.onclick = () => openCity(ctx);
   pane.querySelectorAll(".bands button").forEach(b => b.onclick = () => { p.bands[si] = b.dataset.b; save(); pane.querySelectorAll(".bands button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#prevS").onclick = () => { view.strand = si-1; render(); };
-  if ($("#toSub")) $("#toSub").onclick = () => { view.step = 6; render(); window.scrollTo({ top:0, behavior:"smooth" }); };
+  if ($("#toSub")) $("#toSub").onclick = () => { view.step = stepIdx("sub"); render(); window.scrollTo({ top:0, behavior:"smooth" }); };
   $("#spellBtn").onclick = () => spellPanel($("#spellBox"), $("#fields"));
   $("#doneS").onclick = async () => {
     if (!LIT.ready()) await Promise.race([LIT.load(), new Promise(r => setTimeout(r, 6000))]);
@@ -5048,7 +5152,7 @@ function paneTask(pane, ctx){
     const was = p.done[si]; p.done[si] = true; try { if (window.SDC && SDC.slow) SDC.slow.stop(); } catch(e){} if (was && p.finished){ p.finished = false; p.edited = true; } save();
     if (!was){ logEvent(c, `Strand ${ROMAN[si]} complete`, `Self-rating ${p.bands[si]}`); rankBump(ctx.u); }
     sendWork(c, "snapshot");
-    if (p.done.every(Boolean)){ speak(P().allDone); view.step = 6; render(); return; }
+    if (p.done.every(Boolean)){ speak(P().allDone); view.step = stepIdx("sub"); render(); return; }
     speak(pickOne(P().right));
     const next = p.done.findIndex(d=>!d); view.strand = next; render(); window.scrollTo({top:0, behavior:"smooth"});
   };
@@ -5705,8 +5809,8 @@ function paneSubmit(pane, ctx){
   };
   $("#saveCopy").onclick = () => { saveCopy(); speak(P().copy); };
   $("#dlPdf").onclick = () => g10Reminder(c, async () => { try { await buildPDF(ctx); if (!p.finished) saveCopy(); speak(P().pdf); } catch(e){ $("#subMsg").innerHTML = `<div class="notice bad">The PDF could not be created on this device (${esc(e.message)}). Open the course in Chrome or Edge and try again.</div>`; } });
-  $("#edit").onclick = () => { view.step = 5; view.strand = 0; render(); };
-  pane.querySelectorAll("[data-back]").forEach(b => b.onclick = () => { view.step = 5; view.strand = +b.dataset.back; render(); window.scrollTo({ top:0, behavior:"smooth" }); });
+  $("#edit").onclick = () => { view.step = stepIdx("task"); view.strand = 0; render(); };
+  pane.querySelectorAll("[data-back]").forEach(b => b.onclick = () => { view.step = stepIdx("task"); view.strand = +b.dataset.back; render(); window.scrollTo({ top:0, behavior:"smooth" }); });
 }
 
 /* ================= PDF ================= */
@@ -6480,7 +6584,7 @@ document.addEventListener("visibilitychange", async () => {
 let liveBusy = false;
 setInterval(async () => {
   const u = syncable(); if (!u || document.hidden || liveBusy || syncBusy || syncHold || syncDirty || (DB.syncQ || []).length) return;
-  if (Date.now() - (u.touchedAt || 0) < 8000) return;
+  if (Date.now() - (u.touchedAt || 0) < 6000) return;
   const cfg = syncCfg(); if (!cfg) return;
   liveBusy = true; const em = session.email;
   try {
@@ -6492,10 +6596,11 @@ setInterval(async () => {
     u.seenVer = ver; if (session.email !== em) return; save(true);
     if (r === "restored"){ toast("Updated with your latest work from another device.", 3000); render(); }
   } catch(e){} finally { liveBusy = false; }
-}, 15000);
+}, 8000);
 /* leaving the page or switching away: send what is waiting straight away */
 const sendNowLeaving = () => { if (syncDirty && !syncBusy && !syncHold) syncNow(true); else flushSync(); };
 window.addEventListener("pagehide", sendNowLeaving);
+document.addEventListener("focusout", e => { const t = e.target; if (t && /^(TEXTAREA|INPUT|SELECT)$/.test(t.tagName) && syncDirty && !syncBusy && !syncHold) setTimeout(() => { if (syncDirty && !syncBusy && !syncHold) syncNow(true); }, 400); }, true);   // finished a box: send it now, so the other device gets it sooner
 document.addEventListener("visibilitychange", () => { if (document.hidden) sendNowLeaving(); });
 if (lang() !== "en") applyLang(lang(), true);
 setInterval(() => { loadLive(); flushQueue(); flushSync(); }, 60000);
