@@ -4694,7 +4694,7 @@ let STEPS = STEPS_BASE;
 function useSteps(g){ STEPS = exemOn(g) ? STEPS_BASE.slice(0, 6).concat(STEP_EXEM, STEPS_BASE.slice(6)) : STEPS_BASE; return STEPS; }
 const exemOn = g => ["10RD", "10"].includes(String(g || ""));
 const stepIdx = k => Math.max(0, STEPS.findIndex(s => s.k === k));
-/* view-only: each sample is a set of watermarked page pictures (samples/sN/001.jpg …), never a PDF, so there is no file to download and no text to copy */
+/* view-only: each sample is a set of watermarked page pictures (s1/001.jpg … s8/, at the top of the repo), never a PDF, so there is no file to download and no text to copy */
 const EXEMPLARS = [
   { d:"s1", t:"The Stress Breaker", kind:"Product design", lv:"8866", pages:41 },
   { d:"s2", t:"2 Person Icebreaker Challenge Board", kind:"Product design", lv:"7887", pages:43 },
@@ -4728,7 +4728,7 @@ function paneExem(pane, ctx){
   const seen = i => { p.seen = p.seen || {}; if (!p.seen.exem){ p.seen.exem = true; save(); } try { logEvent(c, "Viewed ePortfolio sample", EXEMPLARS[i].t); } catch(e){} };
   pane.querySelectorAll("[data-exv]").forEach(b => b.onclick = () => { const i = +b.dataset.exv, x = EXEMPLARS[i], box = pane.querySelector("#exBox"); seen(i);
     box.innerHTML = `<div class="card stack" style="gap:8px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><b>${esc(x.t)} <span class="muted" style="font-weight:400;font-size:13px">· view only · ${x.pages} pages</span></b><button class="btn ghost sm" type="button" id="exClose">✕ Close</button></div>
-      <div class="exView sdcNoRead" role="region" aria-label="${esc(x.t)} (view only)">${Array.from({ length: x.pages }, (_, k) => `<img src="samples/${x.d}/${String(k + 1).padStart(3, "0")}.jpg" alt="Page ${k + 1}" loading="lazy" draggable="false" width="1000" height="1294"><span class="pg">Page ${k + 1} of ${x.pages}</span>`).join("")}</div>
+      <div class="exView sdcNoRead" role="region" aria-label="${esc(x.t)} (view only)">${Array.from({ length: x.pages }, (_, k) => `<img src="${x.d}/${String(k + 1).padStart(3, "0")}.jpg" alt="Page ${k + 1}" loading="lazy" draggable="false" width="1000" height="1294"><span class="pg">Page ${k + 1} of ${x.pages}</span>`).join("")}</div>
       <p class="muted" style="margin:0;font-size:13px">Scroll inside the box to turn the pages. Samples can be viewed here only: they can't be downloaded, printed or copied.</p></div>`;
     const ev = box.querySelector(".exView"), no = e => e.preventDefault();
     ["contextmenu", "dragstart", "copy", "cut", "selectstart"].forEach(t => ev.addEventListener(t, no));
