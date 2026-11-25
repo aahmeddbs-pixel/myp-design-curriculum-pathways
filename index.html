@@ -3451,6 +3451,8 @@ function render(){
   if (u.role === "teacher" && !session.preview){
     if (!approvedTeacher(session.email)){ session = { email:null, preview:false, back:null }; DB.session = null; save(true); return renderLogin(app); }
     return renderTeacherHome(app); }
+  const own = g => !SDCG || session.preview || isTester() || myUnits(u).includes(g);   // students: own grade and course only
+  if ((view.name === "crit" && !own(u.grade)) || (view.name === "intro" && !own(view.g))) view = { name:"home", crit:null, step:0, strand:0 };
   if (view.name === "crit"){ renderCrit(app); return rememberSpot(user()); }
   if (view.name === "explore") return renderExplore(app);
   if (view.name === "intro") return renderIntro(app);
@@ -3706,7 +3708,8 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
   u.testerArea = a.k; if (!a.units.includes(u.grade)) setUnit(u, a.units[0]); else save();
   view = { name: "home", crit: null, step: 0, strand: 0 }; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
 function setUnit(u, key){
-  if (!u || u.grade === key) return;
+  if (!u || !key || u.grade === key) return;
+  if (SDCG && u.role !== "teacher" && !session.preview && !isTester() && !myUnits(u).includes(key)) return;   // a student can only open their own grade and course
   if (pendingSnap){ clearTimeout(snapTimer); const c = pendingSnap; pendingSnap = null; sendWork(c, "snapshot"); }
   u.progressBy = u.progressBy || {}; u.choiceBy = u.choiceBy || {};
   u.progressBy[u.grade] = u.progress || {}; u.choiceBy[u.grade] = u.choice || null;
@@ -4407,6 +4410,7 @@ function historyBlock(u){
   </section>`;
 }
 function renderExplore(app){
+  if (!isTester()){ view = { name:"home", crit:null, step:0, strand:0 }; return renderHome(app); }   // students only ever see their own grade
   const u = user();
   const mine = u.group || groupOf(u.grade);
   const others = Object.keys(COURSE.groups).filter(k => k !== mine).flatMap(k => COURSE.groups[k].units);
@@ -4497,7 +4501,7 @@ function renderHome(app){
     ${grp.units.map(g => unitBlock(u, g, multi)).join(multi ? `<hr style="border:0;border-top:1px solid var(--line);margin:0">` : "")}
     ${historyBlock(u)}
     <div id="rankBox"></div>
-    <div class="row" style="justify-content:space-between"><p class="muted" style="margin:0;font-size:13px">You can come back here at any time to see Criteria A to D, and go back into an open criterion to change your work.</p><button class="btn ghost sm" id="exploreBtn">See what other grades are learning →</button></div>
+    <div class="row" style="justify-content:space-between"><p class="muted" style="margin:0;font-size:13px">You can come back here at any time to see Criteria A to D, and go back into an open criterion to change your work.</p>${isTester() ? `<button class="btn ghost sm" id="exploreBtn">See what other grades are learning →</button>` : ""}</div>
   </div>`;
   bindDlAll(app, u);
   app.querySelectorAll("[data-hpdf]").forEach(b => b.onclick = async () => { const [g, c] = b.dataset.hpdf.split("|"), p = ((u.progressBy || {})[g] || {})[c];
@@ -6436,7 +6440,7 @@ function hasUnitWork(u, g){ const pr = u.grade === g ? u.progress : (u.progressB
 function sdcUnits(u, units){
   if (!SDCG || !u || u.role === "teacher" || session.preview) return units;
   const c = u.course || SDCG.course, out = units.filter(x => (c === "it" ? IT_UNITS.includes(x) : !IT_UNITS.includes(x)) && (x !== "10" || hasUnitWork(u, "10")));
-  return out.length ? out : units;
+  return out;   // never fall back to the whole year group: a student sees only their own course's units
 }
 /* ---------- Grade 10: one login for both Design and IT ----------
    A Grade 10 student uses the same username and password for Design and IT, and switches with
@@ -6547,7 +6551,7 @@ async function sdcAfter(u, email, signup){
   if (g10Both(u, c)) g10Switch(u, c);
   u.course = c; sdcApply(u, ck.assign);
   const allowed = sdcUnits(u, (COURSE.groups[u.group || groupOf(u.grade)] || { units:[u.grade] }).units);
-  if (!allowed.includes(u.grade)) setUnit(u, allowed[0]);
+  if (allowed.length && !allowed.includes(u.grade)) setUnit(u, allowed[0]);
   save(true); if (syncable()) syncNow();
   return true;
 }
