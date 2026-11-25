@@ -4694,22 +4694,26 @@ let STEPS = STEPS_BASE;
 function useSteps(g){ STEPS = exemOn(g) ? STEPS_BASE.slice(0, 6).concat(STEP_EXEM, STEPS_BASE.slice(6)) : STEPS_BASE; return STEPS; }
 const exemOn = g => ["10RD", "10"].includes(String(g || ""));
 const stepIdx = k => Math.max(0, STEPS.findIndex(s => s.k === k));
+/* view-only: each sample is a set of watermarked page pictures (samples/sN/001.jpg …), never a PDF, so there is no file to download and no text to copy */
 const EXEMPLARS = [
-  { f:"ePortfolio_Sample_8866.pdf", t:"The Stress Breaker", kind:"Product design", lv:"8866", pages:41 },
-  { f:"ePortfolio_Sample_7887.pdf", t:"2 Person Icebreaker Challenge Board", kind:"Product design", lv:"7887", pages:43 },
-  { f:"DD_ePortfolio_Sample_1_7887.pdf", t:"Providing a Sense of Belonging", kind:"Digital design", lv:"7887", pages:47 },
-  { f:"DD_ePortfolio_Sample_2_7887.pdf", t:"Creating a Sense of Belonging", kind:"Digital design", lv:"7887", pages:48 },
-  { f:"ePortfolio_Sample_7768.pdf", t:"Sense of Belonging", kind:"Product design", lv:"7768", pages:49 },
-  { f:"ePortfolio_Sample_7687_Boardgame_Sample.pdf", t:"Play to Belong (board game)", kind:"Product design", lv:"7687", pages:45 },
-  { f:"DD_ePortfolio_Sample_3_7778.pdf", t:"Welcome to Jumeirah Beach Residence (JBR)", kind:"Digital design", lv:"7778", pages:59 },
-  { f:"ePortfolio_Sample_6778.pdf", t:"Product Design ePortfolio", kind:"Product design", lv:"6778", pages:43 }
+  { d:"s1", t:"The Stress Breaker", kind:"Product design", lv:"8866", pages:41 },
+  { d:"s2", t:"2 Person Icebreaker Challenge Board", kind:"Product design", lv:"7887", pages:43 },
+  { d:"s3", t:"Providing a Sense of Belonging", kind:"Digital design", lv:"7887", pages:47 },
+  { d:"s4", t:"Creating a Sense of Belonging", kind:"Digital design", lv:"7887", pages:48 },
+  { d:"s5", t:"Sense of Belonging", kind:"Product design", lv:"7768", pages:49 },
+  { d:"s6", t:"Play to Belong (board game)", kind:"Product design", lv:"7687", pages:45 },
+  { d:"s7", t:"Welcome to Jumeirah Beach Residence (JBR)", kind:"Digital design", lv:"7778", pages:59 },
+  { d:"s8", t:"Product Design ePortfolio", kind:"Product design", lv:"6778", pages:43 }
 ];
 function paneExem(pane, ctx){
   const { c, p } = ctx, lvl = x => ["A","B","C","D"].map((k, i) => `<span class="exLv${k === c ? " on" : ""}" title="Criterion ${k}">${k} ${x.lv[i]}</span>`).join("");
   pane.innerHTML = `<div class="stack">
     <style>.exGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}.exCard{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--card)}
     .exLv{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12.5px;font-weight:700;margin:0 4px 4px 0}.exLv.on{background:#E5484D;border-color:#E5484D;color:#fff}
-    .exView{width:100%;height:80vh;border:1px solid var(--line);border-radius:12px;background:#fff}</style>
+    .exView{height:80vh;overflow-y:auto;border:1px solid var(--line);border-radius:12px;background:#E9EDF5;padding:12px;display:flex;flex-direction:column;align-items:center;gap:12px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+    .exView img{display:block;width:100%;max-width:900px;height:auto;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;-webkit-user-drag:none;user-select:none}
+    .exView .pg{font-size:12px;color:#5B6782;margin-top:-6px}
+    @media print{.exView,#exBox{display:none!important}}</style>
     <div class="card stack" style="gap:10px;border-left:6px solid #E5484D">
       <span class="muted" style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)">ePortfolio samples · Criterion ${esc(c)}</span>
       <h2 style="margin:0">See how other students did it</h2>
@@ -4717,19 +4721,22 @@ function paneExem(pane, ctx){
       <p class="notice warn" style="margin:0"><b>Use them for ideas, never copy.</b> Your research, ideas, making and testing must be your own work. Copying from a sample is plagiarism.</p>
     </div>
     <div class="exGrid">${EXEMPLARS.map((x, i) => `<div class="exCard"><b style="font-size:16px">${esc(x.t)}</b><span class="muted" style="font-size:13px">${esc(x.kind)} · ${x.pages} pages</span><div>${lvl(x)}</div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:auto"><button class="btn sm" type="button" data-exv="${i}">👁 View here</button><a class="btn ghost sm" href="exemplars/${encodeURIComponent(x.f)}" target="_blank" rel="noopener" data-exo="${i}">↗ Open in a new tab</a></div></div>`).join("")}</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:auto"><button class="btn sm" type="button" data-exv="${i}">👁 View sample</button></div></div>`).join("")}</div>
     <div id="exBox"></div>
     <div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">${p.done.every(Boolean) ? `<button class="btn" type="button" id="exSub">Go to Download &amp; hand in →</button>` : ""}</div>
   </div>`;
   const seen = i => { p.seen = p.seen || {}; if (!p.seen.exem){ p.seen.exem = true; save(); } try { logEvent(c, "Viewed ePortfolio sample", EXEMPLARS[i].t); } catch(e){} };
   pane.querySelectorAll("[data-exv]").forEach(b => b.onclick = () => { const i = +b.dataset.exv, x = EXEMPLARS[i], box = pane.querySelector("#exBox"); seen(i);
-    box.innerHTML = `<div class="card stack" style="gap:8px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><b>${esc(x.t)}</b><button class="btn ghost sm" type="button" id="exClose">✕ Close</button></div>
-      <iframe class="exView" src="exemplars/${encodeURIComponent(x.f)}#view=FitH" title="${esc(x.t)}"></iframe><p class="muted" style="margin:0;font-size:13px">Can't see it? Press <b>Open in a new tab</b> on the card above.</p></div>`;
+    box.innerHTML = `<div class="card stack" style="gap:8px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><b>${esc(x.t)} <span class="muted" style="font-weight:400;font-size:13px">· view only · ${x.pages} pages</span></b><button class="btn ghost sm" type="button" id="exClose">✕ Close</button></div>
+      <div class="exView sdcNoRead" role="region" aria-label="${esc(x.t)} (view only)">${Array.from({ length: x.pages }, (_, k) => `<img src="samples/${x.d}/${String(k + 1).padStart(3, "0")}.jpg" alt="Page ${k + 1}" loading="lazy" draggable="false" width="1000" height="1294"><span class="pg">Page ${k + 1} of ${x.pages}</span>`).join("")}</div>
+      <p class="muted" style="margin:0;font-size:13px">Scroll inside the box to turn the pages. Samples can be viewed here only: they can't be downloaded, printed or copied.</p></div>`;
+    const ev = box.querySelector(".exView"), no = e => e.preventDefault();
+    ["contextmenu", "dragstart", "copy", "cut", "selectstart"].forEach(t => ev.addEventListener(t, no));
     box.querySelector("#exClose").onclick = () => { box.innerHTML = ""; };
     box.scrollIntoView({ behavior:"smooth", block:"start" }); });
-  pane.querySelectorAll("[data-exo]").forEach(a => a.addEventListener("click", () => seen(+a.dataset.exo)));
   if (pane.querySelector("#exSub")) pane.querySelector("#exSub").onclick = () => { view.step = stepIdx("sub"); render(); window.scrollTo({ top:0, behavior:"smooth" }); };
 }
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && /^[spc]$/i.test(e.key) && document.querySelector("#exBox .exView") && !(e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName))){ e.preventDefault(); toast("Samples can be viewed here only: they can't be saved, printed or copied.", 3500); } }, true);
 function stepDone(p, i){
   switch(STEPS[i].k){ case "exem": return true; case "video": return p.watched; case "ex": return !!p.seen.ex; case "me": return !!p.seen.me; case "ru": return !!p.seen.ru;
     case "prac": return p.ex.done || !!p.ex.skipped; case "task": return p.done.every(Boolean); case "sub": return p.finished; }
