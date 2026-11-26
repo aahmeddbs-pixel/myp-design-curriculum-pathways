@@ -159,7 +159,8 @@ let flushing = false;
 async function flush(){
   if (flushing || offline()) return; flushing = true;
   try { let q = getQ();
-    while (q.length){ const it = q[0]; if (!(await post(it.a, it.f, true))) break; q = getQ(); if (q.length && JSON.stringify(q[0]) === JSON.stringify(it)) q.shift(); setQ(q); if (q.length) await new Promise(r => setTimeout(r, 300)); }
+    try { await Promise.race([dirRefresh(), new Promise(r => setTimeout(r, 6000))]); } catch(e){}
+    while (q.length){ const it = q[0], to = toCurrent(it); if (!(await post(to.a, to.f, true))) break; q = getQ(); if (q.length && JSON.stringify(q[0]) === JSON.stringify(it)) q.shift(); setQ(q); if (q.length) await new Promise(r => setTimeout(r, 300)); }
   } finally { flushing = false; }
 }
 function enqueue(action, fields){ const q = getQ(); q.push({ a:action, f:fields }); setQ(q); flush(); }
@@ -223,6 +224,63 @@ async function rows(kind, id, limit){
       const p = v.split("|"); if (p.length >= 7) out.push({ ver:+p[3], text:p.slice(6).join("|") }); });
   }
   return out.sort((a, b) => b.ver - a.ver);   // newest first
+}
+/* ---------- the newest sync sheet ----------
+   26 Nov 2026: sheets are now replaced automatically before they fill up (sync-rotator.gs, a 30-minute timer in
+   sisd.design.computing1@gmail.com). Every sync spreadsheet from Sync 3 on has a "Directory" tab listing all the sync
+   sheets, newest last; a full sheet's Directory points on to the next one. Each page follows that list from the newest
+   sheet it knows, remembers it on this computer, and checks again every 30 minutes. The same list is used by
+   Python Pathways (pp-sync.js) and the Design course. Older sheets are always still read. */
+const DIR_KEY = "sdc_syncdir_v1", DIR_MIN = 30;
+const DIR_BASE = [SYNC].concat(SYNC_OLD).map(s => ({ id:s.id, gid:s.gid, action:s.action || "", entry:s.entry || "" }));
+function dirCached(){
+  try { const d = JSON.parse(localStorage.getItem(DIR_KEY) || "null"); return d && Array.isArray(d.list) && d.list.length && d.list[0].action ? d : null; } catch(e){ return null; }
+}
+function dirParse(r){
+  const cols = ((r && r.table && r.table.cols) || []).map(c => String(c.label || "").trim().toLowerCase()), rws = (r && r.table && r.table.rows) || [];
+  const at = n => cols.indexOf(n), iId = at("sheet id"), iGid = at("tab gid"), iAct = at("form action"), iEnt = at("entry"), iSt = at("status"), iNm = at("name");
+  if (iId < 0 || iAct < 0 || iEnt < 0 || iSt < 0) return null;                    // no Directory tab: Google answers with the first tab instead
+  const val = (row, i) => i < 0 ? "" : String((((row.c || [])[i]) || {}).v == null ? "" : ((row.c || [])[i]).v).trim();
+  const list = rws.map(row => ({ name:val(row, iNm), id:val(row, iId), gid:val(row, iGid).replace(/\.0$/, ""), action:val(row, iAct), entry:val(row, iEnt), status:val(row, iSt) }))
+    .filter(x => /^[\w-]{25,}$/.test(x.id) && /^\d*$/.test(x.gid) && (!x.action || /^https:\/\/docs\.google\.com\/forms\/d\/e\/[\w-]+\/formResponse$/.test(x.action)) && (!x.action || /^entry\.\d+$/.test(x.entry)));
+  const cur = list.filter(x => x.status === "current" && x.action).pop();
+  return cur ? [cur].concat(list.filter(x => x !== cur).reverse()) : null;            // newest first
+}
+function dirApply(list){
+  if (!list || !list[0] || !list[0].action) return false;
+  const all = list.concat(DIR_BASE.filter(b => !list.some(x => x.id === b.id))), cur = all[0];
+  const before = SYNC.id + "|" + SYNC_OLD.map(o => o.id).join(",");
+  Object.assign(SYNC, { action:cur.action, entry:cur.entry, id:cur.id, gid:cur.gid });
+  SYNC_OLD.splice(0, SYNC_OLD.length, ...all.slice(1).map(o => ({ id:o.id, gid:o.gid })));
+  if (before === SYNC.id + "|" + SYNC_OLD.map(o => o.id).join(",")) return false;
+  COL = null; COL_P = null; try { localStorage.removeItem(COL_KEY); } catch(e){}  // look the tabs up again in the new set of sheets
+  return true;
+}
+let DIR_P = null;
+async function dirRefresh(force){
+  if (offline()) return;
+  const c = dirCached(); if (!force && c && Date.now() - (c.at || 0) < DIR_MIN * 60000) return;
+  if (DIR_P) return DIR_P;
+  DIR_P = (async () => {
+    let id = (c && c.list[0].id) || SYNC.id, list = null;
+    for (let hop = 0; hop < 8; hop++){                                                  // follow "current" from sheet to sheet
+      let r; try { r = await gviz("select *", "Directory", { id, gid:"" }); } catch(e){ break; }
+      const l = dirParse(r); if (!l) break;
+      list = l; if (l[0].id === id) break; id = l[0].id;
+    }
+    if (!list) return;
+    try { localStorage.setItem(DIR_KEY, JSON.stringify({ at:Date.now(), list })); } catch(e){}
+    dirApply(list);
+  })();
+  try { return await DIR_P; } finally { DIR_P = null; }
+}
+dirApply(dirCached() && dirCached().list);
+dirRefresh(); setInterval(() => dirRefresh(true), DIR_MIN * 60000);
+/* a row queued for an older sync form (before this page knew about the newer sheet) goes to the current form instead */
+function toCurrent(it){
+  const old = DIR_BASE.concat(((dirCached() || {}).list) || []).find(x => x.action && x.action === it.a);
+  if (!old || it.a === SYNC.action) return it;
+  const v = it.f && it.f[old.entry]; return v == null ? it : { a:SYNC.action, f:{ [SYNC.entry]: v } };
 }
 const sendRow = (kind, id, text) => enqueue(SYNC.action, { [SYNC.entry]: ["PPS2", kind, id, String(Date.now()), 0, 1, text].join("|") });
 

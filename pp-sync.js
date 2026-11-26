@@ -71,7 +71,19 @@ const sha256 = async b => new Uint8Array(await crypto.subtle.digest("SHA-256", b
 async function hmac(keyBytes, msg){ const k = await crypto.subtle.importKey("raw", keyBytes, { name:"HMAC", hash:"SHA-256" }, false, ["sign"]); return new Uint8Array(await crypto.subtle.sign("HMAC", k, TE.encode(msg))); }
 const emailId = async email => hexOf(await sha256(TE.encode(PF.e + String(email).toLowerCase()))).slice(0, 32);
 const dataId = async dk => hexOf(await sha256(TE.encode(PF.d + dk))).slice(0, 32);
+/* the newest sync sheet, as found by sdc.js in the sheets' "Directory" tab (see sync-rotator.gs in sisd-design-and-computing) */
+function dirCfg(){
+  try { const d = JSON.parse(localStorage.getItem("sdc_syncdir_v1") || "null"), l = d && d.list;
+    if (!Array.isArray(l) || !l.length || !l[0].action || !l[0].entry || !l[0].id) return null;
+    return { action: l[0].action, entry: l[0].entry, id: l[0].id, gid: l[0].gid || "", old: l.slice(1).map(x => ({ id: x.id, gid: x.gid || "" })) };
+  } catch(e){ return null; }
+}
 function cfg(){
+  const base = baseCfg(), d = dirCfg(); if (!d) return base; if (!base) return d;
+  [{ id: base.id, gid: base.gid }].concat(base.old).forEach(o => { if (o.id !== d.id && !d.old.some(x => x.id === o.id)) d.old.push(o); });
+  return d;
+}
+function baseCfg(){
   const m = String(CFG.sheet).match(/\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]{20,})/), f = String(CFG.form).match(/docs\.google\.com\/forms\/d\/(e\/)?([^/]+)\//);
   const entry = (String(CFG.form).match(/entry\.(\d+)=/) || [])[1];
   if (!m || !f || !entry || m[1] === "e") return null;
