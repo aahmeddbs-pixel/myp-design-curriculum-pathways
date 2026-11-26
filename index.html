@@ -6581,10 +6581,13 @@ new MutationObserver(() => { cancelAnimationFrame(window.__lr); window.__lr = re
 try { Object.values(DB.users || {}).forEach(fixUser); } catch(e){}   // repair records that a sync left incomplete (18 Nov 2026)
 render(); loadLive(); flushQueue(); flushSync();
 if (SDCG && SDCG.link && SDCG.link.design && !user()) linkIn().catch(() => {});   // came from Computer Science
+const SYNC2_FULL = Date.parse("2026-11-24T07:54:00Z");   // "SDC Sync 2" took no rows after 24 Nov 11:54 Dubai time
 (async () => { const u = syncable(); if (!u){ syncHold = false; return; } const em = session.email; let r = "";
   try { r = await syncIn(u, em, null); } finally { syncHold = false; }
   if (session.email !== em) return; save(true);
-  if (r === "restored"){ toast("Your latest work from another device has been loaded.", 4000); resumeSpot(u); } else syncNow(); })();
+  if (r === "restored"){ toast("Your latest work from another device has been loaded.", 4000); resumeSpot(u); }
+  else if (!u.sync3 && (u.syncedAt || 0) > SYNC2_FULL){ u.sync3 = 1; save(true); syncNow(true); }   // work "sent" after Sync 2 filled up never arrived: send it again to Sync 3
+  else syncNow(); })();
 /* coming back to a tab left open (e.g. on a school computer since last lesson): catch up before carrying on */
 document.addEventListener("visibilitychange", async () => {
   const u = syncable(); if (document.hidden || !u || syncBusy || syncHold || Date.now() - (u.pulledAt || 0) < 3 * 60000) return;
