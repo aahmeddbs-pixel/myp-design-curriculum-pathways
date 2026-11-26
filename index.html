@@ -4,8 +4,8 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <script>try{if(window.top!==window.self){window.top.location=window.self.location}}catch(e){document.documentElement.style.display="none"}</script>
-<script src="/sisd-design-and-computing/sdc.js?v=20261125help"></script>
-<script src="/python-pathways/pp-sync.js?v=20261123fast"></script>
+<script src="/sisd-design-and-computing/sdc.js?v=20261126sync3"></script>
+<script src="/python-pathways/pp-sync.js?v=20261126sync3"></script>
 <script src="keywords.js?v=20261109f"></script>
 <script src="citybuilder.js?v=20261110a"></script>
 <script>window.SDC && SDC.require(["design","it"]);</script>
@@ -327,9 +327,9 @@ const CONFIG = {
   "videoLinks": {},
   "studioUrl": "https://claude.ai/artifact/GwxfxmzBWyxbjy18kkdY7Z",
   "roster": null,
-  "syncForm": "https://docs.google.com/forms/d/e/1FAIpQLScz4HZXAuqSguFrhRDLAtAV2PxAi6K8uF2Vzx4cPWFCevMYdA/viewform?usp=pp_url&entry.919327250=x",
-  "syncSheet": "https://docs.google.com/spreadsheets/d/1qRTsBkS6MfA7lHEU5ZN3e3cbQAGtjrF8xmSfHGHKEoE/edit#gid=996219689",
-  "syncOld": ["https://docs.google.com/spreadsheets/d/12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0/edit#gid=1433531983"],
+  "syncForm": "https://docs.google.com/forms/d/e/1FAIpQLSdMyq_x4TXZ7fWbMEoZsL25Rgbhmgx2b7_n9l9wcoZhT_0GsA/viewform?usp=pp_url&entry.666192810=x",
+  "syncSheet": "https://docs.google.com/spreadsheets/d/1yvhp7MAxKMp6VsUm0nVS7vZ3CbNNfLJCdReJN2TgLWY/edit#gid=1112428158",
+  "syncOld": ["https://docs.google.com/spreadsheets/d/1qRTsBkS6MfA7lHEU5ZN3e3cbQAGtjrF8xmSfHGHKEoE/edit#gid=996219689", "https://docs.google.com/spreadsheets/d/12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0/edit#gid=1433531983"],
   "adminKeys": {
     "sigPub": {
       "key_ops": [
@@ -3856,7 +3856,7 @@ const SYNC_CHUNK = 30000, SYNC_EVERY = 5000, KDF_ROUNDS = 400000;
 const TE = new TextEncoder();
 /* 18 Nov 2026: the first sync sheet (12_g1y…) grew past what Google Sheets can hold and stopped taking new rows on
    16 Nov at 10:44. Saves now go to a fresh form + sheet; the old sheet is still read for older saves and keys. */
-const OLD_SYNC_IDS = ["12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0", "1FAIpQLSdGZGdrzAvN_21zfKHufKcba8003hZIeUhzTKQJ3Mun53trlQ"];
+const OLD_SYNC_IDS = ["12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0", "1FAIpQLSdGZGdrzAvN_21zfKHufKcba8003hZIeUhzTKQJ3Mun53trlQ", "1qRTsBkS6MfA7lHEU5ZN3e3cbQAGtjrF8xmSfHGHKEoE", "1FAIpQLScz4HZXAuqSguFrhRDLAtAV2PxAi6K8uF2Vzx4cPWFCevMYdA"];   // full sheets and their forms (Sync 1, Sync 2)
 const sheetOf = link => { const m = String(link || "").match(/\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]{20,})/); return m && m[1] !== "e" ? { id: m[1], gid: (String(link).match(/[#&?]gid=(\d+)/) || [])[1] || "" } : null; };
 function syncCfg(){
   const s = settings(), stale = v => OLD_SYNC_IDS.some(x => String(v || "").includes(x));   // a teacher's saved settings may still hold the old, full links
@@ -3994,7 +3994,7 @@ function stampFields(u, baselineOnly){
       if (known && !baselineOnly && old[k] !== h) p.fieldAt[id] = now; } }
   u.sentN = seen; u.sentG = Object.assign({}, u.sentG || {}, { [G]: 1 });
 }
-const SEND_GAP = 10000;   // one full copy at most every 15 seconds while typing (the old sheet filled up with one every 5 seconds)
+const SEND_GAP = 60000;   // 26 Nov 2026: one full copy at most every 60 seconds while typing (every 10 seconds, plus one per box, filled "SDC Sync 2" in 8 days); leaving the page still sends straight away
 let lastSendAt = 0;
 async function syncNow(force){
   const u = syncable(), email = session.email; if (!u || syncHold) return;
@@ -6611,7 +6611,7 @@ setInterval(async () => {
 /* leaving the page or switching away: send what is waiting straight away */
 const sendNowLeaving = () => { if (syncDirty && !syncBusy && !syncHold) syncNow(true); else flushSync(); };
 window.addEventListener("pagehide", sendNowLeaving);
-document.addEventListener("focusout", e => { const t = e.target; if (t && /^(TEXTAREA|INPUT|SELECT)$/.test(t.tagName) && syncDirty && !syncBusy && !syncHold) setTimeout(() => { if (syncDirty && !syncBusy && !syncHold) syncNow(true); }, 400); }, true);   // finished a box: send it now, so the other device gets it sooner
+document.addEventListener("focusout", e => { const t = e.target; if (t && /^(TEXTAREA|INPUT|SELECT)$/.test(t.tagName) && syncDirty && !syncBusy && !syncHold) setTimeout(() => { if (syncDirty && !syncBusy && !syncHold) syncNow(); }, 400); }, true);   // finished a box: send it if the last full copy is over a minute old
 document.addEventListener("visibilitychange", () => { if (document.hidden) sendNowLeaving(); });
 if (lang() !== "en") applyLang(lang(), true);
 setInterval(() => { loadLive(); flushQueue(); flushSync(); }, 60000);

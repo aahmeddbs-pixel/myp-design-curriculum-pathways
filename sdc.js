@@ -68,10 +68,11 @@ const LOG = { url:"https://docs.google.com/forms/d/e/1FAIpQLSfFnVZORF6176gPE9a2z
   entries:{ type:"entry.1355322393", student:"entry.1753714859", email:"entry.1091945433", teacher:"entry.1559320258", data:"entry.145790134" } };
 // Registry and admin assignments live in the sync form/sheet as scrambled PPS2 rows.
 // 18 Nov 2026: the first sync sheet (12_g1y…) grew past what Google Sheets can hold and stopped taking rows on 16 Nov at 10:44.
-// New rows go to "SDC Sync 2"; the old sheet is still read (newest sheet first).
-const SYNC = { action:"https://docs.google.com/forms/d/e/1FAIpQLScz4HZXAuqSguFrhRDLAtAV2PxAi6K8uF2Vzx4cPWFCevMYdA/formResponse", entry:"entry.919327250",
-  id:"1qRTsBkS6MfA7lHEU5ZN3e3cbQAGtjrF8xmSfHGHKEoE", gid:"996219689" };
-const SYNC_OLD = [{ id:"12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0", gid:"1433531983" }];
+// 26 Nov 2026: "SDC Sync 2" (1qRT…) filled up the same way and stopped taking rows on 24 Nov at 11:54.
+// New rows go to "SDC Sync 3" (owned by sisd.design.computing1@gmail.com); both older sheets are still read (newest sheet first).
+const SYNC = { action:"https://docs.google.com/forms/d/e/1FAIpQLSdMyq_x4TXZ7fWbMEoZsL25Rgbhmgx2b7_n9l9wcoZhT_0GsA/formResponse", entry:"entry.666192810",
+  id:"1yvhp7MAxKMp6VsUm0nVS7vZ3CbNNfLJCdReJN2TgLWY", gid:"1112428158" };
+const SYNC_OLD = [{ id:"1qRTsBkS6MfA7lHEU5ZN3e3cbQAGtjrF8xmSfHGHKEoE", gid:"996219689" }, { id:"12_g1ySZtyUX-rXTuOHcZ7_vUzCkdhXV_T7KF5NjBFa0", gid:"1433531983" }];
 const SIG_PUB = {"key_ops":["verify"],"ext":true,"kty":"EC","x":"g6JG87cYBkusgs-I5KvQKNdcS2VGwCu4FP9lJYIvu58","y":"Tc06F7jM1RaDT6RsO7UTPumlWm7d3MNQNtqky5ygZAE","crv":"P-256"};
 const GATE_KEY = "sdc_gate", Q_KEY = "sdc_q", GATE_HOURS = 12;
 const TE = new TextEncoder();
@@ -182,7 +183,7 @@ let COL = null;
 /* every tab that holds sync rows: the linked tab plus any "Form responses N" tab (a re-linked form writes to a new tab) */
 /* 25 Nov 2026: sign-in was slow because the 10 tabs were checked one after another on every page. Now they are all
    checked at the same time, and the answer is remembered on this computer for 12 hours. */
-const COL_KEY = "sdc_col_v2", COL_HOURS = 12;
+const COL_KEY = "sdc_col_v3", COL_HOURS = 12;
 let COL_P = null;
 async function column(){
   if (COL) return COL;
