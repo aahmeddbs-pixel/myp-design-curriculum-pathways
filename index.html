@@ -3814,7 +3814,7 @@ function workPayload(ctx, kind){
     practice: { correct: p.ex.correct, points: p.ex.points, hints: p.ex.hints },
     strands: F.map((fs, i) => ({ n: ROMAN[i], strand: strandsFor(cd, typeof gd === "undefined" ? null : gd, Y)[i], done: !!p.done[i], self: p.bands[i] || "",
       fields: fs.map(f => { const v = p.fields[f.id];
-        return { id: f.id, t: f.t, label: fill(f.label, g, sc), cols: f.cols, rowLabels: f.rowLabels, min: f.min,
+        return { id: f.id, t: f.t, label: fill(f.label, g, sc), cols: f.cols, rowLabels: f.rowLabels, min: f.min, ip: (p.ip || {})[f.id] || null,
           value: f.t === "shots" ? (v || []).map(() => "IMAGE") : f.t === "evlist" ? (v ? Array.from({ length: v.__n || 0 }, (_, i) => v[i] ? "IMAGE" : "") : []) : f.t === "sketch" ? (v ? "IMAGE" : "") : f.t === "video" ? (v && v.url ? "Video: " + v.url : f.grp === "video" && p.fields.__skipVideo ? "SKIPPED (lose marks)" : "") : f.grp === "video" && p.fields.__skipVideo && !v ? "SKIPPED" : (v ?? "") }; }) })) };
 }
 function queueChunks(ctx, tag, id, text, extra){
@@ -5410,6 +5410,16 @@ const deepUnit = g => String(g) === "10";
 const autoGrow = ta => { const fit = () => { ta.style.height = "auto"; ta.style.height = Math.max(ta.scrollHeight + 2, ta.classList.contains("tcell") ? 44 : 110) + "px"; }; ta.addEventListener("input", fit); requestAnimationFrame(fit); };
 /* a short exercise inside a strand ("Exercise · …"): practice, not the main task */
 const isExField = f => /^Exercise\b/i.test(String(f.label || "")) || /ex\d*$/.test(String(f.id || ""));
+/* academic integrity evidence: for every answer box, how much was TYPED and how much was PASTED (or dropped) in.
+   Stored with the work (p.ip[fieldId] = { t: typed chars, p: pasted chars, n: number of pastes, b: biggest paste })
+   and sent to the teacher with each strand, so the dashboard's integrity check can say exactly where text came in. */
+function ipTrack(p, id, e, before, after){
+  try { if (!e || e.type !== "input" || e.isTrusted === false) return; const t = String(e.inputType || ""), d = after - before;
+    const o = (p.ip = p.ip || {})[id] = Object.assign({ t:0, p:0, n:0, b:0 }, p.ip[id] || {});
+    if (/^insertFrom(Paste|Drop|PasteAsQuotation)/.test(t)){ if (d > 0){ o.p += d; o.n++; o.b = Math.max(o.b, d); } }
+    else if (/^insert/.test(t)) o.t += Math.max(1, String(e.data || "").length);
+  } catch(x){}
+}
 function buildField(f, ctx){ const el = buildField0(f, ctx);
   try { const ex = isExField(f); el.classList.add(ex ? "exQ" : f.opt ? "optQ" : "mainQ");
     if (ex){ const l = el.querySelector(".lbl"), n = document.createElement("span"); n.className = "muted exOpt"; n.style.fontSize = "12.5px"; n.textContent = "Optional exercise: you can skip it and go straight to the task below."; if (l) l.after(n); else el.prepend(n); } } catch(e){}
@@ -5465,7 +5475,8 @@ function buildField0(f, ctx){
     const upd = () => { const w = LIT.count(ta.value), pr = LIT.problem(ta.value); cn.textContent = `${w} / ${f.min} real words minimum` + (pr ? " · ⚠ " + pr : deep && w >= f.min && w < goal ? ` · ✓ Good. For full depth, aim for ${goal}+ words: explain, give examples and evidence.` : w >= f.min ? " · ✓ Good" + (deep ? ", in depth" : "") : ""); cn.classList.toggle("ok", w >= f.min && !pr); cn.classList.toggle("bad", !!pr); };
     autoGrow(ta);   // grows as they write: nothing scrolls out of view
     LIT.onReady(() => { if (ta.isConnected) upd(); });
-    ta.oninput = () => { p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
+    ta._len = ta.value.length;
+    ta.oninput = e => { ipTrack(p, f.id, e, ta._len, ta.value.length); ta._len = ta.value.length; p.fields[f.id] = ta.value; upd(); clearTimeout(ta._t); ta._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); };
     upd();
   } else if (f.t === "table"){
     const v = p.fields[f.id] || Array.from({length:f.rows},()=>f.cols.map(()=>""));
@@ -5487,7 +5498,7 @@ function buildField0(f, ctx){
       let hint = ""; v.forEach((r, ri) => f.cols.forEach((_, k) => { if (hint || (f.rowLabels && k === 0)) return; const val = String(r[k]||"").trim(); if (!val) return; const pr = cellProblem(f, k, val); if (pr) hint = ` · Row ${ri+1}: ${pr}`; }));
       el.querySelectorAll("input[data-c],select[data-c],textarea[data-c]").forEach(x => { const val = x.value.trim(); x.classList.toggle("bad", !!val && !!cellProblem(f, +x.dataset.c, val)); });
       cn.textContent = (f.rowLabels ? `${done} of ${f.rows} rows complete` : `${done} of ${v.length} rows complete (at least ${need} needed)`) + hint; cn.classList.toggle("ok", done >= need && !hint); };
-    el.querySelectorAll("input[data-c],select[data-c],textarea[data-c]").forEach(inp => inp.oninput = inp.onchange = () => { v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); });
+    el.querySelectorAll("input[data-c],select[data-c],textarea[data-c]").forEach(inp => inp.oninput = inp.onchange = e => { ipTrack(p, f.id, e, String(v[+inp.dataset.r][+inp.dataset.c] || "").length, inp.value.length); v[+inp.dataset.r][+inp.dataset.c] = inp.value; upd(); clearTimeout(el._t); el._t = setTimeout(() => { save(); scheduleSnapshot(ctx.c); }, 400); });
     upd();
   } else if (f.t === "sketch"){
     el.appendChild(sketchBox(f, label, p));
