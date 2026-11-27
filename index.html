@@ -2657,8 +2657,10 @@ const RD_TASKS = {
       TB("a2f", "Research findings: answer your High-priority questions first", ["Research question", "Key finding (with numbers where possible)", "What it means for my design", "Source (MLA)"], 8, 6),
       T("a2c", "Critically evaluate your research: which sources were most reliable and why? What gaps or limitations remain, and how will they affect your design?", 80) ],
     [ T("a3ex", "Exercise · Describe or analyse? \"Fairphone is a smartphone with replaceable parts.\" Turn this description into analysis: explain a strength, a limitation, its resilience and its adaptability, and draw ONE conclusion a designer could use.", 60),
-      RL("a3t", "Task · Analyse at least THREE existing products, services or systems related to your problem (add an image of each in the evidence box below)", "Analysis point", ["Name, maker and source (MLA)", "Purpose and intended users", "Function: what it does and how", "Materials or technology used", "Cost and affordability for my audience", "Strengths (at least 2, with reasons)", "Limitations (at least 2, with reasons)", "Sustainability, repairability and life cycle", "Resilience: how it withstands disruption", "Adaptability: how it changes with needs", "Fairness: who can and cannot use or afford it", "Design inspiration: what I will adopt or avoid"], ["Product 1", "Product 2", "Product 3"]),
-      SK("a3img", "Images of the three existing products, labelled with their names and sources", true),
+      RL("a3t", "Task · Analyse at least THREE existing products, services or systems related to your problem (then upload an image of each product in the three upload boxes below)", "Analysis point", ["Name, maker and source (MLA)", "Purpose and intended users", "Function: what it does and how", "Materials or technology used", "Cost and affordability for my audience", "Strengths (at least 2, with reasons)", "Limitations (at least 2, with reasons)", "Sustainability, repairability and life cycle", "Resilience: how it withstands disruption", "Adaptability: how it changes with needs", "Fairness: who can and cannot use or afford it", "Design inspiration: what I will adopt or avoid"], ["Product 1", "Product 2", "Product 3"]),
+      { t:"sketch", id:"a3img", label:"Image of existing product 1: upload a photo or screenshot of Product 1. Its label (name and source) comes from the first row of your table above.", evidence:true, noSketch:true, prod:1 },
+      { t:"sketch", id:"a3img2", label:"Image of existing product 2: upload a photo or screenshot of Product 2. Its label (name and source) comes from the first row of your table above.", evidence:true, noSketch:true, prod:2 },
+      { t:"sketch", id:"a3img3", label:"Image of existing product 3: upload a photo or screenshot of Product 3. Its label (name and source) comes from the first row of your table above.", evidence:true, noSketch:true, prod:3 },
       T("a3c", "Compare the three: which is the most resilient, which is the most adaptable, and which best meets your audience's needs? Justify each judgement with evidence from your table.", 120),
       TB("a3o", "Design opportunities: at least TWO gaps or weaknesses your design could solve", ["Design opportunity", "Evidence from the analysis (product and row)", "How it could shape my solution"], 4, 2) ],
     [ T("a4ex", "Exercise · Check the model brief against the 10-point checklist. \"I will design an affordable modular storage solution for low-income households. Research indicates that conventional storage furniture can become unsuitable as family requirements change. My design will use interchangeable compartments and replaceable components to increase its lifespan.\" Which points are missing or too general, and what exactly would lift it to the 7–8 band?", 70),
@@ -5489,6 +5491,10 @@ function buildField0(f, ctx){
     upd();
   } else if (f.t === "sketch"){
     el.appendChild(sketchBox(f, label, p));
+    if (f.prod){ const cp = document.createElement("div"); cp.className = "prodCap"; cp.style.cssText = "margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--soft,#EEF3FB);border-left:4px solid #1F6FEB;font-size:13.5px";
+      const paintCap = () => { if (!cp.isConnected && cp._on){ document.removeEventListener("input", paintCap); return; } const n = prodLabel(f, p);
+        cp.innerHTML = n ? `<b>Label:</b> Product ${f.prod}: ${esc(n)}` : `<b>Label:</b> <span class="muted">write Product ${f.prod}'s name, maker and source (MLA) in the first row of the table above, and it will appear here.</span>`; };
+      paintCap(); cp._on = true; document.addEventListener("input", paintCap); el.appendChild(cp); }
   } else if (f.t === "choice"){
     el.innerHTML = `<label class="lbl" for="f_${f.id}">${esc(label)}</label><select id="f_${f.id}"><option value="">Choose…</option>${f.options.map(o=>`<option ${p.fields[f.id]===o?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
     el.querySelector("select").onchange = e => { p.fields[f.id] = e.target.value; save(); scheduleSnapshot(ctx.c); };
@@ -5510,6 +5516,9 @@ function zoomImg(src, label){
 }
 const skLabel = label => { const i = label.indexOf(": "); return i > 0 && i < 70 ? `<span class="lbl" style="font-weight:bold;margin:0">${esc(label.slice(0, i))}<span class="muted" style="display:block;font-weight:400;font-size:13px">${esc(label.slice(i + 2))}</span></span>` : `<span class="lbl" style="font-weight:bold">${esc(label)}</span>`; };
 /* a sketch or screenshot box. Small by default: drop / paste / upload a picture, or press "Sketch here" to open the drawing area. */
+/* G10 Design A.iii: each existing-product image is labelled with the name and source from row 1 ("Name, maker and source") of the a3t table */
+function prodLabel(f, p){ if (!f || !f.prod) return ""; const r = (p && p.fields && p.fields.a3t || [])[0] || []; return String(r[f.prod] || "").trim(); }
+function prodCap(f, p, base){ const n = prodLabel(f, p); return f && f.prod ? `Product ${f.prod}: ${n || "name and source not written yet"}` : base; }
 function sketchBox(f, label, p){
   const wrap = document.createElement("div"); wrap.className = "sk";
   let mode = "small";
@@ -5598,7 +5607,7 @@ const RH_UNDER = /^(b2n\d|c2q\d)$/;
 const RH_EP = { a1aud:"Target audience", a1type:"Type of solution", a1title:"Project title", a1p:"Problem statement", a1why:"Why this is a problem",
   a1whyS1:"Evidence 1", a1whyS2:"Evidence 2", a1whyS3:"Evidence 3", a1e:"The need for a solution", a1r:"Resilience, adaptation and fairness", a1soi:"Statement of inquiry",
   a2t:"Research plan", a2j:"Research priorities", a2s:"Primary research method", a2ev:"Primary research evidence", a2f:"Research findings", a2c:"Evaluation of the research",
-  a3t:"Analysis of existing products", a3img:"Existing products", a3c:"Comparison of existing products", a3o:"Design opportunities",
+  a3t:"Analysis of existing products", a3img:"Existing product 1", a3img2:"Existing product 2", a3img3:"Existing product 3", a3c:"Comparison of existing products", a3o:"Design opportunities",
   a4brief:"Design brief", a4con:"Constraints", a4what:"Type of solution",
   b1t:"Design specification", b1j:"Justification of the key specifications", b2c1:"Concept 1", b2c2:"Concept 2", b2c3:"Concept 3", b2n1:"Concept 1", b2n2:"Concept 2", b2n3:"Concept 3",
   b2p:"Feasibility and peer check", b3t:"Client feedback on the design principles", b3w:"Weighted totals", b3u:"Target audience feedback", b3ch:"The chosen design",
@@ -5635,7 +5644,7 @@ function reportBlocks(u, only, full){
         const ep = !full && String(g) === "10RD";
         if (ep && f.t === "checklist" && /chk$/.test(f.id)) return;   // ePortfolio: the tick-box checklists are for the student, not the report
         const v = p.fields[f.id], label = fill(f.label, g, sc), rhOf = full ? taskHead : ep ? ((f2, l) => RH_EP[f2.id] || rhOf0(f2, l)) : rhOf0;
-        if (f.t === "sketch"){ if (v){ sec.push({ k:"h3", t:rhOf(f, label) }); sec.push({ k:"img", src:v, cap:rhOf(f, label) }); lastImg = true; } return; }
+        if (f.t === "sketch"){ if (v){ sec.push({ k:"h3", t:rhOf(f, label) }); sec.push({ k:"img", src:v, cap:prodCap(f, p, rhOf(f, label)) }); lastImg = true; } return; }
         if (f.t === "video"){ if (v && v.url) sec.push({ k:"h3", t:"Finished video" }, { k:"p", t:v.url }); return; }
         if (f.t === "shots"){ const l = (v || []).filter(Boolean); if (!l.length) return; sec.push({ k:"h3", t:rhOf(f, label) }); l.forEach((im, n) => sec.push({ k:"img", src:im, cap:`${rhOf(f, label)}: screenshot ${n + 1}` })); lastImg = true; return; }
         if (f.t === "evlist"){ const ts = testsOf(p, f.src); if (!ts.some((_, n) => v && v[n])) return; sec.push({ k:"h3", t:"Testing evidence" });
@@ -5881,8 +5890,8 @@ function buildPDF(ctx){
         doc.autoTable({ startY: y, head:[f.cols.map(clean)], body: body.length?body.map(r=>r.map(clean)):[f.cols.map(()=>"")], margin:{left:M,right:M, top:30}, styles:{ fontSize:9, cellPadding:2, lineColor:[216,222,234], lineWidth:.2 }, headStyles:{ fillColor:NAVY, textColor:255 }, theme:"grid", didDrawPage: bar });
         y = doc.lastAutoTable.finalY + 5;
       } else if (f.t === "sketch"){
-        if (v){ const props = doc.getImageProperties(v); const w = W-2*M, h = Math.min(120, w * props.height / props.width), ww = h * props.width / props.height; need(h+4); doc.addImage(v, "JPEG", M, y, ww, h); y += h + 5; }
-        else para("(no sketch)", 10, "italic");
+        if (v){ const props = doc.getImageProperties(v); const w = W-2*M, h = Math.min(120, w * props.height / props.width), ww = h * props.width / props.height; need(h+4); doc.addImage(v, "JPEG", M, y, ww, h); y += h + 5; if (f.prod) para(prodCap(f, p, ""), 9.5, "italic"); }
+        else para(f.prod ? "(no image)" : "(no sketch)", 10, "italic");
       }
     });
     y += 3;
